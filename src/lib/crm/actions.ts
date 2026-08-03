@@ -1,0 +1,243 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createServiceClient } from "@/lib/supabase/server";
+import type {
+  AfiliadoEstado,
+  LeadEstado,
+  ModalidadIngreso,
+  Prioridad,
+  ProductoInteres,
+  SeguimientoEstado,
+  SeguimientoTipo,
+} from "@/lib/crm/types";
+
+const COOKIE = "marxel_crm_session";
+
+export async function isCrmAuthenticated() {
+  const store = await cookies();
+  const value = store.get(COOKIE)?.value;
+  const expected = process.env.CRM_PASSWORD;
+  if (!expected) return false;
+  return value === hashSession(expected);
+}
+
+function hashSession(password: string) {
+  // Simple signature — enough for app-gate with HTTPS
+  return Buffer.from(`marxel:${password}`).toString("base64url");
+}
+
+export async function loginCrm(formData: FormData) {
+  const password = String(formData.get("password") || "");
+  const expected = process.env.CRM_PASSWORD || "";
+  if (!password || password !== expected) {
+    redirect("/crm/login?error=1");
+  }
+  const store = await cookies();
+  store.set(COOKIE, hashSession(expected), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 14,
+  });
+  redirect("/crm");
+}
+
+export async function logoutCrm() {
+  const store = await cookies();
+  store.delete(COOKIE);
+  redirect("/crm/login");
+}
+
+async function requireCrm() {
+  if (!(await isCrmAuthenticated())) {
+    redirect("/crm/login");
+  }
+}
+
+export async function updateLeadEstado(leadId: string, estado: LeadEstado, motivo?: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const patch: Record<string, unknown> = {
+    estado,
+    ultimo_contacto_at: new Date().toISOString(),
+  };
+  if (estado === "perdido" && motivo) patch.motivo_perdida = motivo;
+
+  const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
+  if (error) throw new Error(error.message);
+
+  await supabase.from("actividades").insert({
+    lead_id: leadId,
+    tipo: "cambio_estado",
+    titulo: `Estado → ${estado}`,
+    detalle: motivo || null,
+    autor: "asesor",
+  });
+}
+
+export async function updateLead(leadId: string, data: Record<string, unknown>) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("leads").update(data).eq("id", leadId);
+  if (error) throw new Error(error.message);
+}
+
+export async function createLeadManual(formData: FormData) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const payload = {
+    nombre: String(formData.get("nombre") || "").trim(),
+    celular: String(formData.get("celular") || "").trim(),
+    email: String(formData.get("email") || "") || null,
+    dni: String(formData.get("dni") || "") || null,
+    edad: formData.get("edad") ? Number(formData.get("edad")) : null,
+    provincia: String(formData.get("provincia") || "") || null,
+    localidad: String(formData.get("localidad") || "") || null,
+    producto: (String(formData.get("producto") || "general") as ProductoInteres),
+    plan_interes: String(formData.get("plan_interes") || "") || null,
+    modalidad: (String(formData.get("modalidad") || "sin_definir") as ModalidadIngreso),
+    origen: "otro" as const,
+    prioridad: (String(formData.get("prioridad") || "media") as Prioridad),
+    notas_iniciales: String(formData.get("notas") || "") || null,
+  };
+  if (!payload.nombre || !payload.celular) {
+    throw new Error("Nombre y celular son obligatorios");
+  }
+  const { data, error } = await supabase.from("leads").insert(payload).select("id").single();
+  if (error) throw new Error(error.message);
+  redirect(`/crm/leads/${data.id}`);
+}
+
+export async function addNota(leadId: string | null, afiliadoId: string | null, formData: FormData) {
+  await requireCrm();
+  const detalle = String(formData.get("nota") || "").trim();
+  if (!detalle) return;
+  const supabase = createServiceClient();
+  await supabase.from("actividades").insert({
+    lead_id: leadId,
+    afiliado_id: afiliadoId,
+    tipo: "nota",
+    titulo: "Nota",
+    detalle,
+    autor: "asesor",
+  });
+}
+
+export async function createSeguimiento(formData: FormData) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const leadId = String(formData.get("lead_id") || "") || null;
+  const afiliadoId = String(formData.get("afiliado_id") || "") || null;
+  const payload = {
+    lead_id: leadId,
+    afiliado_id: afiliadoId,
+    titulo: String(formData.get("titulo") || "").trim(),
+    descripcion: String(formData.get("descripcion") || "") || null,
+    tipo: (String(formData.get("tipo") || "whatsapp") as SeguimientoTipo),
+    prioridad: (String(formData.get("prioridad") || "media") as Prioridad),
+    programado_para: String(formData.get("programado_para") || new Date().toISOString()),
+    estado: "pendiente" as SeguimientoEstado,
+    creado_por: "asesor",
+  };
+  if (!payload.titulo || (!leadId && !afiliadoId)) {
+    throw new Error("Datos incompletos");
+  }
+  const { error } = await supabase.from("seguimientos").insert(payload);
+  if (error) throw new Error(error.message);
+}
+
+export async function completeSeguimiento(id: string, resultado?: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { data: seg } = await supabase
+    .from("seguimientos")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  const { error } = await supabase
+    .from("seguimientos")
+    .update({
+      estado: "hecho",
+      completado_at: new Date().toISOString(),
+      resultado: resultado || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  if (seg) {
+    await supabase.from("actividades").insert({
+      lead_id: seg.lead_id,
+      afiliado_id: seg.afiliado_id,
+      tipo: "seguimiento",
+      titulo: `Seguimiento completado: ${seg.titulo}`,
+      detalle: resultado || null,
+      autor: "asesor",
+    });
+    if (seg.lead_id) {
+      await supabase
+        .from("leads")
+        .update({ ultimo_contacto_at: new Date().toISOString() })
+        .eq("id", seg.lead_id);
+    }
+  }
+}
+
+export async function cancelSeguimiento(id: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
+}
+
+export async function convertLead(leadId: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.rpc("convertir_lead_a_afiliado", {
+    p_lead_id: leadId,
+  });
+  if (error) throw new Error(error.message);
+  redirect(`/crm/afiliados/${data}`);
+}
+
+export async function updateAfiliado(id: string, data: Record<string, unknown>) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("afiliados").update(data).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateAfiliadoEstado(id: string, estado: AfiliadoEstado) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  await supabase.from("afiliados").update({ estado }).eq("id", id);
+  await supabase.from("actividades").insert({
+    afiliado_id: id,
+    tipo: "cambio_estado",
+    titulo: `Estado afiliado → ${estado}`,
+    autor: "asesor",
+  });
+}
+
+export async function logWhatsApp(leadId: string | null, afiliadoId: string | null) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  await supabase.from("actividades").insert({
+    lead_id: leadId,
+    afiliado_id: afiliadoId,
+    tipo: "whatsapp",
+    titulo: "WhatsApp abierto",
+    detalle: "Se abrió conversación por WhatsApp desde el CRM.",
+    autor: "asesor",
+  });
+  if (leadId) {
+    const { data: lead } = await supabase.from("leads").select("estado").eq("id", leadId).single();
+    const patch: Record<string, unknown> = {
+      ultimo_contacto_at: new Date().toISOString(),
+    };
+    if (lead?.estado === "nuevo") patch.estado = "contactado";
+    await supabase.from("leads").update(patch).eq("id", leadId);
+  }
+}

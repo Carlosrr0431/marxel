@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0a3d6b;
+  --navy-deep: #062844;
+  --blue: #1a6aa8;
+  --sky: #4aa3d4;
+  --teal: #1a9b96;
+  --teal-soft: #2bb8b0;
+  --aqua: #e6f5f4;
+  --mist: #eef6fb;
+  --cloud: #f7fbfd;
+  --gold: #c9a227;
+  --ink: #102a43;
+  --muted: #5b7088;
+  --line: #d5e4ef;
+  --white: #ffffff;
+  --background: var(--cloud);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-blue: var(--blue);
+  --color-sky: var(--sky);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-aqua: var(--aqua);
+  --color-mist: var(--mist);
+  --color-cloud: var(--cloud);
+  --color-gold: var(--gold);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-syne);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--teal) 28%, white);
+  color: var(--navy-deep);
+}
+
+.font-display {
+  font-family: var(--font-syne), system-ui, sans-serif;
+}
+
+.bg-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 55% at 12% -10%, rgba(74, 163, 212, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 92% 8%, rgba(43, 184, 176, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(26, 106, 168, 0.08), transparent 55%),
+    linear-gradient(180deg, #f7fbfd 0%, #eef6fb 45%, #e8f4f2 100%);
+}
+
+.bg-wave {
+  background-image:
+    radial-gradient(ellipse 80% 55% at 12% -10%, rgba(74, 163, 212, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 92% 8%, rgba(43, 184, 176, 0.14), transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='220' viewBox='0 0 1440 220' fill='none'%3E%3Cpath d='M0 120C240 40 480 20 720 80C960 140 1200 160 1440 90V220H0V120Z' fill='%23dceef8' fill-opacity='0.45'/%3E%3Cpath d='M0 150C260 90 520 70 780 110C1040 150 1240 170 1440 120V220H0V150Z' fill='%23d4f0ed' fill-opacity='0.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center top, center top, center bottom;
+  background-size: auto, auto, 100% 220px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 240;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+.animate-rise-delay-3 {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+}
+
+.animate-float {
+  animation: soft-float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .animate-float {
+    animation: none;
+  }
+}
