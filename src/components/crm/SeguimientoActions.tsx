@@ -2,7 +2,12 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { completeSeguimiento, cancelSeguimiento, logWhatsApp } from "@/lib/crm/actions";
+import {
+  completeSeguimiento,
+  cancelSeguimiento,
+  logWhatsApp,
+  snoozeSeguimiento,
+} from "@/lib/crm/actions";
 import { whatsappLink } from "@/lib/crm/types";
 
 export function SeguimientoActions({
@@ -11,12 +16,14 @@ export function SeguimientoActions({
   afiliadoId,
   celular,
   nombre,
+  showSnooze,
 }: {
   id: string;
   leadId?: string | null;
   afiliadoId?: string | null;
   celular?: string | null;
   nombre?: string | null;
+  showSnooze?: boolean;
 }) {
   const [pending, start] = useTransition();
 
@@ -30,11 +37,7 @@ export function SeguimientoActions({
           )}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => {
-            start(async () => {
-              await logWhatsApp(leadId || null, afiliadoId || null);
-            });
-          }}
+          onClick={() => start(async () => logWhatsApp(leadId || null, afiliadoId || null))}
           className="rounded-lg bg-[#25D366] px-2.5 py-1.5 text-xs font-semibold text-white"
         >
           WhatsApp
@@ -48,6 +51,16 @@ export function SeguimientoActions({
       >
         Hecho
       </button>
+      {showSnooze ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => start(async () => snoozeSeguimiento(id, 24))}
+          className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-navy"
+        >
+          +24h
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={pending}

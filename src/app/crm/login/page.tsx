@@ -10,16 +10,23 @@ export default async function CrmLoginPage({
   const hasError = params.error === "1";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-atmosphere px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#0b3d6b_0%,_#071f35_45%,_#041525_100%)]" />
+      <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-teal/30 blur-3xl" />
+      <div className="absolute -right-10 bottom-10 h-80 w-80 rounded-full bg-sky/25 blur-3xl" />
+
       <form
         action={loginCrm}
-        className="w-full max-w-sm rounded-2xl border border-line bg-white p-7 shadow-[0_20px_50px_rgba(10,61,107,0.08)]"
+        className="relative w-full max-w-md rounded-[1.75rem] border border-white/15 bg-white/95 p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur"
       >
-        <p className="font-display text-2xl font-bold text-navy">
-          Mar<span className="text-teal">X</span>el CRM
+        <p className="font-display text-3xl font-bold tracking-tight text-navy">
+          Mar<span className="text-teal">X</span>el
         </p>
-        <p className="mt-2 text-sm text-muted">
-          Ingresá la clave de acceso del panel.
+        <p className="mt-1 text-xs font-bold uppercase tracking-[0.28em] text-teal">
+          CRM Studio
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-muted">
+          Accedé al panel de leads, afiliados y seguimientos.
         </p>
 
         {hasError ? (
@@ -29,23 +36,19 @@ export default async function CrmLoginPage({
         ) : null}
 
         <label className="mt-6 block">
-          <span className="mb-1.5 block text-sm font-medium text-ink">
-            Contraseña
-          </span>
+          <span className="mb-1.5 block text-sm font-medium text-ink">Contraseña</span>
           <input
             type="password"
             name="password"
             required
             autoFocus
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm outline-none focus:border-sky focus:ring-2 focus:ring-sky/20"
+            className="crm-input"
+            placeholder="••••••••"
           />
         </label>
 
-        <button
-          type="submit"
-          className="mt-5 w-full rounded-xl bg-navy py-3 text-sm font-semibold text-white hover:bg-navy-deep"
-        >
-          Entrar
+        <button type="submit" className="crm-btn crm-btn-primary mt-5 w-full py-3.5">
+          Entrar al CRM
         </button>
 
         <Link

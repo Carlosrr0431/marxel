@@ -5,59 +5,86 @@ import { usePathname } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
 
 const links = [
-  { href: "/crm", label: "Dashboard", exact: true },
-  { href: "/crm/pipeline", label: "Pipeline" },
-  { href: "/crm/leads", label: "Leads" },
-  { href: "/crm/afiliados", label: "Afiliados" },
-  { href: "/crm/seguimientos", label: "Seguimientos" },
+  { href: "/crm", label: "Dashboard", icon: "◈", exact: true },
+  { href: "/crm/inbox", label: "Inbox", icon: "◎" },
+  { href: "/crm/pipeline", label: "Pipeline", icon: "▦" },
+  { href: "/crm/leads", label: "Leads", icon: "◉" },
+  { href: "/crm/afiliados", label: "Afiliados", icon: "✦" },
+  { href: "/crm/seguimientos", label: "Agenda", icon: "◷" },
+  { href: "/crm/plantillas", label: "Plantillas", icon: "✎" },
 ];
 
-export function CrmSidebar() {
+export function CrmSidebar({
+  badges,
+}: {
+  badges?: { inbox?: number; seguimientos?: number };
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-full flex-col border-b border-line bg-navy-deep text-white lg:min-h-screen lg:w-60 lg:border-b-0 lg:border-r lg:border-white/10">
-      <div className="px-5 py-5">
-        <Link href="/crm" className="font-display text-xl font-bold tracking-tight">
-          Mar<span className="text-gold">X</span>el
-          <span className="mt-0.5 block text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-white/55">
-            CRM
+    <aside className="flex w-full flex-col border-b border-white/10 bg-[linear-gradient(180deg,#071f35_0%,#0a2f4c_55%,#0b3a55_100%)] text-white lg:min-h-screen lg:w-[17rem] lg:border-b-0 lg:border-r lg:border-white/10">
+      <div className="px-5 py-6">
+        <Link href="/crm" className="block">
+          <span className="font-display text-[1.65rem] font-bold tracking-[-0.04em]">
+            Mar<span className="text-[#f0c14b]">X</span>el
+          </span>
+          <span className="mt-1 flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-white/50">
+            CRM Studio
+            <span className="crm-pulse inline-block h-1.5 w-1.5 rounded-full bg-teal-soft" />
           </span>
         </Link>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible lg:px-3 lg:pb-0">
+      <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-3">
         {links.map((link) => {
           const active = link.exact
             ? pathname === link.href
             : pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const badge =
+            link.href === "/crm/inbox"
+              ? badges?.inbox
+              : link.href === "/crm/seguimientos"
+                ? badges?.seguimientos
+                : undefined;
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              className={`group flex items-center gap-2.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                 active
-                  ? "bg-white/15 text-white"
-                  : "text-white/65 hover:bg-white/10 hover:text-white"
+                  ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                  : "text-white/60 hover:bg-white/8 hover:text-white"
               }`}
             >
-              {link.label}
+              <span className="text-xs opacity-70">{link.icon}</span>
+              <span className="flex-1">{link.label}</span>
+              {badge && badge > 0 ? (
+                <span className="rounded-full bg-teal-soft/90 px-1.5 py-0.5 text-[10px] font-bold text-navy-deep">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto hidden flex-col gap-2 p-4 lg:flex">
+      <div className="mt-auto hidden space-y-1 border-t border-white/10 p-4 lg:block">
+        <Link
+          href="/crm/leads/nuevo"
+          className="mb-3 flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-teal to-teal-soft px-3 py-2.5 text-sm font-semibold text-white"
+        >
+          + Nuevo lead
+        </Link>
         <Link
           href="/"
-          className="rounded-xl px-3 py-2 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+          className="block rounded-xl px-3 py-2 text-sm text-white/55 transition hover:bg-white/8 hover:text-white"
         >
-          ← Sitio web
+          ← Sitio público
         </Link>
         <form action={logoutCrm}>
           <button
             type="submit"
-            className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+            className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/55 transition hover:bg-white/8 hover:text-white"
           >
             Cerrar sesión
           </button>

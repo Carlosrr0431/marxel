@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Afiliado } from "@/lib/crm/types";
-import { AFILIADO_ESTADOS, formatDate, formatMoney } from "@/lib/crm/types";
+import { AFILIADO_ESTADOS, formatMoney } from "@/lib/crm/types";
+import { PageHeader, Avatar, EmptyState } from "@/components/crm/ui";
+import { relativeTime } from "@/lib/crm/utils";
 
 export default async function AfiliadosPage({
   searchParams,
@@ -10,10 +12,7 @@ export default async function AfiliadosPage({
 }) {
   const params = await searchParams;
   const supabase = createServiceClient();
-  let query = supabase
-    .from("afiliados")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let query = supabase.from("afiliados").select("*").order("created_at", { ascending: false });
 
   if (params.estado) query = query.eq("estado", params.estado);
   if (params.q) {
@@ -27,27 +26,25 @@ export default async function AfiliadosPage({
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-3xl font-semibold text-navy">
-          Afiliados
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Clientes convertidos: altas, planes y seguimiento post-venta.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Clientes"
+        title="Afiliados"
+        description="Altas, planes, documentación y seguimiento post-venta."
+        actions={
+          <Link href="/api/crm/export?type=afiliados" className="crm-btn crm-btn-ghost">
+            Exportar CSV
+          </Link>
+        }
+      />
 
-      <form className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 sm:flex-row">
+      <form className="crm-card flex flex-col gap-3 p-4 sm:flex-row">
         <input
           name="q"
           defaultValue={params.q || ""}
           placeholder="Buscar nombre, DNI, celular…"
-          className="flex-1 rounded-xl border border-line bg-cloud px-3 py-2.5 text-sm"
+          className="crm-input flex-1"
         />
-        <select
-          name="estado"
-          defaultValue={params.estado || ""}
-          className="rounded-xl border border-line bg-cloud px-3 py-2.5 text-sm"
-        >
+        <select name="estado" defaultValue={params.estado || ""} className="crm-input sm:max-w-[200px]">
           <option value="">Todos</option>
           {AFILIADO_ESTADOS.map((e) => (
             <option key={e.value} value={e.value}>
@@ -55,68 +52,70 @@ export default async function AfiliadosPage({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white"
-        >
+        <button type="submit" className="crm-btn crm-btn-primary">
           Filtrar
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-[#f7fafc] text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Afiliado</th>
-                <th className="px-4 py-3 font-medium">Plan</th>
-                <th className="px-4 py-3 font-medium">Modalidad</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Cuota</th>
-                <th className="px-4 py-3 font-medium">Alta</th>
-              </tr>
-            </thead>
-            <tbody>
-              {afiliados.map((a) => {
-                const estado = AFILIADO_ESTADOS.find((e) => e.value === a.estado);
-                return (
-                  <tr key={a.id} className="border-t border-line/80">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/crm/afiliados/${a.id}`}
-                        className="font-semibold text-navy hover:underline"
-                      >
-                        {a.nombre}
-                      </Link>
-                      <p className="text-xs text-muted">{a.celular}</p>
-                    </td>
-                    <td className="px-4 py-3 text-muted">{a.plan || "—"}</td>
-                    <td className="px-4 py-3 capitalize text-muted">
-                      {a.modalidad.replaceAll("_", " ")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-md px-2 py-1 text-xs font-medium ${estado?.color}`}>
-                        {estado?.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {formatMoney(a.cuota_estimada)}
-                    </td>
-                    <td className="px-4 py-3 text-muted">{formatDate(a.created_at)}</td>
-                  </tr>
-                );
-              })}
-              {!afiliados.length ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-muted">
-                    Todavía no hay afiliados. Convertí un lead ganado.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+      {afiliados.length ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {afiliados.map((a) => {
+            const estado = AFILIADO_ESTADOS.find((e) => e.value === a.estado);
+            return (
+              <Link
+                key={a.id}
+                href={`/crm/afiliados/${a.id}`}
+                className="crm-card crm-card-hover block p-5"
+              >
+                <div className="flex items-start gap-3">
+                  <Avatar name={a.nombre} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-navy">{a.nombre}</p>
+                    <p className="text-xs text-muted">{a.celular}</p>
+                  </div>
+                  <span className={`crm-badge ${estado?.color}`}>{estado?.label}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted">
+                  <div>
+                    <p className="font-semibold text-navy">Plan</p>
+                    <p>{a.plan || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-navy">Cuota</p>
+                    <p>{formatMoney(a.cuota_estimada)}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-navy">Modalidad</p>
+                    <p className="capitalize">{a.modalidad.replaceAll("_", " ")}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-navy">Alta</p>
+                    <p>{relativeTime(a.created_at)}</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="mb-1 flex justify-between text-[11px]">
+                    <span className="text-muted">Docs</span>
+                    <span className="font-medium text-navy">
+                      {a.docs_completos ? "Completos" : "Pendientes"}
+                    </span>
+                  </div>
+                  <div className="crm-progress">
+                    <span style={{ width: a.docs_completos ? "100%" : "35%" }} />
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        <EmptyState
+          title="Sin afiliados"
+          description="Convertí un lead ganado para crear la ficha de afiliado."
+          actionHref="/crm/leads"
+          actionLabel="Ver leads"
+        />
+      )}
     </div>
   );
 }

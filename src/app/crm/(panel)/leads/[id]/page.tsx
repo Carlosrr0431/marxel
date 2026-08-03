@@ -11,7 +11,16 @@ import {
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
 import { LeadQuickActions } from "@/components/crm/LeadQuickActions";
 import { SeguimientoActions } from "@/components/crm/SeguimientoActions";
-import { addNota, createSeguimiento, updateLead } from "@/lib/crm/actions";
+import { Avatar, ScoreRing } from "@/components/crm/ui";
+import {
+  addLeadTag,
+  addNota,
+  createSeguimiento,
+  updateLead,
+} from "@/lib/crm/actions";
+import { DOC_CHECKLIST_SALUD, scoreLead } from "@/lib/crm/utils";
+import { fillTemplate, WA_TEMPLATES } from "@/lib/crm/templates";
+import { whatsappLink } from "@/lib/crm/types";
 
 export default async function LeadDetailPage({
   params,
@@ -40,6 +49,17 @@ export default async function LeadDetailPage({
   if (!lead) notFound();
   const l = lead as Lead;
   const estado = LEAD_ESTADOS.find((e) => e.value === l.estado);
+  const puntaje = l.puntaje || scoreLead(l);
+  const tips: string[] = [];
+  if (l.estado === "nuevo") tips.push("Hacé el WhatsApp inicial con plantilla de apertura.");
+  if (!l.email) tips.push("Pedí el email para enviar propuestas formales.");
+  if (l.producto === "salud" && l.modalidad === "sin_definir") {
+    tips.push("Definí si es monotributo, relación de dependencia o particular.");
+  }
+  if (l.estado === "interesado" || l.estado === "cotizado") {
+    tips.push("Programá pedido de documentación y fecha de alta.");
+  }
+  if (puntaje >= 70) tips.push("Lead caliente: priorizá contacto hoy.");
 
   async function saveLead(formData: FormData) {
     "use server";
@@ -69,37 +89,68 @@ export default async function LeadDetailPage({
     await createSeguimiento(formData);
   }
 
+  async function saveTag(formData: FormData) {
+    "use server";
+    await addLeadTag(id, String(formData.get("tag") || ""));
+  }
+
+  const quickWa = WA_TEMPLATES.filter((t) => t.categoria === "apertura").slice(0, 2);
+
   return (
     <div className="space-y-6">
-      <div>
+      <div className="crm-card p-5 sm:p-6">
         <Link href="/crm/leads" className="text-sm text-teal hover:underline">
           ← Leads
         </Link>
-        <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-semibold text-navy">
-              {l.nombre}
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              {l.celular}
-              {l.email ? ` · ${l.email}` : ""}
-              {l.provincia ? ` · ${l.provincia}` : ""}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className={`rounded-md px-2 py-1 text-xs font-medium ${estado?.color}`}>
-                {estado?.label}
-              </span>
-              <LeadEstadoSelect leadId={l.id} value={l.estado} />
+        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex gap-4">
+            <Avatar name={l.nombre} size="lg" />
+            <div>
+              <h1 className="font-display text-3xl font-semibold text-navy">
+                {l.nombre}
+              </h1>
+              <p className="mt-1 text-sm text-muted">
+                {l.celular}
+                {l.email ? ` · ${l.email}` : ""}
+                {l.provincia ? ` · ${l.provincia}` : ""}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className={`crm-badge ${estado?.color}`}>{estado?.label}</span>
+                <LeadEstadoSelect leadId={l.id} value={l.estado} />
+                {(l.tags || []).map((t) => (
+                  <span key={t} className="crm-badge bg-mist text-navy">
+                    #{t}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-          <LeadQuickActions
-            leadId={l.id}
-            nombre={l.nombre}
-            celular={l.celular}
-            estado={l.estado}
-          />
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <ScoreRing score={puntaje} />
+            <LeadQuickActions
+              leadId={l.id}
+              nombre={l.nombre}
+              celular={l.celular}
+              estado={l.estado}
+            />
+          </div>
         </div>
       </div>
+
+      {tips.length ? (
+        <div className="rounded-2xl border border-teal/25 bg-gradient-to-r from-aqua/80 to-mist p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal">
+            Sugerencias inteligentes
+          </p>
+          <ul className="mt-2 space-y-1">
+            {tips.map((t) => (
+              <li key={t} className="text-sm text-navy">
+                → {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
@@ -228,6 +279,65 @@ export default async function LeadDetailPage({
               </button>
             </form>
           </div>
+
+          <div className="crm-card p-5">
+            <h2 className="font-display text-lg font-semibold text-navy">
+              WhatsApp rápido
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {quickWa.map((t) => {
+                const text = fillTemplate(t.cuerpo, {
+                  nombre: l.nombre,
+                  interes: l.plan_interes || l.producto,
+                });
+                return (
+                  <li key={t.id}>
+                    <a
+                      href={whatsappLink(l.celular, text)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-xl border border-line px-3 py-2 text-sm font-medium text-navy hover:bg-mist"
+                    >
+                      {t.titulo} →
+                    </a>
+                  </li>
+                );
+              })}
+              <li>
+                <Link href="/crm/plantillas" className="text-sm font-semibold text-teal hover:underline">
+                  Ver todas las plantillas
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {l.producto === "salud" ? (
+            <div className="crm-card p-5">
+              <h2 className="font-display text-lg font-semibold text-navy">
+                Checklist docs salud
+              </h2>
+              <ul className="mt-3 space-y-2">
+                {DOC_CHECKLIST_SALUD.map((item) => (
+                  <li key={item} className="flex gap-2 text-sm text-muted">
+                    <span className="text-teal">☐</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <form action={saveTag} className="crm-card flex gap-2 p-4">
+            <input
+              name="tag"
+              placeholder="Agregar tag…"
+              className="crm-input"
+              required
+            />
+            <button type="submit" className="crm-btn crm-btn-ghost shrink-0">
+              Tag
+            </button>
+          </form>
 
           <div className="rounded-2xl border border-line bg-mist/50 p-5 text-sm text-muted">
             <p>

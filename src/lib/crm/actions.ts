@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import type {
   AfiliadoEstado,
@@ -12,6 +13,7 @@ import type {
   SeguimientoEstado,
   SeguimientoTipo,
 } from "@/lib/crm/types";
+import { scoreLead } from "@/lib/crm/utils";
 
 const COOKIE = "marxel_crm_session";
 
@@ -24,7 +26,6 @@ export async function isCrmAuthenticated() {
 }
 
 function hashSession(password: string) {
-  // Simple signature — enough for app-gate with HTTPS
   return Buffer.from(`marxel:${password}`).toString("base64url");
 }
 
@@ -57,6 +58,15 @@ async function requireCrm() {
   }
 }
 
+function revalidateCrm() {
+  revalidatePath("/crm");
+  revalidatePath("/crm/leads");
+  revalidatePath("/crm/pipeline");
+  revalidatePath("/crm/afiliados");
+  revalidatePath("/crm/seguimientos");
+  revalidatePath("/crm/inbox");
+}
+
 export async function updateLeadEstado(leadId: string, estado: LeadEstado, motivo?: string) {
   await requireCrm();
   const supabase = createServiceClient();
@@ -76,13 +86,18 @@ export async function updateLeadEstado(leadId: string, estado: LeadEstado, motiv
     detalle: motivo || null,
     autor: "asesor",
   });
+  revalidateCrm();
 }
 
 export async function updateLead(leadId: string, data: Record<string, unknown>) {
   await requireCrm();
   const supabase = createServiceClient();
+  const { data: current } = await supabase.from("leads").select("*").eq("id", leadId).single();
+  const merged = { ...(current || {}), ...data };
+  data.puntaje = scoreLead(merged);
   const { error } = await supabase.from("leads").update(data).eq("id", leadId);
   if (error) throw new Error(error.message);
+  revalidateCrm();
 }
 
 export async function createLeadManual(formData: FormData) {
@@ -96,18 +111,28 @@ export async function createLeadManual(formData: FormData) {
     edad: formData.get("edad") ? Number(formData.get("edad")) : null,
     provincia: String(formData.get("provincia") || "") || null,
     localidad: String(formData.get("localidad") || "") || null,
-    producto: (String(formData.get("producto") || "general") as ProductoInteres),
+    producto: String(formData.get("producto") || "general") as ProductoInteres,
     plan_interes: String(formData.get("plan_interes") || "") || null,
-    modalidad: (String(formData.get("modalidad") || "sin_definir") as ModalidadIngreso),
+    modalidad: String(formData.get("modalidad") || "sin_definir") as ModalidadIngreso,
     origen: "otro" as const,
-    prioridad: (String(formData.get("prioridad") || "media") as Prioridad),
+    prioridad: String(formData.get("prioridad") || "media") as Prioridad,
     notas_iniciales: String(formData.get("notas") || "") || null,
+    tags: String(formData.get("tags") || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
   };
   if (!payload.nombre || !payload.celular) {
     throw new Error("Nombre y celular son obligatorios");
   }
-  const { data, error } = await supabase.from("leads").insert(payload).select("id").single();
+  const puntaje = scoreLead(payload);
+  const { data, error } = await supabase
+    .from("leads")
+    .insert({ ...payload, puntaje })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+  revalidateCrm();
   redirect(`/crm/leads/${data.id}`);
 }
 
@@ -124,6 +149,7 @@ export async function addNota(leadId: string | null, afiliadoId: string | null, 
     detalle,
     autor: "asesor",
   });
+  revalidateCrm();
 }
 
 export async function createSeguimiento(formData: FormData) {
@@ -131,14 +157,18 @@ export async function createSeguimiento(formData: FormData) {
   const supabase = createServiceClient();
   const leadId = String(formData.get("lead_id") || "") || null;
   const afiliadoId = String(formData.get("afiliado_id") || "") || null;
+  let programado = String(formData.get("programado_para") || "");
+  if (programado && !programado.includes("Z") && programado.length === 16) {
+    programado = new Date(programado).toISOString();
+  }
   const payload = {
     lead_id: leadId,
     afiliado_id: afiliadoId,
     titulo: String(formData.get("titulo") || "").trim(),
     descripcion: String(formData.get("descripcion") || "") || null,
-    tipo: (String(formData.get("tipo") || "whatsapp") as SeguimientoTipo),
-    prioridad: (String(formData.get("prioridad") || "media") as Prioridad),
-    programado_para: String(formData.get("programado_para") || new Date().toISOString()),
+    tipo: String(formData.get("tipo") || "whatsapp") as SeguimientoTipo,
+    prioridad: String(formData.get("prioridad") || "media") as Prioridad,
+    programado_para: programado || new Date().toISOString(),
     estado: "pendiente" as SeguimientoEstado,
     creado_por: "asesor",
   };
@@ -147,16 +177,13 @@ export async function createSeguimiento(formData: FormData) {
   }
   const { error } = await supabase.from("seguimientos").insert(payload);
   if (error) throw new Error(error.message);
+  revalidateCrm();
 }
 
 export async function completeSeguimiento(id: string, resultado?: string) {
   await requireCrm();
   const supabase = createServiceClient();
-  const { data: seg } = await supabase
-    .from("seguimientos")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data: seg } = await supabase.from("seguimientos").select("*").eq("id", id).single();
 
   const { error } = await supabase
     .from("seguimientos")
@@ -184,12 +211,25 @@ export async function completeSeguimiento(id: string, resultado?: string) {
         .eq("id", seg.lead_id);
     }
   }
+  revalidateCrm();
 }
 
 export async function cancelSeguimiento(id: string) {
   await requireCrm();
   const supabase = createServiceClient();
   await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
+  revalidateCrm();
+}
+
+export async function snoozeSeguimiento(id: string, hours = 24) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const when = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("seguimientos")
+    .update({ programado_para: when, estado: "pendiente" })
+    .eq("id", id);
+  revalidateCrm();
 }
 
 export async function convertLead(leadId: string) {
@@ -199,6 +239,7 @@ export async function convertLead(leadId: string) {
     p_lead_id: leadId,
   });
   if (error) throw new Error(error.message);
+  revalidateCrm();
   redirect(`/crm/afiliados/${data}`);
 }
 
@@ -207,6 +248,7 @@ export async function updateAfiliado(id: string, data: Record<string, unknown>) 
   const supabase = createServiceClient();
   const { error } = await supabase.from("afiliados").update(data).eq("id", id);
   if (error) throw new Error(error.message);
+  revalidateCrm();
 }
 
 export async function updateAfiliadoEstado(id: string, estado: AfiliadoEstado) {
@@ -219,9 +261,14 @@ export async function updateAfiliadoEstado(id: string, estado: AfiliadoEstado) {
     titulo: `Estado afiliado → ${estado}`,
     autor: "asesor",
   });
+  revalidateCrm();
 }
 
-export async function logWhatsApp(leadId: string | null, afiliadoId: string | null) {
+export async function logWhatsApp(
+  leadId: string | null,
+  afiliadoId: string | null,
+  detalle?: string
+) {
   await requireCrm();
   const supabase = createServiceClient();
   await supabase.from("actividades").insert({
@@ -229,7 +276,7 @@ export async function logWhatsApp(leadId: string | null, afiliadoId: string | nu
     afiliado_id: afiliadoId,
     tipo: "whatsapp",
     titulo: "WhatsApp abierto",
-    detalle: "Se abrió conversación por WhatsApp desde el CRM.",
+    detalle: detalle || "Se abrió conversación por WhatsApp desde el CRM.",
     autor: "asesor",
   });
   if (leadId) {
@@ -240,4 +287,45 @@ export async function logWhatsApp(leadId: string | null, afiliadoId: string | nu
     if (lead?.estado === "nuevo") patch.estado = "contactado";
     await supabase.from("leads").update(patch).eq("id", leadId);
   }
+  revalidateCrm();
+}
+
+export async function bulkUpdateLeadEstado(ids: string[], estado: LeadEstado) {
+  await requireCrm();
+  if (!ids.length) return;
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("leads")
+    .update({ estado, ultimo_contacto_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) throw new Error(error.message);
+  await supabase.from("actividades").insert(
+    ids.map((lead_id) => ({
+      lead_id,
+      tipo: "cambio_estado" as const,
+      titulo: `Estado masivo → ${estado}`,
+      autor: "asesor",
+    }))
+  );
+  revalidateCrm();
+}
+
+export async function addLeadTag(leadId: string, tag: string) {
+  await requireCrm();
+  const clean = tag.trim().toLowerCase();
+  if (!clean) return;
+  const supabase = createServiceClient();
+  const { data } = await supabase.from("leads").select("tags").eq("id", leadId).single();
+  const tags = Array.from(new Set([...(data?.tags || []), clean]));
+  await supabase.from("leads").update({ tags }).eq("id", leadId);
+  revalidateCrm();
+}
+
+export async function recalculateLeadScore(leadId: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { data } = await supabase.from("leads").select("*").eq("id", leadId).single();
+  if (!data) return;
+  await supabase.from("leads").update({ puntaje: scoreLead(data) }).eq("id", leadId);
+  revalidateCrm();
 }
