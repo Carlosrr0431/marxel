@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { QuoteForm } from "@/components/QuoteForm";
+import { HeroProtectionVisual } from "@/components/HeroProtectionVisual";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
 import { site, seguros } from "@/lib/content";
@@ -43,6 +44,11 @@ export default function HomePage() {
                     Confianza personal
                   </span>
                 </div>
+
+                <div className="relative flex flex-1 items-center justify-center py-4 sm:py-6">
+                  <HeroProtectionVisual />
+                </div>
+
                 <div>
                   <p className="font-display text-2xl font-semibold leading-tight sm:text-4xl">
                     Tres pilares.
