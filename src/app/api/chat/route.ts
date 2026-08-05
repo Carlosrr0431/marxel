@@ -8,20 +8,26 @@ export const maxDuration = 60;
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 function getClient() {
-  if (process.env.DEEPSEEK_API_KEY) {
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  if (deepseekKey) {
     return {
       client: new OpenAI({
-        apiKey: process.env.DEEPSEEK_API_KEY,
+        apiKey: deepseekKey,
         baseURL: "https://api.deepseek.com",
       }),
-      model: process.env.AI_CHAT_MODEL || "deepseek-chat",
+      model: process.env.AI_CHAT_MODEL || "deepseek-v4-pro",
+      provider: "deepseek" as const,
     };
   }
 
   if (process.env.OPENAI_API_KEY) {
     return {
       client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-      model: process.env.OPENAI_CHAT_MODEL || process.env.AI_CHAT_MODEL || "gpt-4o-mini",
+      model:
+        process.env.OPENAI_CHAT_MODEL ||
+        process.env.AI_CHAT_MODEL ||
+        "gpt-4o-mini",
+      provider: "openai" as const,
     };
   }
 
@@ -64,28 +70,31 @@ export async function POST(req: Request) {
           typeof m.content === "string" &&
           m.content.trim().length > 0
       )
-      .slice(-8);
+      .slice(-10);
 
-    const chunks = retrieveChunks(message, 8);
+    const chunks = retrieveChunks(message, 10);
     const context = formatContext(chunks);
 
     const completion = await ai.client.chat.completions.create({
       model: ai.model,
-      temperature: 0.2,
-      max_tokens: 700,
+      temperature: 0.35,
+      max_tokens: 900,
       messages: [
         { role: "system", content: CHATBOT_SYSTEM_PROMPT },
         {
           role: "system",
-          content: `CONTEXTO DOCUMENTAL:\n${context}`,
+          content: `CONTEXTO DOCUMENTAL (usalo para responder con precisión; no inventes fuera de esto):\n${context}`,
         },
         ...history.map((m) => ({
           role: m.role,
-          content: m.content.slice(0, 2000),
+          content: m.content.slice(0, 2500),
         })),
         { role: "user", content: message },
       ],
-    });
+      ...(ai.provider === "deepseek"
+        ? ({ thinking: { type: "disabled" } } as Record<string, unknown>)
+        : {}),
+    } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
     const answer =
       completion.choices[0]?.message?.content?.trim() ||
