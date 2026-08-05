@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { QuoteForm } from "@/components/QuoteForm";
+import { PlanesComparador } from "@/components/PlanesComparador";
 import {
   faqSalud,
   modalidadesIngreso,
@@ -12,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "Salud · Prepagas",
   description:
-    "Prevención Salud con Marxel: planes a medida, coberturas especiales, aportes y preguntas frecuentes.",
+    "Compará Plan A2 y Plan A4 de Prevención Salud con Marxel: coberturas, odontología, óptica y cotización.",
 };
 
 export default function SaludPage() {
@@ -22,15 +23,36 @@ export default function SaludPage() {
         eyebrow="MarXel Salud"
         title="Prepagas con asesoramiento de verdad"
         description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular."
-        cta={{ href: "/cotizar?interes=Salud%20-%20Prepagas", label: "Cotizar prepaga" }}
+        cta={{ href: "#planes-a2-a4", label: "Comparar A2 y A4" }}
       />
+
+      <section
+        id="planes-a2-a4"
+        className="scroll-mt-24 border-b border-line/70 bg-atmosphere"
+      >
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+          <SectionHeading
+            eyebrow="Prevención Salud"
+            title="Plan A2 vs Plan A4"
+            description="Compará de forma interactiva las coberturas más importantes: rehabilitación, odontología, óptica, farmacia y beneficios familiares."
+          />
+          <div className="mt-10">
+            <PlanesComparador />
+          </div>
+          <p className="mt-8 text-center text-xs leading-relaxed text-muted">
+            La información es orientativa según los folletos de Prevención Salud.
+            Topes, carencias y reintegros se confirman al cotizar con tu asesor
+            Marxel. Prestaciones sujetas a auditoría médica/odontológica.
+          </p>
+        </div>
+      </section>
 
       <section className="border-b border-line/70 bg-cloud">
         <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
           <SectionHeading
-            eyebrow="Prevención Salud"
-            title="Planes a medida y coberturas especiales"
-            description="Desarrollamos la propuesta según tu perfil, tu zona y cómo querés atenderte: cartilla cerrada o sistema abierto con reintegros."
+            eyebrow="Líneas comerciales"
+            title="Toda la grilla, en simple"
+            description="Desde opciones iniciales hasta premium. A2 y A4 son dos de los planes más consultados."
           />
 
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
@@ -121,7 +143,7 @@ export default function SaludPage() {
           <div>
             <SectionHeading
               title="Pedí tu cotización de salud"
-              description="Completá nombre, provincia, edad y celular. Te contactamos para armar la propuesta."
+              description="Completá nombre, provincia, edad y celular. Te contactamos para armar la propuesta A2, A4 u otro plan."
             />
             <Link
               href="/cotizar?interes=Prevención%20Salud"

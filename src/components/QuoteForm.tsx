@@ -168,6 +168,8 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             <option value="">Asesoramiento general</option>
             <option value="Seguros">Seguros</option>
             <option value="Salud - Prepagas">Salud · Prepagas</option>
+            <option value="Prevención Salud Plan A2">Plan A2 · Prevención Salud</option>
+            <option value="Prevención Salud Plan A4">Plan A4 · Prevención Salud</option>
             <option value="Asistencia al viajero">Asistencia al viajero</option>
             <option value="Prevención Salud">Prevención Salud</option>
           </select>
