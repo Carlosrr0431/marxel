@@ -55,9 +55,6 @@ export default function HomePage() {
                     <br />
                     Un solo equipo.
                   </p>
-                  <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/70">
-                    Seguros · Salud · Viajero.
-                  </p>
                 </div>
               </div>
             </div>
