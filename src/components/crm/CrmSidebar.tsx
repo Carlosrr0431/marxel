@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
+import { Logo } from "@/components/Logo";
 
 const links = [
   { href: "/crm", label: "Dashboard", exact: true },
@@ -25,10 +26,8 @@ export function CrmSidebar({
     <aside className="flex w-full flex-col border-b border-white/10 bg-[linear-gradient(180deg,#051e36_0%,#0a355c_100%)] text-white lg:min-h-screen lg:w-60 lg:border-b-0 lg:border-r">
       <div className="px-5 py-5">
         <Link href="/crm" className="block">
-          <span className="font-display text-[1.55rem] font-bold tracking-[-0.04em]">
-            Mar<span className="text-[#f0c14b]">X</span>el
-          </span>
-          <span className="mt-1 flex items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-white/45">
+          <Logo href={null} light size="sm" />
+          <span className="mt-1.5 flex items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-white/45">
             CRM
             <span className="crm-pulse inline-block h-1.5 w-1.5 rounded-full bg-teal-soft" />
           </span>

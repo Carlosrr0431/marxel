@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     description: site.description,
     locale: "es_AR",
     type: "website",
+    images: [{ url: "/brand/marxel-logo.png", width: 800, height: 227 }],
+  },
+  icons: {
+    icon: "/brand/marxel-mark.png",
+    apple: "/apple-icon.png",
   },
 };
 

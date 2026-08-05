@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loginCrm } from "@/lib/crm/actions";
+import { Logo } from "@/components/Logo";
 
 export default async function CrmLoginPage({
   searchParams,
@@ -19,10 +20,8 @@ export default async function CrmLoginPage({
         action={loginCrm}
         className="relative w-full max-w-md rounded-[1.75rem] border border-white/15 bg-white/95 p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur"
       >
-        <p className="font-display text-3xl font-bold tracking-tight text-navy">
-          Mar<span className="text-teal">X</span>el
-        </p>
-        <p className="mt-1 text-xs font-bold uppercase tracking-[0.28em] text-teal">
+        <Logo href={null} size="lg" />
+        <p className="mt-2 text-xs font-bold uppercase tracking-[0.28em] text-teal">
           CRM Studio
         </p>
         <p className="mt-4 text-sm leading-relaxed text-muted">

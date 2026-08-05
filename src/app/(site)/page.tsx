@@ -2,6 +2,7 @@ import Link from "next/link";
 import { QuoteForm } from "@/components/QuoteForm";
 import { HeroProtectionVisual } from "@/components/HeroProtectionVisual";
 import { Icon, seguroIconMap } from "@/components/Icon";
+import { Logo } from "@/components/Logo";
 import { SectionHeading } from "@/components/SectionHeading";
 import { site, seguros } from "@/lib/content";
 
@@ -12,9 +13,9 @@ export default function HomePage() {
         <div className="container-mx grid items-center gap-10 py-12 sm:py-16 lg:min-h-[calc(100svh-4.25rem)] lg:grid-cols-[1.15fr_0.85fr] lg:gap-12 lg:py-10">
           <div className="relative z-10 max-w-xl">
             <p className="animate-rise eyebrow">Productora de seguros</p>
-            <h1 className="animate-rise-delay-1 mt-4 font-display text-[clamp(2.6rem,9vw,5rem)] font-bold leading-[0.94] tracking-[-0.045em] text-navy">
-              Mar<span className="text-teal">X</span>el
-            </h1>
+            <div className="animate-rise-delay-1 mt-5">
+              <Logo href={null} size="xl" />
+            </div>
             <p className="animate-rise-delay-2 mt-5 text-base leading-relaxed text-muted sm:text-xl">
               {site.tagline}. Seguros, prepagas y asistencia al viajero, con
               asesoramiento claro.

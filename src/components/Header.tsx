@@ -9,7 +9,6 @@ import { navLinks } from "@/lib/content";
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const showSalud = pathname.startsWith("/salud");
 
   useEffect(() => {
     setOpen(false);
@@ -25,7 +24,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-line/60 bg-cloud/80 backdrop-blur-xl">
       <div className="container-mx flex h-16 items-center justify-between gap-4 sm:h-[4.25rem]">
-        <Logo showSalud={showSalud} />
+        <Logo />
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
           {navLinks.map((link) => {

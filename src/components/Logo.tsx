@@ -1,45 +1,55 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type LogoProps = {
-  href?: string;
+  href?: string | null;
+  /** Kept for compatibility; official lockup always includes Salud */
   showSalud?: boolean;
   className?: string;
+  /** Light wordmark for dark backgrounds */
   light?: boolean;
+  size?: "sm" | "md" | "lg" | "xl";
 };
+
+const sizes = {
+  sm: { width: 118, height: 34 },
+  md: { width: 148, height: 42 },
+  lg: { width: 196, height: 56 },
+  xl: { width: 260, height: 74 },
+} as const;
 
 export function Logo({
   href = "/",
-  showSalud = false,
   className = "",
   light = false,
+  size = "md",
 }: LogoProps) {
-  const content = (
-    <span className={`inline-flex flex-col leading-none ${className}`}>
-      <span
-        className={`font-display text-[1.55rem] font-bold tracking-[-0.04em] sm:text-[1.7rem] ${
-          light ? "text-white" : "text-navy"
-        }`}
-      >
-        Mar
-        <span className={light ? "text-gold" : "text-teal"}>X</span>
-        el
-      </span>
-      {showSalud ? (
-        <span
-          className={`mt-0.5 pl-[2.55rem] text-[0.65rem] font-semibold uppercase tracking-[0.28em] sm:pl-[2.85rem] ${
-            light ? "text-white/75" : "text-teal"
-          }`}
-        >
-          Salud
-        </span>
-      ) : null}
-    </span>
+  const { width, height } = sizes[size];
+  const src = light
+    ? "/brand/marxel-logo-light.png"
+    : "/brand/marxel-logo.png";
+
+  const mark = (
+    <Image
+      src={src}
+      alt="Marxen Salud"
+      width={width}
+      height={height}
+      className={`h-auto w-auto ${className}`}
+      style={{ width, height: "auto" }}
+      priority={size === "md" || size === "lg"}
+    />
   );
 
-  if (!href) return content;
+  if (href === null || href === "") return mark;
+
   return (
-    <Link href={href} className="inline-block focus-visible:outline-none">
-      {content}
+    <Link
+      href={href}
+      className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/40 focus-visible:ring-offset-2"
+      aria-label="Marxen Salud"
+    >
+      {mark}
     </Link>
   );
 }
