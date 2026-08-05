@@ -1,6 +1,15 @@
 import OpenAI from "openai";
 import { CHATBOT_SYSTEM_PROMPT } from "@/lib/chatbot/prompt";
 import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
+import {
+  emptyQuoteState,
+  processQuoteFlow,
+  type QuoteState,
+} from "@/lib/chatbot/quote-flow";
+import {
+  updateLeadOptionalFromQuote,
+  upsertHotLeadFromQuote,
+} from "@/lib/chatbot/persist-lead";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,11 +43,34 @@ function getClient() {
   return null;
 }
 
+async function persistQuoteSideEffects(state: QuoteState): Promise<QuoteState> {
+  const next = { ...state, data: { ...state.data } };
+  try {
+    if (next.pendingSave === "hot") {
+      const leadId = await upsertHotLeadFromQuote(next);
+      next.leadId = leadId;
+      next.pendingSave = null;
+    } else if (next.pendingSave === "optional" && next.leadId) {
+      await updateLeadOptionalFromQuote(next);
+      next.pendingSave = null;
+    } else {
+      next.pendingSave = null;
+    }
+  } catch (err) {
+    console.error("[chat][persist]", err);
+    // Keep flow going even if CRM write fails; warn softly in answer later
+    next.pendingSave = null;
+    (next as QuoteState & { persistError?: boolean }).persistError = true;
+  }
+  return next;
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as {
       message?: string;
       history?: ChatMessage[];
+      quoteState?: QuoteState;
     };
 
     const message = (body.message || "").trim();
@@ -52,12 +84,33 @@ export async function POST(req: Request) {
       );
     }
 
+    // Cotización / precio → flujo estructurado (imagen CLAVE + OPCIONAL)
+    const quote = processQuoteFlow(message, body.quoteState || emptyQuoteState());
+    if (quote.handled && quote.answer) {
+      let state = await persistQuoteSideEffects(quote.state);
+      let answer = quote.answer;
+      if ((state as QuoteState & { persistError?: boolean }).persistError) {
+        answer +=
+          "\n\n(Nota: tuve un problema al guardar en el CRM; igual un asesor puede retomarlo si me pasás tu WhatsApp otra vez.)";
+        delete (state as QuoteState & { persistError?: boolean }).persistError;
+      }
+
+      return Response.json({
+        answer,
+        sources: quote.sources || [],
+        quoteState: state,
+        quickReplies: quote.quickReplies || [],
+        mode: "quote",
+      });
+    }
+
     const ai = getClient();
     if (!ai) {
       return Response.json(
         {
           error:
             "El asistente no está configurado todavía. Escribinos por WhatsApp.",
+          quoteState: body.quoteState || emptyQuoteState(),
         },
         { status: 503 }
       );
@@ -80,7 +133,12 @@ export async function POST(req: Request) {
       temperature: 0.35,
       max_tokens: 900,
       messages: [
-        { role: "system", content: CHATBOT_SYSTEM_PROMPT },
+        {
+          role: "system",
+          content: `${CHATBOT_SYSTEM_PROMPT}
+
+Si el usuario pide cotización, precio o presupuesto, invitá a decir “quiero cotizar” para iniciar el flujo de datos. No inventes precios.`,
+        },
         {
           role: "system",
           content: `CONTEXTO DOCUMENTAL (usalo para responder con precisión; no inventes fuera de esto):\n${context}`,
@@ -103,6 +161,9 @@ export async function POST(req: Request) {
     return Response.json({
       answer,
       sources: [...new Set(chunks.map((c) => c.sourceTitle))],
+      quoteState: body.quoteState || emptyQuoteState(),
+      quickReplies: [],
+      mode: "rag",
     });
   } catch (error) {
     console.error("[chat]", error);

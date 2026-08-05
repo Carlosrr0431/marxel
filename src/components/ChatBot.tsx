@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { site } from "@/lib/content";
+import {
+  emptyQuoteState,
+  type QuoteQuickReply,
+  type QuoteState,
+} from "@/lib/chatbot/quote-flow";
 
 type Msg = {
   id: string;
@@ -12,22 +17,24 @@ type Msg = {
 };
 
 const SUGGESTIONS = [
+  "Quiero cotizar",
   "¿Qué diferencia hay entre A2 y A4?",
   "¿A2 cubre ortodoncia?",
   "¿Qué farmacias están en cartilla?",
-  "¿Cómo me afilio siendo monotributista?",
 ];
 
 export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [quoteState, setQuoteState] = useState<QuoteState>(emptyQuoteState());
+  const [quickReplies, setQuickReplies] = useState<QuoteQuickReply[]>([]);
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "welcome",
       role: "assistant",
       content:
-        "Hola, soy el asistente de Marxel. Puedo ayudarte con planes A2/A4, cartillas y el manual de Prevención Salud. ¿Qué necesitás saber?",
+        "Hola, soy el asistente de Marxel. Puedo ayudarte con planes A2/A4, cartillas y armarte una cotización. ¿Qué necesitás?",
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -37,7 +44,7 @@ export function ChatBot() {
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open, loading]);
+  }, [messages, open, loading, quickReplies]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -51,6 +58,7 @@ export function ChatBot() {
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
+    setQuickReplies([]);
     setLoading(true);
 
     try {
@@ -62,13 +70,22 @@ export function ChatBot() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content, history }),
+        body: JSON.stringify({
+          message: content,
+          history,
+          quoteState,
+        }),
       });
       const data = (await res.json()) as {
         answer?: string;
         error?: string;
         sources?: string[];
+        quoteState?: QuoteState;
+        quickReplies?: QuoteQuickReply[];
       };
+
+      if (data.quoteState) setQuoteState(data.quoteState);
+      setQuickReplies(data.quickReplies || []);
 
       setMessages((prev) => [
         ...prev,
@@ -96,6 +113,8 @@ export function ChatBot() {
       setLoading(false);
     }
   }
+
+  const inQuote = quoteState.active;
 
   return (
     <>
@@ -149,7 +168,9 @@ export function ChatBot() {
             <div>
               <p className="font-display text-base font-semibold">Asistente Marxel</p>
               <p className="mt-0.5 text-xs text-white/65">
-                Prevención Salud · A2 / A4 · Cartillas
+                {inQuote
+                  ? "Cotización en curso · datos clave"
+                  : "Prevención Salud · A2 / A4 · Cotizar"}
               </p>
             </div>
             <Link
@@ -185,12 +206,28 @@ export function ChatBot() {
               </div>
             ))}
             {loading ? (
-              <p className="text-xs text-muted">Pensando con la documentación…</p>
+              <p className="text-xs text-muted">
+                {inQuote ? "Guardando y continuando…" : "Pensando con la documentación…"}
+              </p>
             ) : null}
             <div ref={bottomRef} />
           </div>
 
-          {messages.length <= 2 ? (
+          {quickReplies.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 border-t border-line/70 bg-white px-3 py-2.5">
+              {quickReplies.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => send(r.value)}
+                  disabled={loading}
+                  className="rounded-full border border-line bg-mist/70 px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          ) : messages.length <= 2 ? (
             <div className="flex flex-wrap gap-1.5 border-t border-line/70 bg-white px-3 py-2.5">
               {SUGGESTIONS.map((s) => (
                 <button
@@ -215,7 +252,11 @@ export function ChatBot() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Preguntá por A2, A4, cartilla…"
+              placeholder={
+                inQuote
+                  ? "Respondé acá…"
+                  : "Preguntá o escribí “quiero cotizar”…"
+              }
               className="field !min-h-11 flex-1 !rounded-xl !py-2.5 text-sm"
               disabled={loading}
               maxLength={1200}
