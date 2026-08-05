@@ -23,6 +23,12 @@ const SUGGESTIONS = [
   "¿Qué farmacias están en cartilla?",
 ];
 
+const LABORAL_OPTIONS: QuoteQuickReply[] = [
+  { label: "Monotributo", value: "Monotributo" },
+  { label: "Relación de dependencia", value: "Relación de dependencia" },
+  { label: "Particular", value: "Particular" },
+];
+
 export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -44,7 +50,7 @@ export function ChatBot() {
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open, loading, quickReplies]);
+  }, [messages, open, loading, quickReplies, quoteState.step]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -115,6 +121,11 @@ export function ChatBot() {
   }
 
   const inQuote = quoteState.active;
+  const showLaboralButtons =
+    !loading && quoteState.active && quoteState.step === "laboral";
+  const choiceButtons = showLaboralButtons
+    ? LABORAL_OPTIONS
+    : quickReplies;
 
   return (
     <>
@@ -157,40 +168,38 @@ export function ChatBot() {
       {open ? (
         <div
           id="marxel-chatbot"
-          className="fixed z-50 flex w-[min(100vw-1.5rem,24rem)] flex-col overflow-hidden rounded-[1.35rem] border border-line/80 bg-white shadow-[0_24px_60px_rgba(5,30,54,0.22)]"
+          className="fixed z-50 flex w-[min(100vw-1.25rem,24rem)] flex-col overflow-hidden rounded-2xl border border-line/80 bg-white shadow-[0_24px_60px_rgba(5,30,54,0.22)]"
           style={{
             right: "calc(1.1rem + env(safe-area-inset-right, 0px))",
             bottom: "calc(5.4rem + env(safe-area-inset-bottom, 0px))",
-            height: "min(70vh, 34rem)",
+            height: "min(78vh, 38rem)",
           }}
         >
-          <header className="flex items-start justify-between gap-3 bg-navy px-4 py-3.5 text-white">
-            <div>
-              <p className="font-display text-base font-semibold">Asistente Marxel</p>
-              <p className="mt-0.5 text-xs text-white/65">
-                {inQuote
-                  ? "Cotización en curso · datos clave"
-                  : "Prevención Salud · A2 / A4 · Cotizar"}
-              </p>
-            </div>
+          <header className="flex h-10 shrink-0 items-center justify-between gap-2 bg-navy px-3 text-white">
+            <p className="truncate text-[13px] font-semibold tracking-tight">
+              Asistente Marxel
+              <span className="ml-1.5 font-normal text-white/55">
+                {inQuote ? "· Cotización" : "· Salud"}
+              </span>
+            </p>
             <Link
               href={wa}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white/90 hover:bg-white/15"
+              className="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white"
             >
-              WhatsApp
+              WA
             </Link>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto bg-cloud/80 px-3.5 py-3.5">
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-cloud/80 px-3 py-3">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                  className={`max-w-[90%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${
                     m.role === "user"
                       ? "rounded-br-md bg-navy text-white"
                       : "rounded-bl-md border border-line/70 bg-white text-ink"
@@ -198,7 +207,7 @@ export function ChatBot() {
                 >
                   <p className="whitespace-pre-wrap">{m.content}</p>
                   {m.sources && m.sources.length > 0 ? (
-                    <p className="mt-2 border-t border-line/60 pt-2 text-[10px] leading-snug text-muted">
+                    <p className="mt-1.5 border-t border-line/60 pt-1.5 text-[10px] leading-snug text-muted">
                       Fuentes: {m.sources.slice(0, 3).join(" · ")}
                     </p>
                   ) : null}
@@ -206,29 +215,37 @@ export function ChatBot() {
               </div>
             ))}
             {loading ? (
-              <p className="text-xs text-muted">
-                {inQuote ? "Guardando y continuando…" : "Pensando con la documentación…"}
+              <p className="text-[11px] text-muted">
+                {inQuote ? "Continuando…" : "Pensando…"}
               </p>
             ) : null}
             <div ref={bottomRef} />
           </div>
 
-          {quickReplies.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 border-t border-line/70 bg-white px-3 py-2.5">
-              {quickReplies.map((r) => (
+          {choiceButtons.length > 0 ? (
+            <div
+              className={`shrink-0 border-t border-line/70 bg-white px-2.5 py-2 ${
+                showLaboralButtons ? "grid gap-1.5" : "flex flex-wrap gap-1.5"
+              }`}
+            >
+              {choiceButtons.map((r) => (
                 <button
                   key={r.value}
                   type="button"
                   onClick={() => send(r.value)}
                   disabled={loading}
-                  className="rounded-full border border-line bg-mist/70 px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
+                  className={
+                    showLaboralButtons
+                      ? "w-full rounded-xl border border-line bg-mist/80 px-3 py-2.5 text-left text-[13px] font-semibold text-navy transition hover:border-teal/40 hover:bg-aqua disabled:opacity-50"
+                      : "rounded-full border border-line bg-mist/70 px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
+                  }
                 >
                   {r.label}
                 </button>
               ))}
             </div>
           ) : messages.length <= 2 ? (
-            <div className="flex flex-wrap gap-1.5 border-t border-line/70 bg-white px-3 py-2.5">
+            <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-line/70 bg-white px-2.5 py-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
@@ -243,7 +260,7 @@ export function ChatBot() {
           ) : null}
 
           <form
-            className="flex gap-2 border-t border-line/70 bg-white p-3"
+            className="flex shrink-0 gap-2 border-t border-line/70 bg-white p-2.5"
             onSubmit={(e) => {
               e.preventDefault();
               send(input);
@@ -253,18 +270,20 @@ export function ChatBot() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={
-                inQuote
-                  ? "Respondé acá…"
-                  : "Preguntá o escribí “quiero cotizar”…"
+                showLaboralButtons
+                  ? "O elegí una opción arriba…"
+                  : inQuote
+                    ? "Respondé acá…"
+                    : "Preguntá o escribí quiero cotizar…"
               }
-              className="field !min-h-11 flex-1 !rounded-xl !py-2.5 text-sm"
+              className="field !min-h-10 flex-1 !rounded-xl !py-2 text-[13px]"
               disabled={loading}
               maxLength={1200}
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="btn btn-primary !min-h-11 !rounded-xl px-3.5 disabled:opacity-50"
+              className="btn btn-primary !min-h-10 !rounded-xl px-3 text-[13px] disabled:opacity-50"
             >
               Enviar
             </button>
