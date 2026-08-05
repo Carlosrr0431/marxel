@@ -26,8 +26,10 @@ export default async function CotizarPage({
         description="Nombre, provincia, edad y celular. Con eso armamos una orientación inicial y seguimos por WhatsApp."
       />
 
-      <section className="mx-auto max-w-xl px-5 py-14 sm:px-8 sm:py-16">
-        <QuoteForm defaultInterest={interes} />
+      <section className="bg-atmosphere">
+        <div className="container-mx max-w-xl py-14 sm:py-16">
+          <QuoteForm defaultInterest={interes} />
+        </div>
       </section>
     </>
   );

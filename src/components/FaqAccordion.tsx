@@ -7,18 +7,18 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+    <div className="surface divide-y divide-line/80 overflow-hidden !shadow-none">
       {items.map((item, i) => {
         const isOpen = open === i;
         return (
           <div key={item.q}>
             <button
               type="button"
-              className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition hover:bg-mist/60"
+              className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition hover:bg-mist/50 sm:px-6"
               aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : i)}
             >
-              <span className="text-[0.95rem] font-semibold text-navy">
+              <span className="text-[0.95rem] font-semibold leading-snug text-navy">
                 {item.q}
               </span>
               <span
@@ -31,7 +31,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
               </span>
             </button>
             {isOpen ? (
-              <div className="px-5 pb-5">
+              <div className="px-5 pb-5 sm:px-6">
                 <p className="max-w-3xl text-sm leading-relaxed text-muted">
                   {item.a}
                 </p>

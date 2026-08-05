@@ -20,15 +20,15 @@ export default function SegurosPage() {
         cta={{ href: "/cotizar?interes=Seguros", label: "Cotizar un seguro" }}
       />
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-        <div className="flex flex-col gap-8">
+      <section className="bg-cloud">
+        <div className="container-mx flex flex-col gap-5 py-14 sm:py-16 lg:gap-6 lg:py-20">
           {seguros.map((item, index) => (
             <article
               key={item.slug}
               id={item.slug}
-              className="scroll-mt-28 grid gap-6 rounded-[1.75rem] border border-line bg-white p-6 sm:p-8 lg:grid-cols-[0.9fr_1.3fr] lg:gap-10"
+              className="surface scroll-mt-28 grid gap-6 p-5 sm:p-7 lg:grid-cols-[0.85fr_1.35fr] lg:gap-10 lg:p-8"
             >
-              <div className="flex flex-col justify-between rounded-2xl bg-atmosphere p-6">
+              <div className="flex flex-col justify-between rounded-2xl bg-mist/80 p-5 sm:p-6">
                 <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white text-navy shadow-sm">
                   <Icon name={seguroIconMap[item.slug] || "shield"} />
                 </span>
@@ -50,7 +50,7 @@ export default function SegurosPage() {
                   {item.highlights.map((h) => (
                     <li
                       key={h}
-                      className="rounded-lg border border-line bg-mist/70 px-3 py-1.5 text-xs font-medium text-navy"
+                      className="rounded-lg border border-line/80 bg-mist/60 px-3 py-1.5 text-xs font-medium text-navy"
                     >
                       {h}
                     </li>
@@ -58,7 +58,7 @@ export default function SegurosPage() {
                 </ul>
                 <Link
                   href={`/cotizar?interes=${encodeURIComponent(item.title)}`}
-                  className="mt-7 inline-flex w-fit rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+                  className="btn btn-primary mt-7 w-full sm:w-auto"
                 >
                   Pedir cotización
                 </Link>

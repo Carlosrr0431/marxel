@@ -117,16 +117,19 @@ function CompararView({
 
       {/* Tabla comparativa */}
       <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_12px_40px_rgba(10,61,107,0.05)]">
-        <div className="grid grid-cols-[1.2fr_1fr_1fr] border-b border-line bg-[#f7fafc] px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted sm:px-5">
+        <div className="hidden grid-cols-[1.15fr_1fr_1fr] border-b border-line bg-[#f7fafc] px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-muted sm:grid">
           <span>{cat.titulo}</span>
           <span className="text-center text-blue">Plan A2</span>
           <span className="text-center text-teal">Plan A4</span>
         </div>
+        <p className="border-b border-line bg-[#f7fafc] px-4 py-3 text-sm font-semibold text-navy sm:hidden">
+          {cat.icono} {cat.titulo}
+        </p>
         <ul>
           {cat.filas.map((fila) => (
             <li
               key={fila.label}
-              className="grid grid-cols-1 gap-2 border-b border-line/70 px-4 py-4 last:border-b-0 sm:grid-cols-[1.2fr_1fr_1fr] sm:gap-3 sm:px-5"
+              className="grid grid-cols-1 gap-2.5 border-b border-line/70 px-4 py-4 last:border-b-0 sm:grid-cols-[1.15fr_1fr_1fr] sm:gap-3 sm:px-5"
             >
               <div>
                 <p className="text-sm font-semibold text-navy">{fila.label}</p>

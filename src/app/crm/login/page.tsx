@@ -47,15 +47,15 @@ export default async function CrmLoginPage({
           />
         </label>
 
-        <button type="submit" className="crm-btn crm-btn-primary mt-5 w-full py-3.5">
+        <button type="submit" className="btn btn-primary mt-5 w-full py-3.5">
           Entrar al CRM
         </button>
 
         <Link
           href="/"
-          className="mt-4 block text-center text-xs text-muted hover:text-navy"
+          className="mt-5 block text-center text-sm text-muted transition hover:text-navy"
         >
-          Volver al sitio
+          ← Volver al sitio
         </Link>
       </form>
     </div>

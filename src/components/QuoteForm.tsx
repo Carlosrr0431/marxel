@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { provincias } from "@/lib/content";
-import { site } from "@/lib/content";
+import { provincias, site } from "@/lib/content";
 
 type QuoteFormProps = {
   defaultInterest?: string;
@@ -18,8 +17,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
     e.preventDefault();
     setLoading(true);
     setError("");
-    const form = e.currentTarget;
-    const data = new FormData(form);
+    const data = new FormData(e.currentTarget);
     const nombre = String(data.get("nombre") || "");
     const provincia = String(data.get("provincia") || "");
     const edad = String(data.get("edad") || "");
@@ -59,13 +57,13 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
 
   if (sent) {
     return (
-      <div className="rounded-2xl border border-teal/25 bg-aqua/60 p-6 text-center">
+      <div className="surface border-teal/20 bg-aqua/50 p-6 text-center sm:p-8">
         <p className="font-display text-xl font-semibold text-navy">
           ¡Listo! Te estamos contactando
         </p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Guardamos tu consulta en nuestro CRM y abrimos WhatsApp para continuar.
-          Si no se abrió, escribinos al {site.phone}.
+          Guardamos tu consulta y abrimos WhatsApp. Si no se abrió, escribinos al{" "}
+          {site.phone}.
         </p>
       </div>
     );
@@ -74,7 +72,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
   return (
     <form
       onSubmit={onSubmit}
-      className={`rounded-2xl border border-line bg-white/90 ${compact ? "p-5" : "p-6 sm:p-8"}`}
+      className={`surface ${compact ? "p-5" : "p-5 sm:p-8"}`}
     >
       {!compact ? (
         <div className="mb-6">
@@ -82,8 +80,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             Cotizá en minutos
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Completá tus datos y te acompañamos con una propuesta clara. Sin
-            compromiso.
+            Completá tus datos. Sin compromiso.
           </p>
         </div>
       ) : null}
@@ -104,20 +101,13 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             required
             autoComplete="name"
             placeholder="Ej. Ana Pérez"
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm text-ink outline-none transition focus:border-sky focus:ring-2 focus:ring-sky/20"
+            className="field"
           />
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink">
-            Provincia
-          </span>
-          <select
-            name="provincia"
-            required
-            defaultValue=""
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm text-ink outline-none transition focus:border-sky focus:ring-2 focus:ring-sky/20"
-          >
+          <span className="mb-1.5 block text-sm font-medium text-ink">Provincia</span>
+          <select name="provincia" required defaultValue="" className="field">
             <option value="" disabled>
               Seleccioná
             </option>
@@ -138,21 +128,19 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             max={99}
             required
             placeholder="30"
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm text-ink outline-none transition focus:border-sky focus:ring-2 focus:ring-sky/20"
+            className="field"
           />
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="mb-1.5 block text-sm font-medium text-ink">
-            Celular
-          </span>
+          <span className="mb-1.5 block text-sm font-medium text-ink">Celular</span>
           <input
             name="celular"
             type="tel"
             required
             autoComplete="tel"
             placeholder="Ej. 387 555-1234"
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm text-ink outline-none transition focus:border-sky focus:ring-2 focus:ring-sky/20"
+            className="field"
           />
         </label>
 
@@ -160,11 +148,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
           <span className="mb-1.5 block text-sm font-medium text-ink">
             ¿Qué te interesa?
           </span>
-          <select
-            name="interes"
-            defaultValue={defaultInterest}
-            className="w-full rounded-xl border border-line bg-cloud px-3.5 py-3 text-sm text-ink outline-none transition focus:border-sky focus:ring-2 focus:ring-sky/20"
-          >
+          <select name="interes" defaultValue={defaultInterest} className="field">
             <option value="">Asesoramiento general</option>
             <option value="Seguros">Seguros</option>
             <option value="Salud - Prepagas">Salud · Prepagas</option>
@@ -176,17 +160,12 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
         </label>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-5 w-full rounded-xl bg-navy px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:opacity-70"
-      >
+      <button type="submit" disabled={loading} className="btn btn-primary mt-5 w-full disabled:opacity-70">
         {loading ? "Enviando…" : "Ver planes y cotizar"}
       </button>
 
       <p className="mt-3 text-center text-xs leading-relaxed text-muted">
-        La información es orientativa. La cotización formal la cerramos con tu
-        asesor Marxel.
+        Cotización orientativa. La formal la cerramos con tu asesor Marxel.
       </p>
     </form>
   );

@@ -30,37 +30,33 @@ export default function SaludPage() {
         id="planes-a2-a4"
         className="scroll-mt-24 border-b border-line/70 bg-atmosphere"
       >
-        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+        <div className="container-mx py-14 sm:py-16 lg:py-20">
           <SectionHeading
             eyebrow="Prevención Salud"
             title="Plan A2 vs Plan A4"
-            description="Compará de forma interactiva las coberturas más importantes: rehabilitación, odontología, óptica, farmacia y beneficios familiares."
+            description="Compará de forma clara e interactiva: rehabilitación, odontología, óptica, farmacia y beneficios."
           />
-          <div className="mt-10">
+          <div className="mt-8 sm:mt-10">
             <PlanesComparador />
           </div>
           <p className="mt-8 text-center text-xs leading-relaxed text-muted">
-            La información es orientativa según los folletos de Prevención Salud.
-            Topes, carencias y reintegros se confirman al cotizar con tu asesor
-            Marxel. Prestaciones sujetas a auditoría médica/odontológica.
+            Información orientativa según folletos de Prevención Salud. Topes y
+            reintegros se confirman al cotizar. Prestaciones sujetas a auditoría.
           </p>
         </div>
       </section>
 
       <section className="border-b border-line/70 bg-cloud">
-        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+        <div className="container-mx py-14 sm:py-16 lg:py-20">
           <SectionHeading
             eyebrow="Líneas comerciales"
             title="Toda la grilla, en simple"
             description="Desde opciones iniciales hasta premium. A2 y A4 son dos de los planes más consultados."
           />
 
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             {planesSalud.map((plan) => (
-              <article
-                key={plan.linea}
-                className="flex flex-col rounded-2xl border border-line bg-white p-6"
-              >
+              <article key={plan.linea} className="surface flex flex-col p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
                   Línea {plan.linea}
                 </p>
@@ -95,18 +91,15 @@ export default function SaludPage() {
       </section>
 
       <section className="bg-mist/40">
-        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+        <div className="container-mx py-14 sm:py-16 lg:py-20">
           <SectionHeading
             eyebrow="Modalidades de ingreso"
             title="¿Cómo te sumás?"
             description="El camino cambia según tu situación laboral. Te guiamos en cada caso."
           />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-3 md:gap-5">
             {modalidadesIngreso.map((m) => (
-              <article
-                key={m.title}
-                className="rounded-2xl border border-line bg-white p-6"
-              >
+              <article key={m.title} className="surface p-6">
                 <h3 className="font-display text-lg font-semibold text-navy">
                   {m.title}
                 </h3>
@@ -118,7 +111,7 @@ export default function SaludPage() {
       </section>
 
       <section className="border-y border-line/70 bg-cloud">
-        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+        <div className="container-mx py-14 sm:py-16 lg:py-20">
           <SectionHeading
             eyebrow="Preguntas frecuentes"
             title="Respuestas claras, sin vueltas"
@@ -139,7 +132,7 @@ export default function SaludPage() {
       </section>
 
       <section className="bg-atmosphere">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:items-start">
+        <div className="container-mx grid gap-10 py-14 sm:py-16 lg:grid-cols-2 lg:items-start lg:py-20">
           <div>
             <SectionHeading
               title="Pedí tu cotización de salud"

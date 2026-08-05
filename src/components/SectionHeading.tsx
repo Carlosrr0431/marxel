@@ -15,16 +15,14 @@ export function SectionHeading({
 }: SectionHeadingProps) {
   return (
     <div className={align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
-      {eyebrow ? (
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-teal">
-          {eyebrow}
-        </p>
-      ) : null}
-      <h2 className="font-display text-3xl font-semibold tracking-tight text-navy sm:text-4xl">
+      {eyebrow ? <p className="eyebrow mb-3">{eyebrow}</p> : null}
+      <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-navy sm:text-4xl">
         {title}
       </h2>
       {description ? (
-        <p className="mt-3 text-base leading-relaxed text-muted">{description}</p>
+        <p className="mt-3 text-[0.98rem] leading-relaxed text-muted sm:text-base">
+          {description}
+        </p>
       ) : null}
     </div>
   );
@@ -42,24 +40,17 @@ export function PageHero({
   cta?: { href: string; label: string };
 }) {
   return (
-    <section className="border-b border-line/80 bg-atmosphere">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
-        {eyebrow ? (
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-teal">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1 className="max-w-3xl font-display text-4xl font-semibold tracking-tight text-navy sm:text-5xl">
+    <section className="relative overflow-hidden border-b border-line/70 bg-atmosphere">
+      <div className="container-mx py-14 sm:py-16 lg:py-20">
+        {eyebrow ? <p className="eyebrow mb-3">{eyebrow}</p> : null}
+        <h1 className="max-w-3xl font-display text-[2.1rem] font-semibold leading-[1.1] tracking-tight text-navy sm:text-5xl">
           {title}
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
           {description}
         </p>
         {cta ? (
-          <Link
-            href={cta.href}
-            className="mt-8 inline-flex rounded-xl bg-navy px-5 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep"
-          >
+          <Link href={cta.href} className="btn btn-primary mt-8">
             {cta.label}
           </Link>
         ) : null}

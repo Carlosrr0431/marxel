@@ -21,52 +21,51 @@ export default function ContactoPage() {
         description="Estamos para asesorarte en seguros, salud y asistencia al viajero."
       />
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-        <div className="grid gap-5 md:grid-cols-3">
-          <a
-            href={`mailto:${site.email}`}
-            className="rounded-2xl border border-line bg-white p-6 transition hover:border-sky/40"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
-              Email
-            </p>
-            <p className="mt-3 font-display text-xl font-semibold text-navy">
-              {site.email}
-            </p>
-          </a>
-          <a
-            href={`tel:${site.phone.replace(/\s/g, "")}`}
-            className="rounded-2xl border border-line bg-white p-6 transition hover:border-sky/40"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
-              Teléfono
-            </p>
-            <p className="mt-3 font-display text-xl font-semibold text-navy">
-              {site.phone}
-            </p>
-          </a>
-          <a
-            href={wa}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-2xl border border-line bg-white p-6 transition hover:border-sky/40"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
-              WhatsApp
-            </p>
-            <p className="mt-3 font-display text-xl font-semibold text-navy">
-              Escribinos ahora
-            </p>
-          </a>
-        </div>
+      <section className="bg-cloud">
+        <div className="container-mx py-14 sm:py-16">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+            <a
+              href={`mailto:${site.email}`}
+              className="surface group p-6 transition hover:border-sky/40"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                Email
+              </p>
+              <p className="mt-3 break-all font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                {site.email}
+              </p>
+            </a>
+            <a
+              href={`tel:${site.phone.replace(/\s/g, "")}`}
+              className="surface group p-6 transition hover:border-sky/40"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                Teléfono
+              </p>
+              <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                {site.phone}
+              </p>
+            </a>
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="surface group p-6 transition hover:border-sky/40 sm:col-span-2 lg:col-span-1"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                WhatsApp
+              </p>
+              <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                Escribinos ahora
+              </p>
+            </a>
+          </div>
 
-        <div className="mt-10 text-center">
-          <Link
-            href="/cotizar"
-            className="inline-flex rounded-xl bg-navy px-5 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep"
-          >
-            Ir a cotizar
-          </Link>
+          <div className="mt-10 flex justify-center">
+            <Link href="/cotizar" className="btn btn-primary">
+              Ir a cotizar
+            </Link>
+          </div>
         </div>
       </section>
     </>
