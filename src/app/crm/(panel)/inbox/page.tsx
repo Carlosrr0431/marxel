@@ -10,28 +10,58 @@ export default async function InboxPage() {
   const supabase = createServiceClient();
   const now = new Date().toISOString();
 
-  const [{ data: overdueSegs }, { data: newLeads }, { data: hotLeads }] = await Promise.all([
-    supabase
-      .from("seguimientos")
-      .select("*, leads(id,nombre,celular), afiliados(id,nombre,celular)")
-      .eq("estado", "pendiente")
-      .lte("programado_para", now)
-      .order("programado_para", { ascending: true })
-      .limit(30),
-    supabase
-      .from("leads")
-      .select("*")
-      .eq("estado", "nuevo")
-      .order("created_at", { ascending: false })
-      .limit(15),
-    supabase
-      .from("leads")
-      .select("*")
-      .gte("puntaje", 60)
-      .not("estado", "in", "(ganado,perdido)")
-      .order("puntaje", { ascending: false })
-      .limit(10),
-  ]);
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [{ data: overdueSegs }, { data: nuevos }, { data: chatbotLeads }, { data: hotByScore }, { data: hotByChat }] =
+    await Promise.all([
+      supabase
+        .from("seguimientos")
+        .select("*, leads(id,nombre,celular), afiliados(id,nombre,celular)")
+        .eq("estado", "pendiente")
+        .lte("programado_para", now)
+        .order("programado_para", { ascending: true })
+        .limit(30),
+      supabase
+        .from("leads")
+        .select("*")
+        .eq("estado", "nuevo")
+        .order("created_at", { ascending: false })
+        .limit(15),
+      supabase
+        .from("leads")
+        .select("*")
+        .eq("origen_detalle", "chatbot")
+        .gte("created_at", since)
+        .not("estado", "in", "(ganado,perdido)")
+        .order("created_at", { ascending: false })
+        .limit(15),
+      supabase
+        .from("leads")
+        .select("*")
+        .gte("puntaje", 60)
+        .not("estado", "in", "(ganado,perdido)")
+        .order("puntaje", { ascending: false })
+        .limit(10),
+      supabase
+        .from("leads")
+        .select("*")
+        .contains("tags", ["caliente"])
+        .not("estado", "in", "(ganado,perdido)")
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+  const newMap = new Map<string, Lead>();
+  for (const l of [...(chatbotLeads || []), ...(nuevos || [])] as Lead[]) {
+    newMap.set(l.id, l);
+  }
+  const newLeads = Array.from(newMap.values()).slice(0, 15);
+
+  const hotMap = new Map<string, Lead>();
+  for (const l of [...(hotByScore || []), ...(hotByChat || [])] as Lead[]) {
+    hotMap.set(l.id, l);
+  }
+  const hotLeads = Array.from(hotMap.values()).slice(0, 10);
 
   return (
     <div className="space-y-7">
@@ -87,6 +117,7 @@ export default async function InboxPage() {
         <div className="space-y-5">
           <section className="crm-card p-5">
             <h2 className="font-display text-lg font-semibold text-navy">Leads nuevos</h2>
+            <p className="mt-1 text-xs text-muted">Nuevos + chatbot de la última semana</p>
             <ul className="mt-4 space-y-3">
               {(newLeads as Lead[] | null)?.map((l) => (
                 <li key={l.id} className="flex items-center gap-3">
@@ -96,8 +127,14 @@ export default async function InboxPage() {
                       {l.nombre}
                     </Link>
                     <p className="truncate text-xs text-muted">
+                      {l.origen_detalle === "chatbot" ? "Chatbot · " : ""}
                       {l.plan_interes || l.producto} · {relativeTime(l.created_at)}
                     </p>
+                    {l.notas_iniciales ? (
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
+                        {l.notas_iniciales.replace(/^Lead desde chatbot Marxel\n/, "")}
+                      </p>
+                    ) : null}
                   </div>
                   <Link
                     href={whatsappLink(l.celular, `Hola ${l.nombre}, te escribo de Marxel.`)}
@@ -118,22 +155,31 @@ export default async function InboxPage() {
             <h2 className="font-display text-lg font-semibold text-navy">
               Oportunidades calientes
             </h2>
-            <p className="mt-1 text-xs text-muted">Score ≥ 60, aún abiertos</p>
+            <p className="mt-1 text-xs text-muted">Score ≥ 60 o tag caliente</p>
             <ul className="mt-4 space-y-3">
-              {(hotLeads as Lead[] | null)?.map((l) => (
+              {hotLeads.map((l) => (
                 <li key={l.id} className="flex items-center justify-between gap-2">
-                  <Link href={`/crm/leads/${l.id}`} className="font-medium text-navy hover:underline">
-                    {l.nombre}
-                  </Link>
-                  <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <Link href={`/crm/leads/${l.id}`} className="font-medium text-navy hover:underline">
+                      {l.nombre}
+                    </Link>
+                    {l.notas_iniciales ? (
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
+                        {l.notas_iniciales.replace(/^Lead desde chatbot Marxel\n/, "")}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
                     <span className={`crm-badge ${prioridadColor(l.prioridad)}`}>
                       {l.prioridad}
                     </span>
-                    <span className="font-display text-sm font-bold text-teal">{l.puntaje}</span>
+                    <span className="font-display text-sm font-bold text-teal">
+                      {l.puntaje || 0}
+                    </span>
                   </div>
                 </li>
               ))}
-              {!hotLeads?.length ? (
+              {!hotLeads.length ? (
                 <li className="text-sm text-muted">Todavía no hay leads calientes.</li>
               ) : null}
             </ul>

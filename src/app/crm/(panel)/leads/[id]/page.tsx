@@ -152,6 +152,17 @@ export default async function LeadDetailPage({
         </div>
       ) : null}
 
+      {l.origen_detalle === "chatbot" && l.notas_iniciales ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-700">
+            Datos del chatbot
+          </p>
+          <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-navy">
+            {l.notas_iniciales}
+          </pre>
+        </div>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
           <form action={saveLead} className="rounded-2xl border border-line bg-white p-5">

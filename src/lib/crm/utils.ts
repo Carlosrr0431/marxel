@@ -47,6 +47,11 @@ export function scoreLead(lead: Partial<Lead>): number {
   if (lead.origen === "referido") score += 10;
   if (lead.estado === "interesado" || lead.estado === "cotizado") score += 15;
   if (lead.estado === "documentacion") score += 20;
+  const tags = lead.tags || [];
+  if (tags.includes("chatbot") || tags.includes("caliente")) score += 15;
+  if (tags.includes("completo")) score += 5;
+  if (lead.origen_detalle === "chatbot") score += 10;
+  if (lead.notas_iniciales && lead.notas_iniciales.length > 40) score += 5;
   return Math.min(100, score);
 }
 

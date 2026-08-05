@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import type { ModalidadIngreso } from "@/lib/crm/types";
+import { scoreLead } from "@/lib/crm/utils";
 import {
   buildNotas,
   parseEdadTitular,
@@ -14,6 +15,32 @@ function toModalidad(data: QuoteData): ModalidadIngreso {
   return "sin_definir";
 }
 
+function buildPayload(data: QuoteData, notas: string, tags: string[]) {
+  const payload = {
+    nombre: data.nombre!,
+    celular: data.celular!,
+    edad: parseEdadTitular(data.edades),
+    localidad: data.localidad || null,
+    provincia: "Salta",
+    producto: "salud" as const,
+    plan_interes: "Prevención Salud · cotización chatbot",
+    coberturas:
+      [data.prepaga, data.uso].filter(Boolean).join(" · ") || null,
+    modalidad: toModalidad(data),
+    origen: "web" as const,
+    origen_detalle: "chatbot",
+    estado: "interesado" as const,
+    prioridad: "urgente" as const,
+    tags,
+    notas_iniciales: notas,
+    page_path: "/chatbot",
+    proximo_contacto_at: new Date(
+      Date.now() + 2 * 60 * 60 * 1000
+    ).toISOString(),
+  };
+  return { ...payload, puntaje: scoreLead(payload) };
+}
+
 export async function upsertHotLeadFromQuote(state: QuoteState) {
   const data = state.data;
   if (!data.nombre || !data.celular) {
@@ -23,26 +50,7 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
   const supabase = createServiceClient();
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · listo para cotizar");
   const tags = ["chatbot", "caliente", "cotizar", "salud"];
-
-  const payload = {
-    nombre: data.nombre,
-    celular: data.celular,
-    edad: parseEdadTitular(data.edades),
-    localidad: data.localidad || null,
-    provincia: "Salta",
-    producto: "salud" as const,
-    plan_interes: "Prevención Salud · cotización chatbot",
-    coberturas: data.prepaga || data.uso || null,
-    modalidad: toModalidad(data),
-    origen: "web" as const,
-    origen_detalle: "chatbot",
-    estado: "interesado" as const,
-    prioridad: "urgente" as const,
-    tags,
-    notas_iniciales: notas,
-    page_path: "/chatbot",
-    proximo_contacto_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-  };
+  const payload = buildPayload(data, notas, tags);
 
   if (state.leadId) {
     const { data: updated, error } = await supabase
@@ -94,15 +102,30 @@ export async function updateLeadOptionalFromQuote(state: QuoteState) {
   const supabase = createServiceClient();
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · datos opcionales cargados");
 
+  const tags = ["chatbot", "caliente", "cotizar", "salud", "completo"];
+  const patch = {
+    localidad: data.localidad || null,
+    provincia: "Salta",
+    coberturas: [data.prepaga, data.uso].filter(Boolean).join(" · ") || null,
+    notas_iniciales: notas,
+    tags,
+    prioridad: "urgente" as const,
+    modalidad: toModalidad(data),
+    edad: parseEdadTitular(data.edades),
+    updated_at: new Date().toISOString(),
+  };
+
   const { error } = await supabase
     .from("leads")
     .update({
-      localidad: data.localidad || null,
-      provincia: "Salta",
-      coberturas: [data.prepaga, data.uso].filter(Boolean).join(" · ") || null,
-      notas_iniciales: notas,
-      tags: ["chatbot", "caliente", "cotizar", "salud", "completo"],
-      updated_at: new Date().toISOString(),
+      ...patch,
+      puntaje: scoreLead({
+        ...patch,
+        producto: "salud",
+        estado: "interesado",
+        origen_detalle: "chatbot",
+        plan_interes: "Prevención Salud · cotización chatbot",
+      }),
     })
     .eq("id", state.leadId);
 
