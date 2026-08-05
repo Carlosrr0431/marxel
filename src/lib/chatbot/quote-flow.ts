@@ -32,7 +32,6 @@ export type QuoteState = {
   step: QuoteStep;
   data: QuoteData;
   leadId?: string;
-  /** Señales para que la API persista en CRM */
   pendingSave?: "hot" | "optional" | null;
 };
 
@@ -58,6 +57,10 @@ const SKIP =
 
 export function detectsQuoteIntent(text: string): boolean {
   return QUOTE_INTENT.test(text.trim());
+}
+
+function firstName(nombre: string): string {
+  return nombre.trim().split(/\s+/)[0] || nombre;
 }
 
 function normalizeLaboral(text: string): ModalidadQuote | null {
@@ -123,18 +126,10 @@ const SKIP_REPLIES: QuoteQuickReply[] = [
   { label: "Ahora no", value: "Ahora no" },
 ];
 
-function askNombre(): { answer: string } {
-  return {
-    answer:
-      "Perfecto, te armo la cotización. Empecemos por lo esencial.\n\n¿Cómo es tu nombre?",
-  };
-}
-
 /**
- * Avanza el flujo de cotización según la imagen:
- * CLAVE: nombre → edades → laboral (+ detalle) → WhatsApp (para CRM)
- * Al completar CLAVE = lead caliente.
- * OPCIONAL: prepaga → localidad → uso.
+ * Flujo natural, pregunta por pregunta:
+ * CLAVE: nombre → edades → laboral (+ detalle) → WhatsApp
+ * OPCIONAL: prepaga → localidad → uso
  */
 export function processQuoteFlow(
   message: string,
@@ -145,27 +140,25 @@ export function processQuoteFlow(
     ? { ...prev, data: { ...prev.data } }
     : emptyQuoteState();
 
-  // Start flow
   if (!state.active) {
     if (!detectsQuoteIntent(text)) {
       return { handled: false, state };
     }
-    state = {
-      active: true,
-      step: "nombre",
-      data: {},
+    state = { active: true, step: "nombre", data: {} };
+    return {
+      handled: true,
+      state,
+      answer:
+        "Dale, te ayudo con la cotización. Vamos de a una para que sea más fácil.\n\n¿Cómo te llamás?",
     };
-    const start = askNombre();
-    return { handled: true, state, answer: start.answer };
   }
 
-  // Allow cancel
   if (/^(cancelar|salir|dejar\s+cotiz)/i.test(text)) {
     return {
       handled: true,
       state: emptyQuoteState(),
       answer:
-        "Listo, cancelé la cotización. Si querés retomarla después, pedime de nuevo una cotización.",
+        "Sin problema, lo dejamos acá. Cuando quieras retomar, decime quiero cotizar.",
     };
   }
 
@@ -175,7 +168,7 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "Decime tu nombre completo, por favor.",
+          answer: "Decime tu nombre, así te armo la cotización a tu medida.",
         };
       }
       state.data.nombre = text.replace(/^me llamo\s+/i, "").trim();
@@ -183,7 +176,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: `Gracias, ${state.data.nombre}.\n\n¿Cuál es el rango de edad del titular y del grupo familiar?\n(Ej: titular 34, pareja 32, hijo 5)`,
+        answer: `Gracias, ${firstName(state.data.nombre)}. Ahora contame las edades: la del titular y las del grupo familiar, si hay.`,
       };
     }
 
@@ -192,7 +185,8 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "Contame las edades del titular y del grupo familiar.",
+          answer:
+            "Necesito las edades del titular y del grupo familiar para cotizar bien.",
         };
       }
       state.data.edades = text;
@@ -201,7 +195,7 @@ export function processQuoteFlow(
         handled: true,
         state,
         answer:
-          "¿Cuál es tu situación laboral?\n\n1) Monotributo\n2) Relación de dependencia\n3) Particular",
+          "Perfecto. ¿Cómo estás laboralmente hoy: monotributo, relación de dependencia o particular?",
         quickReplies: LABORAL_REPLIES,
       };
     }
@@ -213,7 +207,7 @@ export function processQuoteFlow(
           handled: true,
           state,
           answer:
-            "Elegí una opción: Monotributo, Relación de dependencia o Particular.",
+            "Contame si sos monotributista, estás en relación de dependencia o particular.",
           quickReplies: LABORAL_REPLIES,
         };
       }
@@ -224,7 +218,7 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "¿En qué categoría de monotributo estás?",
+          answer: "Bien. ¿En qué categoría de monotributo estás?",
         };
       }
       if (modalidad === "relacion_dependencia") {
@@ -232,16 +226,15 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "¿Cuál es tu sueldo bruto estimado?",
+          answer: "Bien. ¿Cuál es tu sueldo bruto estimado, más o menos?",
         };
       }
-      // particular → nada extra, pedir WhatsApp y marcar caliente
+
       state.step = "whatsapp";
       return {
         handled: true,
         state,
-        answer:
-          "Genial. Con estos datos ya sos un lead caliente listo para cotizar.\n\n¿A qué WhatsApp te envío la cotización? (con código de área)",
+        answer: `Genial, ${firstName(state.data.nombre || "")}. Con eso ya puedo cotizarte.\n\n¿A qué WhatsApp te mando la propuesta?`,
       };
     }
 
@@ -252,8 +245,8 @@ export function processQuoteFlow(
           state,
           answer:
             state.data.modalidad === "monotributo"
-              ? "Indicame la categoría del monotributo."
-              : "Indicame el sueldo bruto estimado.",
+              ? "Decime la categoría del monotributo."
+              : "Decime el sueldo bruto estimado.",
         };
       }
       if (state.data.modalidad === "monotributo") {
@@ -265,8 +258,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer:
-          "Perfecto. Con eso ya estás listo para cotizar (lead caliente).\n\n¿A qué WhatsApp te mando la cotización? (con código de área)",
+        answer: `Listo, ${firstName(state.data.nombre || "")}. Ya tengo lo necesario para cotizarte.\n\n¿A qué WhatsApp te envío la propuesta?`,
       };
     }
 
@@ -277,7 +269,7 @@ export function processQuoteFlow(
           handled: true,
           state,
           answer:
-            "Pasame un número de WhatsApp válido, con código de área. Ej: 3875123456",
+            "Pasame el WhatsApp con código de área, por ejemplo 3875123456.",
         };
       }
       state.data.celular = phone;
@@ -287,7 +279,7 @@ export function processQuoteFlow(
         handled: true,
         state,
         answer:
-          "Listo, ya quedó cargado en el CRM como lead caliente para cotizar.\n\nSi querés, sumamos unos datos opcionales (podés saltarlos):\n¿Tenés prepaga u obra social actual?",
+          "Quedó registrado. Un asesor te va a escribir por ahí.\n\nSi querés, te hago tres preguntas más opcionales. ¿Tenés prepaga u obra social ahora?",
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -301,7 +293,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿En qué localidad estás? (Salta y alrededores)",
+        answer: "¿De qué localidad sos? Pensamos en Salta y alrededores.",
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -315,7 +307,8 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿En qué suele usar la cobertura? (consultas, estudios, etc.)",
+        answer:
+          "Última: ¿para qué suele usarla más? Por ejemplo consultas, estudios o internaciones.",
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -328,8 +321,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state: { ...state, active: false, step: "done" },
-        answer:
-          "Excelente. Ya tenemos todo para cotizarte. Un asesor de Marxel te va a contactar por WhatsApp con la propuesta.\n\nSi querés, también puedo responderte dudas de A2/A4 o cartilla mientras tanto.",
+        answer: `Gracias, ${firstName(state.data.nombre || "")}. Ya está todo. Te van a contactar por WhatsApp con la cotización.\n\nSi querés, mientras tanto puedo responderte dudas de A2, A4 o cartilla.`,
       };
     }
 
@@ -341,4 +333,17 @@ export function processQuoteFlow(
 export function parseEdadTitular(edades: string | undefined): number | null {
   if (!edades) return null;
   return extractAgeHint(edades);
+}
+
+/** Quita markdown tipo **negrita** y viñetas con * */
+export function stripMarkdownNoise(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/^\s*[-*•]\s+/gm, "")
+    .replace(/(^|\n)\s*\*\s+/g, "$1")
+    .replace(/\*/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

@@ -1,15 +1,16 @@
-import OpenAI from "openai";
-import { CHATBOT_SYSTEM_PROMPT } from "@/lib/chatbot/prompt";
-import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
 import {
   emptyQuoteState,
   processQuoteFlow,
+  stripMarkdownNoise,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
 import {
   updateLeadOptionalFromQuote,
   upsertHotLeadFromQuote,
 } from "@/lib/chatbot/persist-lead";
+import { CHATBOT_SYSTEM_PROMPT } from "@/lib/chatbot/prompt";
+import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
+import OpenAI from "openai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
       }
 
       return Response.json({
-        answer,
+        answer: stripMarkdownNoise(answer),
         sources: quote.sources || [],
         quoteState: state,
         quickReplies: quote.quickReplies || [],
@@ -154,9 +155,10 @@ Si el usuario pide cotización, precio o presupuesto, invitá a decir “quiero 
         : {}),
     } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
-    const answer =
+    const answer = stripMarkdownNoise(
       completion.choices[0]?.message?.content?.trim() ||
-      "No pude generar una respuesta. Probá de nuevo o escribinos por WhatsApp.";
+        "No pude generar una respuesta. Probá de nuevo o escribinos por WhatsApp."
+    );
 
     return Response.json({
       answer,
