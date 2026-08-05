@@ -40,7 +40,7 @@ export function ChatBot() {
       id: "welcome",
       role: "assistant",
       content:
-        "Hola, soy el asistente de Marxel. Puedo contarte sobre planes A2 y A4, cartillas, o armarte una cotización paso a paso. ¿En qué te ayudo?",
+        "Hola, soy el asistente de Marxel. Preguntame por A2/A4 o decí quiero cotizar.",
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);

@@ -1,4 +1,5 @@
 import {
+  detectsQuoteIntent,
   emptyQuoteState,
   processQuoteFlow,
   stripMarkdownNoise,
@@ -91,8 +92,7 @@ export async function POST(req: Request) {
       let state = await persistQuoteSideEffects(quote.state);
       let answer = quote.answer;
       if ((state as QuoteState & { persistError?: boolean }).persistError) {
-        answer +=
-          "\n\n(Nota: tuve un problema al guardar en el CRM; igual un asesor puede retomarlo si me pasás tu WhatsApp otra vez.)";
+        answer += " No pude guardar en el CRM; reintentá con tu WhatsApp.";
         delete (state as QuoteState & { persistError?: boolean }).persistError;
       }
 
@@ -126,27 +126,25 @@ export async function POST(req: Request) {
       )
       .slice(-10);
 
-    const chunks = retrieveChunks(message, 10);
+    const chunks = retrieveChunks(message, 6);
     const context = formatContext(chunks);
 
     const completion = await ai.client.chat.completions.create({
       model: ai.model,
-      temperature: 0.35,
-      max_tokens: 900,
+      temperature: 0.2,
+      max_tokens: 220,
       messages: [
         {
           role: "system",
-          content: `${CHATBOT_SYSTEM_PROMPT}
-
-Si el usuario pide cotización, precio o presupuesto, invitá a decir “quiero cotizar” para iniciar el flujo de datos. No inventes precios.`,
+          content: CHATBOT_SYSTEM_PROMPT,
         },
         {
           role: "system",
-          content: `CONTEXTO DOCUMENTAL (usalo para responder con precisión; no inventes fuera de esto):\n${context}`,
+          content: `CONTEXTO:\n${context}`,
         },
         ...history.map((m) => ({
           role: m.role,
-          content: m.content.slice(0, 2500),
+          content: m.content.slice(0, 1500),
         })),
         { role: "user", content: message },
       ],
@@ -157,14 +155,16 @@ Si el usuario pide cotización, precio o presupuesto, invitá a decir “quiero 
 
     const answer = stripMarkdownNoise(
       completion.choices[0]?.message?.content?.trim() ||
-        "No pude generar una respuesta. Probá de nuevo o escribinos por WhatsApp."
+        "No pude responder. Probá de nuevo o escribinos por WhatsApp."
     );
 
     return Response.json({
       answer,
-      sources: [...new Set(chunks.map((c) => c.sourceTitle))],
+      sources: [],
       quoteState: body.quoteState || emptyQuoteState(),
-      quickReplies: [],
+      quickReplies: detectsQuoteIntent(message)
+        ? [{ label: "Quiero cotizar", value: "Quiero cotizar" }]
+        : [],
       mode: "rag",
     });
   } catch (error) {
