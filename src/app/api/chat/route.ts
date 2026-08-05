@@ -8,9 +8,24 @@ export const maxDuration = 60;
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 function getClient() {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  return new OpenAI({ apiKey: key });
+  if (process.env.DEEPSEEK_API_KEY) {
+    return {
+      client: new OpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: "https://api.deepseek.com",
+      }),
+      model: process.env.AI_CHAT_MODEL || "deepseek-chat",
+    };
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+      model: process.env.OPENAI_CHAT_MODEL || process.env.AI_CHAT_MODEL || "gpt-4o-mini",
+    };
+  }
+
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -31,8 +46,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const client = getClient();
-    if (!client) {
+    const ai = getClient();
+    if (!ai) {
       return Response.json(
         {
           error:
@@ -54,8 +69,8 @@ export async function POST(req: Request) {
     const chunks = retrieveChunks(message, 8);
     const context = formatContext(chunks);
 
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+    const completion = await ai.client.chat.completions.create({
+      model: ai.model,
       temperature: 0.2,
       max_tokens: 700,
       messages: [
