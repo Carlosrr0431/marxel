@@ -16,6 +16,10 @@ type Msg = {
   sources?: string[];
 };
 
+// Espera antes de enviar al bot (acumula mensajes del usuario como en WhatsApp).
+// Cambiá este valor para ajustar el delay.
+const DEBOUNCE_MS = 4_000;
+
 const SUGGESTIONS = [
   "Quiero cotizar",
   "¿Qué diferencia hay entre A2 y A4?",
@@ -33,6 +37,7 @@ export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [waitingDebounce, setWaitingDebounce] = useState(false);
   const [quoteState, setQuoteState] = useState<QuoteState>(emptyQuoteState());
   const [quickReplies, setQuickReplies] = useState<QuoteQuickReply[]>([]);
   const [messages, setMessages] = useState<Msg[]>([
@@ -40,46 +45,51 @@ export function ChatBot() {
       id: "welcome",
       role: "assistant",
       content:
-        "Hola, soy el asistente de Marxel. Preguntame por A2/A4 o decí quiero cotizar.",
+        "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te armo una cotización.",
     },
   ]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Refs para acceder a valores actualizados dentro del setTimeout
+  const messagesRef = useRef<Msg[]>(messages);
+  const quoteStateRef = useRef<QuoteState>(quoteState);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { quoteStateRef.current = quoteState; }, [quoteState]);
+
+  // Buffer de mensajes pendientes de enviar
+  const pendingRef = useRef<string[]>([]);
+  const historySnapRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
     "Hola Marxel, quiero asesoramiento sobre Prevención Salud."
   )}`;
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open, loading, quickReplies, quoteState.step]);
+  }, [messages, open, loading, waitingDebounce, quickReplies, quoteState.step]);
 
-  async function send(text: string) {
-    const content = text.trim();
-    if (!content || loading) return;
+  async function flush() {
+    const msgs = [...pendingRef.current];
+    pendingRef.current = [];
+    setWaitingDebounce(false);
+    if (msgs.length === 0) return;
 
-    const userMsg: Msg = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content,
-    };
-    const next = [...messages, userMsg];
-    setMessages(next);
-    setInput("");
-    setQuickReplies([]);
     setLoading(true);
 
-    try {
-      const history = next
-        .filter((m) => m.id !== "welcome")
-        .slice(0, -1)
-        .map((m) => ({ role: m.role, content: m.content }));
+    // Si hubo varios mensajes, los unimos con salto de línea para que el bot los procese como contexto único
+    const combined = msgs.join("\n");
+    const history = historySnapRef.current;
 
+    try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: content,
+          message: combined,
           history,
-          quoteState,
+          quoteState: quoteStateRef.current,
         }),
       });
       const data = (await res.json()) as {
@@ -112,7 +122,7 @@ export function ChatBot() {
           id: `a-${Date.now()}`,
           role: "assistant",
           content:
-            "No pude conectar con el asistente. Revisá tu conexión o escribinos por WhatsApp.",
+            "No pude conectar. Revisá tu conexión o escribinos por WhatsApp.",
         },
       ]);
     } finally {
@@ -120,12 +130,38 @@ export function ChatBot() {
     }
   }
 
+  function send(text: string) {
+    const content = text.trim();
+    if (!content || loading) return;
+
+    // Snapshot de history solo antes del primer mensaje del batch
+    if (pendingRef.current.length === 0) {
+      historySnapRef.current = messagesRef.current
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({ role: m.role, content: m.content }))
+        .slice(-10);
+    }
+
+    // Mostrar en UI inmediatamente
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", content },
+    ]);
+    setInput("");
+    setQuickReplies([]);
+
+    // Buffer y debounce
+    pendingRef.current.push(content);
+    setWaitingDebounce(true);
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(flush, DEBOUNCE_MS);
+  }
+
   const inQuote = quoteState.active;
-  const showLaboralButtons =
-    !loading && quoteState.active && quoteState.step === "laboral";
-  const choiceButtons = showLaboralButtons
-    ? LABORAL_OPTIONS
-    : quickReplies;
+  const busy = loading || waitingDebounce;
+  const showLaboralButtons = !busy && quoteState.active && quoteState.step === "laboral";
+  const choiceButtons = showLaboralButtons ? LABORAL_OPTIONS : busy ? [] : quickReplies;
 
   return (
     <>
@@ -208,17 +244,24 @@ export function ChatBot() {
                   <p className="whitespace-pre-wrap">{m.content}</p>
                   {m.sources && m.sources.length > 0 ? (
                     <p className="mt-1.5 border-t border-line/60 pt-1.5 text-[10px] leading-snug text-muted">
-                      Fuentes: {m.sources.slice(0, 3).join(" · ")}
+                      {m.sources.slice(0, 3).join(" · ")}
                     </p>
                   ) : null}
                 </div>
               </div>
             ))}
-            {loading ? (
-              <p className="text-[11px] text-muted">
-                {inQuote ? "Continuando…" : "Pensando…"}
-              </p>
+
+            {/* Indicador de "escribiendo..." (espera debounce o respuesta API) */}
+            {busy ? (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-line/70 bg-white px-3.5 py-3">
+                  <span className="chatbot-dot" style={{ animationDelay: "0ms" }} />
+                  <span className="chatbot-dot" style={{ animationDelay: "160ms" }} />
+                  <span className="chatbot-dot" style={{ animationDelay: "320ms" }} />
+                </div>
+              </div>
             ) : null}
+
             <div ref={bottomRef} />
           </div>
 
@@ -233,7 +276,7 @@ export function ChatBot() {
                   key={r.value}
                   type="button"
                   onClick={() => send(r.value)}
-                  disabled={loading}
+                  disabled={busy}
                   className={
                     showLaboralButtons
                       ? "w-full rounded-xl border border-line bg-mist/80 px-3 py-2.5 text-left text-[13px] font-semibold text-navy transition hover:border-teal/40 hover:bg-aqua disabled:opacity-50"

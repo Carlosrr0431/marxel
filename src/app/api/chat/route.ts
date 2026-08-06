@@ -2,6 +2,7 @@ import {
   detectsQuoteIntent,
   emptyQuoteState,
   processQuoteFlow,
+  processQuoteFlowBatch,
   stripMarkdownNoise,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
@@ -86,8 +87,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // Cotización / precio → flujo estructurado (imagen CLAVE + OPCIONAL)
-    const quote = processQuoteFlow(message, body.quoteState || emptyQuoteState());
+    // Cotización / precio → flujo estructurado.
+    // Si el usuario envió varios mensajes acumulados (separados por \n), los procesamos en cadena.
+    const lines = message.includes("\n")
+      ? message.split("\n").map((s) => s.trim()).filter(Boolean)
+      : [message];
+
+    const prevState = body.quoteState || emptyQuoteState();
+
+    if (lines.length > 1) {
+      const batch = await processQuoteFlowBatch(lines, prevState, persistQuoteSideEffects);
+      if (batch && batch.handled && batch.answer) {
+        return Response.json({
+          answer: stripMarkdownNoise(batch.answer),
+          sources: [],
+          quoteState: batch.state,
+          quickReplies: batch.quickReplies || [],
+          mode: "quote",
+        });
+      }
+      // Si el batch no fue manejado, caemos al flujo normal con el mensaje completo
+    }
+
+    const quote = processQuoteFlow(message, prevState);
     if (quote.handled && quote.answer) {
       let state = await persistQuoteSideEffects(quote.state);
       let answer = quote.answer;

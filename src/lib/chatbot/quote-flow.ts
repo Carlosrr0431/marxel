@@ -135,7 +135,7 @@ function startQuote(): QuoteFlowResult {
   return {
     handled: true,
     state: { active: true, step: "nombre", data: {} },
-    answer: "Dale. ¿Cómo te llamás?",
+    answer: "¡Dale! ¿Me decís tu nombre?",
   };
 }
 
@@ -166,7 +166,7 @@ export function processQuoteFlow(
     return {
       handled: true,
       state: emptyQuoteState(),
-      answer: "Listo. Cuando quieras, decime quiero cotizar.",
+      answer: "Entendido. Cuando quieras, escribí 'quiero cotizar' y arrancamos.",
     };
   }
 
@@ -184,7 +184,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: `Gracias, ${firstName(state.data.nombre)}. ¿Edades del titular y del grupo familiar?`,
+        answer: `Bueno, ${firstName(state.data.nombre)}. ¿Cuántos años tenés? Si hay más personas en el grupo, incluí sus edades también.`,
       };
     }
 
@@ -193,7 +193,7 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "¿Edades del titular y del grupo familiar?",
+          answer: "¿Cuántos años tenés? ¿Hay alguien más en el grupo familiar?",
         };
       }
       state.data.edades = text;
@@ -201,7 +201,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿Situación laboral?",
+        answer: "¿Cómo estás en lo laboral?",
         quickReplies: LABORAL_REPLIES,
       };
     }
@@ -223,7 +223,7 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "¿Qué categoría de monotributo?",
+          answer: "¿Qué categoría de monotributo tenés? (A, B, C...)",
         };
       }
       if (modalidad === "relacion_dependencia") {
@@ -231,7 +231,7 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "¿Sueldo bruto estimado?",
+          answer: "¿Más o menos cuánto es tu sueldo bruto? Un aproximado alcanza.",
         };
       }
 
@@ -239,7 +239,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿WhatsApp para enviarte la cotización?",
+        answer: "¿A qué número te mando la cotización?",
       };
     }
 
@@ -250,8 +250,8 @@ export function processQuoteFlow(
           state,
           answer:
             state.data.modalidad === "monotributo"
-              ? "¿Qué categoría de monotributo?"
-              : "¿Sueldo bruto estimado?",
+              ? "¿Qué categoría de monotributo tenés?"
+              : "¿Más o menos cuánto es tu sueldo bruto?",
         };
       }
       if (state.data.modalidad === "monotributo") {
@@ -263,7 +263,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿WhatsApp para enviarte la cotización?",
+        answer: "¿A qué número te mando la cotización?",
       };
     }
 
@@ -273,16 +273,17 @@ export function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "Pasame el WhatsApp con código de área.",
+          answer: "Necesito el número con código de área, por ejemplo 3878...",
         };
       }
       state.data.celular = phone;
       state.step = "prepaga";
       state.pendingSave = "hot";
+      const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
       return {
         handled: true,
         state,
-        answer: "Listo, ya te cargué para cotizar. ¿Tenés prepaga u obra social ahora? (opcional)",
+        answer: `Perfecto${nombre ? `, ${nombre}` : ""}. Ya te tengo agendado. ¿Tenés alguna prepaga o cobertura ahora? (opcional)`,
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -294,7 +295,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿Localidad? (Salta y alrededores, opcional)",
+        answer: "¿De qué parte de Salta sos? (opcional)",
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -306,7 +307,7 @@ export function processQuoteFlow(
       return {
         handled: true,
         state,
-        answer: "¿Para qué la usás más? (opcional)",
+        answer: "¿Para qué la usarías principalmente? Consultas, medicamentos, internaciones... (opcional)",
         quickReplies: SKIP_REPLIES,
       };
     }
@@ -317,13 +318,41 @@ export function processQuoteFlow(
       return {
         handled: true,
         state: { ...state, active: false, step: "done" },
-        answer: "Perfecto. Te contactamos por WhatsApp con la cotización.",
+        answer: "¡Listo! Te mandamos la cotización por WhatsApp. Cualquier duda, preguntá acá.",
       };
     }
 
     default:
       return { handled: false, state: emptyQuoteState() };
   }
+}
+
+/**
+ * Procesa múltiples mensajes en cadena (para cuando el usuario envió varios antes de que el bot respondiera).
+ * Detiene la cadena al primer mensaje no reconocido por el flujo.
+ */
+export async function processQuoteFlowBatch(
+  lines: string[],
+  prev: QuoteState,
+  persist: (s: QuoteState) => Promise<QuoteState>
+): Promise<QuoteFlowResult | null> {
+  let state = prev;
+  let lastResult: QuoteFlowResult | null = null;
+
+  for (const line of lines) {
+    const result = processQuoteFlow(line, state);
+    if (!result.handled) break;
+
+    // Si el paso requiere guardar en CRM, hacerlo antes de continuar
+    if (result.state.pendingSave) {
+      state = await persist(result.state);
+    } else {
+      state = result.state;
+    }
+    lastResult = { ...result, state };
+  }
+
+  return lastResult;
 }
 
 export function parseEdadTitular(edades: string | undefined): number | null {
