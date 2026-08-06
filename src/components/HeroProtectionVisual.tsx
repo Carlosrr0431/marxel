@@ -49,14 +49,16 @@ export function HeroProtectionVisual() {
         <span>Marxel</span>
       </div>
 
-      <ul className="hero-orbit__list">
+      <ul className="hero-orbit__wheel">
         {pillars.map((pillar, index) => (
           <li
             key={pillar.key}
             className={`hero-orbit__node hero-orbit__node--${index + 1}`}
           >
-            <span className="hero-orbit__icon">{pillar.icon}</span>
-            <span className="hero-orbit__label">{pillar.label}</span>
+            <div className="hero-orbit__face">
+              <span className="hero-orbit__icon">{pillar.icon}</span>
+              <span className="hero-orbit__label">{pillar.label}</span>
+            </div>
           </li>
         ))}
       </ul>

@@ -229,8 +229,10 @@ a {
   animation: soft-float 7s ease-in-out infinite;
 }
 
-/* Hero orbit — tres pilares (minimal, posiciones fijas) */
+/* Hero orbit — iconos giran por el anillo y se resaltan arriba */
 .hero-orbit {
+  --r: 5.9rem;
+  --orbit-duration: 12s;
   position: relative;
   width: 15rem;
   height: 15rem;
@@ -241,8 +243,8 @@ a {
   position: absolute;
   inset: 1.5rem;
   border-radius: 9999px;
-  border: 1px dashed rgba(255, 255, 255, 0.32);
-  animation: hero-orbit-spin 28s linear infinite;
+  border: 1px dashed rgba(255, 255, 255, 0.34);
+  animation: hero-orbit-spin var(--orbit-duration) linear infinite;
 }
 
 .hero-orbit__core {
@@ -252,86 +254,117 @@ a {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 4.25rem;
-  height: 4.25rem;
-  margin: -2.125rem 0 0 -2.125rem;
+  width: 4.1rem;
+  height: 4.1rem;
+  margin: -2.05rem 0 0 -2.05rem;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(8px);
   font-family: var(--font-syne), system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  animation: hero-orbit-pulse 4s ease-in-out infinite;
 }
 
-.hero-orbit__list {
+.hero-orbit__wheel {
   position: absolute;
   inset: 0;
+  z-index: 2;
   margin: 0;
   padding: 0;
   list-style: none;
+  animation: hero-orbit-spin var(--orbit-duration) linear infinite;
 }
 
 .hero-orbit__node {
   position: absolute;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+  top: 50%;
+  left: 50%;
   width: 4.5rem;
+  margin: -2.4rem 0 0 -2.25rem;
 }
 
-/* Triángulo equilátero sobre el anillo */
 .hero-orbit__node--1 {
-  top: 0.15rem;
-  left: 50%;
-  transform: translateX(-50%);
+  transform: rotate(0deg) translateY(calc(var(--r) * -1));
 }
 
 .hero-orbit__node--2 {
-  right: 0.1rem;
-  bottom: 1.6rem;
+  transform: rotate(120deg) translateY(calc(var(--r) * -1));
 }
 
 .hero-orbit__node--3 {
-  left: 0.1rem;
-  bottom: 1.6rem;
+  transform: rotate(240deg) translateY(calc(var(--r) * -1));
+}
+
+.hero-orbit__face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.hero-orbit__node--1 .hero-orbit__face {
+  animation: hero-orbit-face-0 var(--orbit-duration) linear infinite;
+}
+
+.hero-orbit__node--2 .hero-orbit__face {
+  animation: hero-orbit-face-120 var(--orbit-duration) linear infinite;
+}
+
+.hero-orbit__node--3 .hero-orbit__face {
+  animation: hero-orbit-face-240 var(--orbit-duration) linear infinite;
 }
 
 .hero-orbit__icon {
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.7rem;
+  height: 2.7rem;
   border-radius: 9999px;
   background: rgba(8, 36, 64, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  color: #f0d78c;
-  box-shadow: 0 8px 20px rgba(5, 30, 54, 0.28);
-  animation: hero-orbit-pulse 4s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 18px rgba(5, 30, 54, 0.22);
+  transition: none;
+}
+
+.hero-orbit__node--1 .hero-orbit__icon {
+  animation: hero-orbit-glow-top var(--orbit-duration) linear infinite;
 }
 
 .hero-orbit__node--2 .hero-orbit__icon {
-  color: #9ae8e2;
-  animation-delay: 0.6s;
+  animation: hero-orbit-glow-top var(--orbit-duration) linear infinite;
+  animation-delay: calc(var(--orbit-duration) * -1 / 3);
 }
 
 .hero-orbit__node--3 .hero-orbit__icon {
-  color: #b7d9f3;
-  animation-delay: 1.2s;
+  animation: hero-orbit-glow-top var(--orbit-duration) linear infinite;
+  animation-delay: calc(var(--orbit-duration) * -2 / 3);
 }
 
 .hero-orbit__label {
   font-family: var(--font-syne), system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 650;
   letter-spacing: 0.01em;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 10px rgba(5, 30, 54, 0.5);
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 10px rgba(5, 30, 54, 0.45);
+}
+
+.hero-orbit__node--1 .hero-orbit__label {
+  animation: hero-orbit-label-top var(--orbit-duration) linear infinite;
+}
+
+.hero-orbit__node--2 .hero-orbit__label {
+  animation: hero-orbit-label-top var(--orbit-duration) linear infinite;
+  animation-delay: calc(var(--orbit-duration) * -1 / 3);
+}
+
+.hero-orbit__node--3 .hero-orbit__label {
+  animation: hero-orbit-label-top var(--orbit-duration) linear infinite;
+  animation-delay: calc(var(--orbit-duration) * -2 / 3);
 }
 
 @keyframes hero-orbit-spin {
@@ -340,13 +373,65 @@ a {
   }
 }
 
-@keyframes hero-orbit-pulse {
+/* Etiquetas siempre derechas */
+@keyframes hero-orbit-face-0 {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes hero-orbit-face-120 {
+  from {
+    transform: rotate(-120deg);
+  }
+  to {
+    transform: rotate(-480deg);
+  }
+}
+
+@keyframes hero-orbit-face-240 {
+  from {
+    transform: rotate(-240deg);
+  }
+  to {
+    transform: rotate(-600deg);
+  }
+}
+
+/* Resalte breve al pasar por arriba (posición inicial de Seguros) */
+@keyframes hero-orbit-glow-top {
   0%,
+  4%,
   100% {
+    color: rgba(255, 255, 255, 0.78);
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(8, 36, 64, 0.55);
+    box-shadow: 0 8px 18px rgba(5, 30, 54, 0.22);
     transform: scale(1);
   }
-  50% {
-    transform: scale(1.06);
+  1.5%,
+  2.5% {
+    color: #f0d78c;
+    border-color: rgba(240, 215, 140, 0.85);
+    background: rgba(240, 215, 140, 0.22);
+    box-shadow:
+      0 0 0 4px rgba(240, 215, 140, 0.18),
+      0 10px 26px rgba(240, 215, 140, 0.35);
+    transform: scale(1.12);
+  }
+}
+
+@keyframes hero-orbit-label-top {
+  0%,
+  4%,
+  100% {
+    color: rgba(255, 255, 255, 0.72);
+    opacity: 0.85;
+  }
+  1.5%,
+  2.5% {
+    color: #fff;
+    opacity: 1;
   }
 }
 
@@ -357,10 +442,18 @@ a {
   .animate-rise-delay-3,
   .animate-float,
   .crm-pulse,
+  .hero-orbit__wheel,
   .hero-orbit__ring,
-  .hero-orbit__core,
-  .hero-orbit__icon {
+  .hero-orbit__face,
+  .hero-orbit__icon,
+  .hero-orbit__label {
     animation: none !important;
+  }
+
+  .hero-orbit__node--1 .hero-orbit__icon,
+  .hero-orbit__node--2 .hero-orbit__icon,
+  .hero-orbit__node--3 .hero-orbit__icon {
+    color: #f0d78c;
   }
 }
 
