@@ -45,7 +45,7 @@ export function ChatBot() {
       id: "welcome",
       role: "assistant",
       content:
-        "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te armo una cotización.",
+        "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te enviamos la cotización lo antes posible.",
     },
   ]);
 
