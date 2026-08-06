@@ -16,9 +16,48 @@ type Msg = {
   sources?: string[];
 };
 
-// Espera antes de enviar al bot (acumula mensajes del usuario como en WhatsApp).
-// Cambiá este valor para ajustar el delay.
 const DEBOUNCE_MS = 4_000;
+const STORAGE_KEY = "marxel-chat-v1";
+const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+const MAX_STORED_MSGS = 60;
+
+const WELCOME_MSG: Msg = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te enviamos la cotización lo antes posible.",
+};
+
+function loadStorage(): { messages: Msg[]; quoteState: QuoteState } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      messages: Msg[];
+      quoteState: QuoteState;
+      ts: number;
+    };
+    if (!parsed.ts || Date.now() - parsed.ts > STORAGE_TTL_MS) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    if (parsed.messages?.length > 0) return parsed;
+  } catch {}
+  return null;
+}
+
+function saveStorage(messages: Msg[], quoteState: QuoteState) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        messages: messages.slice(-MAX_STORED_MSGS),
+        quoteState,
+        ts: Date.now(),
+      })
+    );
+  } catch {}
+}
 
 const SUGGESTIONS = [
   "Quiero cotizar",
@@ -40,14 +79,7 @@ export function ChatBot() {
   const [waitingDebounce, setWaitingDebounce] = useState(false);
   const [quoteState, setQuoteState] = useState<QuoteState>(emptyQuoteState());
   const [quickReplies, setQuickReplies] = useState<QuoteQuickReply[]>([]);
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te enviamos la cotización lo antes posible.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([WELCOME_MSG]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +98,33 @@ export function ChatBot() {
     "Hola Marxel, quiero asesoramiento sobre Prevención Salud."
   )}`;
 
+  // Cargar historial guardado al montar
+  useEffect(() => {
+    const saved = loadStorage();
+    if (saved) {
+      setMessages(saved.messages);
+      setQuoteState(saved.quoteState);
+    }
+  }, []);
+
+  // Guardar historial en cada cambio
+  useEffect(() => {
+    if (messages.length > 1) {
+      saveStorage(messages, quoteState);
+    }
+  }, [messages, quoteState]);
+
+  // Scroll al último mensaje
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open, loading, waitingDebounce, quickReplies, quoteState.step]);
+
+  function clearHistory() {
+    localStorage.removeItem(STORAGE_KEY);
+    setMessages([WELCOME_MSG]);
+    setQuoteState(emptyQuoteState());
+    setQuickReplies([]);
+  }
 
   async function flush() {
     const msgs = [...pendingRef.current];
@@ -218,14 +274,34 @@ export function ChatBot() {
                 {inQuote ? "· Cotización" : "· Salud"}
               </span>
             </p>
-            <Link
-              href={wa}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white"
-            >
-              WA
-            </Link>
+            <div className="flex shrink-0 items-center gap-1">
+              {messages.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={clearHistory}
+                  title="Limpiar conversación"
+                  className="rounded-md p-1.5 text-white/50 hover:bg-white/10 hover:text-white/90"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              ) : null}
+              <Link
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                WA
+              </Link>
+            </div>
           </header>
 
           <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-cloud/80 px-3 py-3">
