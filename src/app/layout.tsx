@@ -16,17 +16,25 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://marxel-omega.vercel.app"),
   title: {
     default: `${site.name} · Seguros, Salud y Viajero`,
     template: `%s · ${site.name}`,
   },
   description: site.description,
   openGraph: {
-    title: site.name,
-    description: site.description,
+    title: "Marxel · Seguros, Salud y Viajero — Salta, Argentina",
+    description:
+      "Productora de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
     locale: "es_AR",
     type: "website",
-    images: [{ url: "/brand/marxel-logo.png", width: 800, height: 227 }],
+    siteName: "Marxel",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Marxel · Seguros, Salud y Viajero",
+    description:
+      "Productora de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
   },
   icons: {
     icon: "/brand/marxel-mark.png",
