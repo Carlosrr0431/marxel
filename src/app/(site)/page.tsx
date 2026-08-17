@@ -38,7 +38,7 @@ export default function HomePage() {
               humano y a tu medida.
             </p>
 
-            <div className="animate-rise-delay-3 mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="animate-rise-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/cotizar" className="btn btn-primary btn-lg">
                 Cotizar ahora
               </Link>
@@ -47,12 +47,11 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Trust badges */}
-            <div className="animate-rise-delay-3 mt-8 flex flex-wrap items-center gap-4">
+            <div className="hero-stats animate-rise-delay-3">
               {STATS.map((s) => (
-                <div key={s.label} className="stat-badge">
-                  <span className="stat-badge__value">{s.value}</span>
-                  <span className="stat-badge__label">{s.label}</span>
+                <div key={s.label} className="hero-stats__item">
+                  <span className="hero-stats__value">{s.value}</span>
+                  <span className="hero-stats__label">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -103,6 +102,7 @@ export default function HomePage() {
                   icon: "shield",
                   title: "MARXEN Seguros",
                   text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cobertura para cada etapa de tu vida.",
+                  cta: "Explorar",
                   tone: "navy",
                   delay: 0,
                 },
@@ -110,22 +110,31 @@ export default function HomePage() {
                   href: "/salud",
                   icon: "heart",
                   title: "MARXEN Salud",
-                  text: "Planes A2 y A4 de Prevención Salud, con guía de aportes según tu modalidad laboral.",
+                  text: "Tu salud no puede esperar. Accedé a los mejores planes de Prevención Salud con el respaldo que necesitás. Te ayudamos a elegir según tus aportes.",
+                  cta: "Explorar",
                   tone: "teal",
                   delay: 80,
                 },
                 {
                   href: "/viajero",
                   icon: "plane",
-                  title: "MARXEN Viajero",
-                  text: "GoAssistance y New Travel. Cobertura nacional e internacional para cada viaje.",
+                  title: "Asistencia al viajero",
+                  text: "Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y disfrutá de tu viaje sin preocupaciones.",
+                  cta: "Ver coberturas",
                   tone: "sky",
                   delay: 160,
                 },
               ] as const
             ).map((p) => (
               <Reveal key={p.href} delay={p.delay}>
-                <PillarCard {...p} />
+                <PillarCard
+                  href={p.href}
+                  icon={p.icon}
+                  title={p.title}
+                  text={p.text}
+                  cta={p.cta}
+                  tone={p.tone}
+                />
               </Reveal>
             ))}
           </div>
@@ -181,29 +190,29 @@ export default function HomePage() {
             <div>
               <p className="eyebrow !text-teal-soft">MARXEN Salud</p>
               <h2 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-                Prevención Salud,
+                Tu plan de salud ideal,
                 <br />
-                <span className="text-teal-soft">explicada en claro.</span>
+                <span className="text-teal-soft">para vos y tu familia.</span>
               </h2>
               <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
-                Compará A2 y A4, resolvé dudas de aportes y avanzá con
-                acompañamiento real.
+                Compará diferentes opciones, optimizá tus aportes laborales y
+                elegí la mejor cobertura con acompañamiento personalizado.
               </p>
               <ul className="mt-6 flex flex-col gap-3 text-sm">
                 {[
-                  "Comparador interactivo A2 / A4",
-                  "Monotributo, sueldo o particular",
-                  "FAQ sin letra chica confusa",
+                  "Comparativa personalizada de planes y cartillas",
+                  "Derivación de aportes (Monotributo, Relación de dependencia o Particular)",
+                  "Asesoramiento transparente sin letra chica",
                 ].map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-white/85">
-                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal/30 text-teal-soft text-[10px] font-bold">
+                  <li key={item} className="flex items-start gap-2.5 text-white/85">
+                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal/30 text-teal-soft text-[10px] font-bold">
                       ✓
                     </span>
                     {item}
                   </li>
                 ))}
               </ul>
-              <Link href="/salud#planes-a2-a4" className="btn mt-8 bg-white text-navy hover:bg-mist">
+              <Link href="/salud#planes-a2-a4" className="btn btn-lg mt-8 bg-white text-navy hover:bg-mist">
                 Comparar planes
               </Link>
             </div>
@@ -279,12 +288,14 @@ function PillarCard({
   icon,
   title,
   text,
+  cta,
   tone,
 }: {
   href: string;
   icon: "shield" | "heart" | "plane";
   title: string;
   text: string;
+  cta: string;
   tone: "navy" | "teal" | "sky";
 }) {
   const toneMap = {
@@ -301,7 +312,7 @@ function PillarCard({
       <h3 className="pillar-card__title">{title}</h3>
       <p className="pillar-card__text">{text}</p>
       <span className="pillar-card__link">
-        Explorar
+        {cta}
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path
             d="M3 8h10M9 4l4 4-4 4"

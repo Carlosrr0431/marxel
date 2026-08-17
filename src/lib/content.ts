@@ -1,11 +1,13 @@
 export const site = {
   name: "MARXEN",
-  tagline: "Tu marca personal como lo más grande",
+  lockup: "MARXEN Protección integral",
+  tagline:
+    "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
     "Productores de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
-  phone: "+54 9 387 000-0000",
+  phone: "+54 9 387 534-8199",
   email: "hola@marxel.com.ar",
-  whatsapp: "5493870000000",
+  whatsapp: "5493875348199",
   location: "Argentina",
 };
 

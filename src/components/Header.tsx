@@ -22,7 +22,7 @@ export function Header() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/60 bg-cloud/80 backdrop-blur-xl">
+    <header className="site-header">
       <div className="container-mx flex h-16 items-center justify-between gap-4 sm:h-[4.25rem]">
         <Logo />
 
@@ -50,7 +50,7 @@ export function Header() {
           <Link href="/crm/login" className="btn btn-secondary !min-h-10 !px-3.5 text-xs">
             CRM
           </Link>
-          <Link href="/cotizar" className="btn btn-primary !min-h-10">
+          <Link href="/cotizar" className="btn btn-primary !min-h-10 !px-5">
             Cotizar
           </Link>
         </div>

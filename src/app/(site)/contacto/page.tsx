@@ -56,7 +56,7 @@ export default function ContactoPage() {
                 WhatsApp
               </p>
               <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
-                Escribinos ahora
+                {site.phone}
               </p>
             </a>
           </div>

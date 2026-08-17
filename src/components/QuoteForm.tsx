@@ -8,10 +8,19 @@ type QuoteFormProps = {
   compact?: boolean;
 };
 
+const VIAJERO = "Asistencia al viajero";
+
+function isViajeroInterest(interes: string) {
+  return /viajero|viaje/i.test(interes);
+}
+
 export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormProps) {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [interes, setInteres] = useState(defaultInterest);
+  const [fechaSalida, setFechaSalida] = useState("");
+  const showViajero = isViajeroInterest(interes);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,7 +31,22 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
     const provincia = String(data.get("provincia") || "");
     const edad = String(data.get("edad") || "");
     const celular = String(data.get("celular") || "");
-    const interes = String(data.get("interes") || "");
+    const interesValue = String(data.get("interes") || "");
+    const destino = String(data.get("destino") || "").trim();
+    const motivo = String(data.get("motivo") || "").trim();
+    const salida = String(data.get("fecha_salida") || "").trim();
+    const regreso = String(data.get("fecha_regreso") || "").trim();
+
+    const notas = [
+      `Cotización web: ${interesValue || "general"}`,
+      destino ? `País de destino: ${destino}` : null,
+      motivo ? `Motivo del viaje: ${motivo}` : null,
+      salida || regreso
+        ? `Fechas aproximadas: ${salida || "—"} a ${regreso || "—"}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     try {
       const res = await fetch("/api/leads", {
@@ -33,7 +57,8 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
           provincia,
           edad,
           celular,
-          interes,
+          interes: interesValue,
+          notas,
           page_path: typeof window !== "undefined" ? window.location.pathname : null,
         }),
       });
@@ -47,9 +72,20 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
       return;
     }
 
-    const msg = encodeURIComponent(
-      `Hola MARXEN, soy ${nombre}.\nProvincia: ${provincia}\nEdad: ${edad}\nInterés: ${interes || "Asesoramiento general"}\nCelular: ${celular}`
-    );
+    const waLines = [
+      `Hola MARXEN, soy ${nombre}.`,
+      `Provincia: ${provincia}`,
+      `Edad: ${edad}`,
+      `Interés: ${interesValue || "Asesoramiento general"}`,
+      destino ? `País de destino: ${destino}` : null,
+      motivo ? `Motivo del viaje: ${motivo}` : null,
+      salida || regreso
+        ? `Fechas aproximadas: ${salida || "—"} a ${regreso || "—"}`
+        : null,
+      `Celular: ${celular}`,
+    ].filter(Boolean);
+
+    const msg = encodeURIComponent(waLines.join("\n"));
     window.open(`https://wa.me/${site.whatsapp}?text=${msg}`, "_blank");
     setSent(true);
     setLoading(false);
@@ -70,10 +106,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className={`surface ${compact ? "p-5" : "p-5 sm:p-8"}`}
-    >
+    <form onSubmit={onSubmit} className={`quote-card ${compact ? "p-5" : "p-5 sm:p-8"}`}>
       {!compact ? (
         <div className="mb-6">
           <h2 className="font-display text-2xl font-semibold text-navy">
@@ -104,6 +137,41 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             className="field"
           />
         </label>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-1.5 block text-sm font-medium text-ink">
+            ¿Qué te interesa?
+          </span>
+          <select
+            name="interes"
+            value={interes}
+            onChange={(e) => setInteres(e.target.value)}
+            className="field"
+          >
+            <option value="">Asesoramiento general</option>
+            <option value="Seguros">Seguros</option>
+            <option value="Salud - Prepagas">Salud · Prepagas</option>
+            <option value="Prevención Salud Plan A2">Plan A2 · Prevención Salud</option>
+            <option value="Prevención Salud Plan A4">Plan A4 · Prevención Salud</option>
+            <option value={VIAJERO}>Asistencia al viajero</option>
+            <option value="Prevención Salud">Prevención Salud</option>
+          </select>
+        </label>
+
+        {showViajero ? (
+          <label className="block sm:col-span-2">
+            <span className="mb-1.5 block text-sm font-medium text-ink">
+              País de destino
+            </span>
+            <input
+              name="destino"
+              required
+              autoComplete="country-name"
+              placeholder="Ej. Brasil, España, Estados Unidos"
+              className="field"
+            />
+          </label>
+        ) : null}
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-ink">Provincia</span>
@@ -139,28 +207,62 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             type="tel"
             required
             autoComplete="tel"
-            placeholder="Ej. 387 555-1234"
+            placeholder="Ej. 387 534-8199"
             className="field"
           />
         </label>
 
-        <label className="block sm:col-span-2">
-          <span className="mb-1.5 block text-sm font-medium text-ink">
-            ¿Qué te interesa?
-          </span>
-          <select name="interes" defaultValue={defaultInterest} className="field">
-            <option value="">Asesoramiento general</option>
-            <option value="Seguros">Seguros</option>
-            <option value="Salud - Prepagas">Salud · Prepagas</option>
-            <option value="Prevención Salud Plan A2">Plan A2 · Prevención Salud</option>
-            <option value="Prevención Salud Plan A4">Plan A4 · Prevención Salud</option>
-            <option value="Asistencia al viajero">Asistencia al viajero</option>
-            <option value="Prevención Salud">Prevención Salud</option>
-          </select>
-        </label>
+        {showViajero ? (
+          <>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-sm font-medium text-ink">
+                Motivo del viaje
+              </span>
+              <select name="motivo" required defaultValue="" className="field">
+                <option value="" disabled>
+                  Seleccioná
+                </option>
+                <option value="Placer">Placer</option>
+                <option value="Trabajo">Trabajo</option>
+                <option value="Estudio">Estudio</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">
+                Fecha de salida
+              </span>
+              <input
+                name="fecha_salida"
+                type="date"
+                required
+                className="field"
+                value={fechaSalida}
+                onChange={(e) => setFechaSalida(e.target.value)}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">
+                Fecha de regreso
+              </span>
+              <input
+                name="fecha_regreso"
+                type="date"
+                required
+                min={fechaSalida || undefined}
+                className="field"
+              />
+            </label>
+          </>
+        ) : null}
       </div>
 
-      <button type="submit" disabled={loading} className="btn btn-primary mt-5 w-full disabled:opacity-70">
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn btn-primary btn-lg mt-6 w-full disabled:opacity-70"
+      >
         {loading ? "Enviando…" : "Ver planes y cotizar"}
       </button>
 

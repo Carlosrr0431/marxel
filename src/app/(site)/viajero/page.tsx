@@ -4,9 +4,9 @@ import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { Icon } from "@/components/Icon";
 
 export const metadata: Metadata = {
-  title: "MARXEN Viajero",
+  title: "Asistencia al viajero",
   description:
-    "Asistencia al viajero con GoAssistance y New Travel. Viajá con respaldo médico y logística.",
+    "Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y viajá sin preocupaciones con MARXEN.",
 };
 
 const partners = [
@@ -28,10 +28,10 @@ export default function ViajeroPage() {
       <PageHero
         eyebrow="MARXEN Viajero"
         title="Viajá con la espalda cubierta"
-        description="Antes de salir, armamos la asistencia adecuada a tu destino, duración y acompañantes. Alianzas con GoAssistance y New Travel."
+        description="Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y disfrutá de tu viaje sin preocupaciones."
         cta={{
           href: "/cotizar?interes=Asistencia%20al%20viajero",
-          label: "Cotizar asistencia",
+          label: "Ver coberturas",
         }}
       />
 
@@ -46,10 +46,10 @@ export default function ViajeroPage() {
               />
               <ul className="mt-6 flex flex-col gap-3 text-sm text-muted">
                 {[
-                  "Emergencias médicas y odontológicas",
+                  "Asistencia médica global",
+                  "Pérdida de equipaje",
                   "Orientación telefónica las 24 horas",
                   "Cobertura según destino y duración",
-                  "Asesoramiento previo a comprar tu pasaje",
                 ].map((item) => (
                   <li key={item} className="flex gap-2">
                     <span className="text-teal">✓</span>
@@ -59,8 +59,7 @@ export default function ViajeroPage() {
               </ul>
             </div>
 
-            <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-teal via-teal-soft to-sky p-7 text-white shadow-[0_24px_60px_rgba(26,155,150,0.28)] sm:rounded-[2rem] sm:p-10">
-              <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
+            <div className="viajero-panel">
               <Icon name="plane" className="h-10 w-10 text-white" />
               <p className="mt-6 font-display text-3xl font-semibold leading-tight">
                 Destino listo.

@@ -3,14 +3,20 @@ import { Logo } from "./Logo";
 import { site, navLinks } from "@/lib/content";
 
 export function Footer() {
+  const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
+    "Hola MARXEN, quiero asesoramiento."
+  )}`;
+
   return (
-    <footer className="border-t border-white/10 bg-navy-deep text-white">
-      <div className="container-mx grid gap-10 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
+    <footer className="site-footer">
+      <div className="container-mx grid gap-10 py-14 md:grid-cols-[1.55fr_1fr_1fr]">
         <div>
           <Logo href="/" light />
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/65">
-            {site.tagline}. Seguros, prepagas y asistencia al viajero, con
-            asesoramiento claro.
+          <p className="mt-3 font-display text-[0.95rem] font-semibold tracking-tight text-white">
+            {site.lockup}
+          </p>
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/65">
+            {site.tagline}
           </p>
         </div>
 
@@ -46,6 +52,11 @@ export function Footer() {
             <li>
               <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="hover:text-white">
                 {site.phone}
+              </a>
+            </li>
+            <li>
+              <a href={wa} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                WhatsApp {site.phone}
               </a>
             </li>
             <li>{site.location}</li>

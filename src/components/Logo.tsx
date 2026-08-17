@@ -32,7 +32,7 @@ export function Logo({
   const mark = (
     <Image
       src={src}
-      alt="MARXEN"
+      alt="MARXEN Protección integral"
       width={width}
       height={height}
       className={`h-auto w-auto ${className}`}
@@ -47,7 +47,7 @@ export function Logo({
     <Link
       href={href}
       className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/40 focus-visible:ring-offset-2"
-      aria-label="MARXEN"
+      aria-label="MARXEN Protección integral"
     >
       {mark}
     </Link>

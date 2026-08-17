@@ -23,7 +23,7 @@ export default async function CotizarPage({
       <PageHero
         eyebrow="Cotización"
         title="Contanos qué necesitás"
-        description="Nombre, provincia, edad y celular. Con eso armamos una orientación inicial y seguimos por WhatsApp."
+        description="Nombre, provincia, edad y celular. Si es asistencia al viajero, también destino, motivo y fechas."
       />
 
       <section className="bg-atmosphere">

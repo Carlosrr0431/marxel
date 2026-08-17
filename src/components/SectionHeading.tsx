@@ -50,7 +50,7 @@ export function PageHero({
           {description}
         </p>
         {cta ? (
-          <Link href={cta.href} className="btn btn-primary mt-8">
+          <Link href={cta.href} className="btn btn-primary btn-lg mt-8">
             {cta.label}
           </Link>
         ) : null}
