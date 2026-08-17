@@ -132,12 +132,12 @@ export default async function InboxPage() {
                     </p>
                     {l.notas_iniciales ? (
                       <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
-                        {l.notas_iniciales.replace(/^Lead desde chatbot Marxel\n/, "")}
+                        {l.notas_iniciales.replace(/^Lead desde chatbot (?:Marxel|MARXEN)\n/, "")}
                       </p>
                     ) : null}
                   </div>
                   <Link
-                    href={whatsappLink(l.celular, `Hola ${l.nombre}, te escribo de Marxel.`)}
+                    href={whatsappLink(l.celular, `Hola ${l.nombre}, te escribo de MARXEN.`)}
                     target="_blank"
                     className="rounded-lg bg-[#25D366] px-2.5 py-1.5 text-[11px] font-bold text-white"
                   >
@@ -165,7 +165,7 @@ export default async function InboxPage() {
                     </Link>
                     {l.notas_iniciales ? (
                       <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
-                        {l.notas_iniciales.replace(/^Lead desde chatbot Marxel\n/, "")}
+                        {l.notas_iniciales.replace(/^Lead desde chatbot (?:Marxel|MARXEN)\n/, "")}
                       </p>
                     ) : null}
                   </div>

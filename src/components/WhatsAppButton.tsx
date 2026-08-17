@@ -3,7 +3,7 @@ import { site } from "@/lib/content";
 
 export function WhatsAppButton() {
   const href = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
-    "Hola Marxel, quiero asesoramiento."
+    "Hola MARXEN, quiero asesoramiento."
   )}`;
 
   return (

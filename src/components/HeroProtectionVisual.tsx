@@ -46,7 +46,7 @@ export function HeroProtectionVisual() {
     <div className="hero-orbit" aria-hidden>
       <div className="hero-orbit__ring" />
       <div className="hero-orbit__core">
-        <span>Marxel</span>
+        <span>MARXEN</span>
       </div>
 
       <ul className="hero-orbit__wheel">

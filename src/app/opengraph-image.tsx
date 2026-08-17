@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Marxel · Seguros, Salud y Viajero · Salta, Argentina";
+export const alt = "MARXEN · Seguros, Salud y Viajero · Salta, Argentina";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -83,7 +83,7 @@ export default function OGImage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Marxel
+              MARXEN
             </span>
             <div
               style={{
@@ -151,9 +151,9 @@ export default function OGImage() {
             {/* Pilares */}
             <div style={{ display: "flex", gap: 12 }}>
               {[
-                { emoji: "🛡️", label: "Seguros" },
-                { emoji: "❤️", label: "Salud · Prepagas" },
-                { emoji: "✈️", label: "Asistencia al Viajero" },
+                { emoji: "🛡️", label: "MARXEN Seguros" },
+                { emoji: "❤️", label: "MARXEN Salud" },
+                { emoji: "✈️", label: "MARXEN Viajero" },
               ].map((p) => (
                 <div
                   key={p.label}

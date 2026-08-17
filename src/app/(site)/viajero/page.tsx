@@ -4,7 +4,7 @@ import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { Icon } from "@/components/Icon";
 
 export const metadata: Metadata = {
-  title: "Asistencia al viajero",
+  title: "MARXEN Viajero",
   description:
     "Asistencia al viajero con GoAssistance y New Travel. Viajá con respaldo médico y logística.",
 };
@@ -26,7 +26,7 @@ export default function ViajeroPage() {
   return (
     <>
       <PageHero
-        eyebrow="Asistencia al viajero"
+        eyebrow="MARXEN Viajero"
         title="Viajá con la espalda cubierta"
         description="Antes de salir, armamos la asistencia adecuada a tu destino, duración y acompañantes. Alianzas con GoAssistance y New Travel."
         cta={{

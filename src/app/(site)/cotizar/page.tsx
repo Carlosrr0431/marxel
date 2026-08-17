@@ -5,7 +5,7 @@ import { PageHero } from "@/components/SectionHeading";
 export const metadata: Metadata = {
   title: "Cotizar",
   description:
-    "Cotizá seguros, prepagas o asistencia al viajero con Marxel. Completá tus datos y te contactamos.",
+    "Cotizá seguros, prepagas o asistencia al viajero con MARXEN. Completá tus datos y te contactamos.",
 };
 
 type SearchParams = Promise<{ interes?: string }>;

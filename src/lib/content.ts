@@ -1,8 +1,8 @@
 export const site = {
-  name: "Marxel",
+  name: "MARXEN",
   tagline: "Tu marca personal como lo más grande",
   description:
-    "Productora de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
+    "Productores de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
   phone: "+54 9 387 000-0000",
   email: "hola@marxel.com.ar",
   whatsapp: "5493870000000",

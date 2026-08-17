@@ -5,16 +5,16 @@ import { Icon, seguroIconMap } from "@/components/Icon";
 import { seguros } from "@/lib/content";
 
 export const metadata: Metadata = {
-  title: "Seguros",
+  title: "MARXEN Seguros",
   description:
-    "Autos y motos, accidentes personales, comercios, ART, mala praxis y hogar. Coberturas claras con Marxel.",
+    "Autos y motos, accidentes personales, comercios, ART, mala praxis y hogar. Coberturas claras con MARXEN.",
 };
 
 export default function SegurosPage() {
   return (
     <>
       <PageHero
-        eyebrow="Seguros"
+        eyebrow="MARXEN Seguros"
         title="Coberturas pensadas para tu día a día"
         description="Elegí la protección que necesitás. Te explicamos cada opción con claridad y te acompañamos en la contratación."
         cta={{ href: "/cotizar?interes=Seguros", label: "Cotizar un seguro" }}

@@ -1,6 +1,6 @@
-# Marxel
+# MARXEN
 
-Sitio web + CRM de la productora **Marxel**: seguros, prepagas (Prevención Salud) y asistencia al viajero.
+Sitio web + CRM de **MARXEN**: seguros, prepagas (Prevención Salud) y asistencia al viajero.
 
 ## Desarrollo
 

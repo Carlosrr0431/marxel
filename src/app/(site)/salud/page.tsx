@@ -11,16 +11,16 @@ import {
 } from "@/lib/content";
 
 export const metadata: Metadata = {
-  title: "Salud · Prepagas",
+  title: "MARXEN Salud",
   description:
-    "Compará Plan A2 y Plan A4 de Prevención Salud con Marxel: coberturas, odontología, óptica y cotización.",
+    "Compará Plan A2 y Plan A4 de Prevención Salud con MARXEN: coberturas, odontología, óptica y cotización.",
 };
 
 export default function SaludPage() {
   return (
     <>
       <PageHero
-        eyebrow="MarXel Salud"
+        eyebrow="MARXEN Salud"
         title="Prepagas con asesoramiento de verdad"
         description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular."
         cta={{ href: "#planes-a2-a4", label: "Comparar A2 y A4" }}

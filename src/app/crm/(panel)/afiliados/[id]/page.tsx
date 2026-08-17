@@ -104,7 +104,7 @@ export default async function AfiliadoDetailPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href={whatsappLink(a.celular, `Hola ${a.nombre}, te escribo de Marxel.`)}
+              href={whatsappLink(a.celular, `Hola ${a.nombre}, te escribo de MARXEN.`)}
               target="_blank"
               className="rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white"
             >

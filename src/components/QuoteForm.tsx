@@ -48,7 +48,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
     }
 
     const msg = encodeURIComponent(
-      `Hola Marxel, soy ${nombre}.\nProvincia: ${provincia}\nEdad: ${edad}\nInterés: ${interes || "Asesoramiento general"}\nCelular: ${celular}`
+      `Hola MARXEN, soy ${nombre}.\nProvincia: ${provincia}\nEdad: ${edad}\nInterés: ${interes || "Asesoramiento general"}\nCelular: ${celular}`
     );
     window.open(`https://wa.me/${site.whatsapp}?text=${msg}`, "_blank");
     setSent(true);
@@ -165,7 +165,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
       </button>
 
       <p className="mt-3 text-center text-xs leading-relaxed text-muted">
-        Cotización orientativa. La formal la cerramos con tu asesor Marxel.
+        Cotización orientativa. La formal la cerramos con tu asesor MARXEN.
       </p>
     </form>
   );

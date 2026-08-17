@@ -5,12 +5,12 @@ import { site } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Contacto",
-  description: "Contactá a Marxel por email, teléfono o WhatsApp.",
+  description: "Contactá a MARXEN por email, teléfono o WhatsApp.",
 };
 
 export default function ContactoPage() {
   const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
-    "Hola Marxel, quiero asesoramiento."
+    "Hola MARXEN, quiero asesoramiento."
   )}`;
 
   return (

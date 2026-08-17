@@ -23,18 +23,16 @@ export const metadata: Metadata = {
   },
   description: site.description,
   openGraph: {
-    title: "Marxel · Seguros, Salud y Viajero — Salta, Argentina",
-    description:
-      "Productora de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
+    title: `${site.name} · Seguros, Salud y Viajero — Salta, Argentina`,
+    description: site.description,
     locale: "es_AR",
     type: "website",
-    siteName: "Marxel",
+    siteName: site.name,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Marxel · Seguros, Salud y Viajero",
-    description:
-      "Productora de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
+    title: `${site.name} · Seguros, Salud y Viajero`,
+    description: site.description,
   },
   icons: {
     icon: "/brand/marxel-mark.png",

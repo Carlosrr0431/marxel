@@ -27,7 +27,7 @@ export default function HomePage() {
         <div className="container-mx grid items-center gap-12 py-16 sm:py-20 lg:min-h-[calc(100svh-4.25rem)] lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-12">
           {/* Left */}
           <div className="relative z-10 max-w-2xl">
-            <p className="animate-rise eyebrow">Productora de seguros · Salta</p>
+            <p className="animate-rise eyebrow">Productores de seguros - Salta</p>
             <h1 className="animate-rise-delay-1 mt-5 font-display text-[2.65rem] font-semibold leading-[1.06] tracking-tight text-navy sm:text-5xl lg:text-[3.5rem]">
               Tu protección,
               <br />
@@ -101,7 +101,7 @@ export default function HomePage() {
                 {
                   href: "/seguros",
                   icon: "shield",
-                  title: "Seguros",
+                  title: "MARXEN Seguros",
                   text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cobertura para cada etapa de tu vida.",
                   tone: "navy",
                   delay: 0,
@@ -109,7 +109,7 @@ export default function HomePage() {
                 {
                   href: "/salud",
                   icon: "heart",
-                  title: "Salud · Prepagas",
+                  title: "MARXEN Salud",
                   text: "Planes A2 y A4 de Prevención Salud, con guía de aportes según tu modalidad laboral.",
                   tone: "teal",
                   delay: 80,
@@ -117,7 +117,7 @@ export default function HomePage() {
                 {
                   href: "/viajero",
                   icon: "plane",
-                  title: "Viajero",
+                  title: "MARXEN Viajero",
                   text: "GoAssistance y New Travel. Cobertura nacional e internacional para cada viaje.",
                   tone: "sky",
                   delay: 160,
@@ -179,7 +179,7 @@ export default function HomePage() {
         <div className="container-mx grid items-center gap-12 py-20 sm:py-24 lg:grid-cols-2">
           <Reveal>
             <div>
-              <p className="eyebrow !text-teal-soft">MarXel Salud</p>
+              <p className="eyebrow !text-teal-soft">MARXEN Salud</p>
               <h2 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
                 Prevención Salud,
                 <br />

@@ -55,7 +55,7 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="container-mx flex flex-col gap-2 py-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Marxel</p>
+          <p>© {new Date().getFullYear()} {site.name}</p>
           <p>Seguros · Salud · Viajero</p>
         </div>
       </div>

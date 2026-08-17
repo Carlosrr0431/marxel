@@ -95,7 +95,7 @@ export function ChatBot() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
-    "Hola Marxel, quiero asesoramiento sobre Prevención Salud."
+    "Hola MARXEN, quiero asesoramiento sobre Prevención Salud."
   )}`;
 
   // Cargar historial guardado al montar
@@ -269,7 +269,7 @@ export function ChatBot() {
         >
           <header className="flex h-10 shrink-0 items-center justify-between gap-2 bg-navy px-3 text-white">
             <p className="truncate text-[13px] font-semibold tracking-tight">
-              Asistente Marxel
+              Asistente MARXEN
               <span className="ml-1.5 font-normal text-white/55">
                 {inQuote ? "· Cotización" : "· Salud"}
               </span>

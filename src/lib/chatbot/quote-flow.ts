@@ -104,7 +104,7 @@ function laboralLabel(m: ModalidadQuote): string {
 
 export function buildNotas(data: QuoteData, extra?: string): string {
   const lines = [
-    "Lead desde chatbot Marxel",
+    "Lead desde chatbot MARXEN",
     data.nombre ? `Nombre: ${data.nombre}` : null,
     data.edades ? `Edades titular/grupo: ${data.edades}` : null,
     data.modalidad ? `Situación laboral: ${laboralLabel(data.modalidad)}` : null,

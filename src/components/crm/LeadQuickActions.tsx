@@ -23,7 +23,7 @@ export function LeadQuickActions({
       <Link
         href={whatsappLink(
           celular,
-          `Hola ${nombre}, te escribo de Marxel. ¿Seguimos con tu cotización?`
+          `Hola ${nombre}, te escribo de MARXEN. ¿Seguimos con tu cotización?`
         )}
         target="_blank"
         rel="noopener noreferrer"

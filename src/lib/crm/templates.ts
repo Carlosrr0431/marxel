@@ -13,7 +13,7 @@ export const WA_TEMPLATES: WaTemplate[] = [
     categoria: "apertura",
     producto: "salud",
     cuerpo:
-      "Hola {{nombre}} 👋 Soy tu asesor de Marxel. Vi tu consulta por Prevención Salud. ¿Tenés unos minutos para armarte una cotización a medida? Con aportes de monotributo o sueldo a menudo la diferencia queda muy baja.",
+      "Hola {{nombre}} 👋 Soy tu asesor de MARXEN. Vi tu consulta por Prevención Salud. ¿Tenés unos minutos para armarte una cotización a medida? Con aportes de monotributo o sueldo a menudo la diferencia queda muy baja.",
   },
   {
     id: "apertura-general",
@@ -21,7 +21,7 @@ export const WA_TEMPLATES: WaTemplate[] = [
     categoria: "apertura",
     producto: "general",
     cuerpo:
-      "Hola {{nombre}}, te escribo de Marxel. Recibimos tu solicitud desde la web. ¿Seguimos con la cotización de {{interes}}?",
+      "Hola {{nombre}}, te escribo de MARXEN. Recibimos tu solicitud desde la web. ¿Seguimos con la cotización de {{interes}}?",
   },
   {
     id: "recontacto",
@@ -52,7 +52,7 @@ export const WA_TEMPLATES: WaTemplate[] = [
     categoria: "apertura",
     producto: "seguros",
     cuerpo:
-      "Hola {{nombre}}, soy de Marxel. Para cotizar tu seguro de auto/moto necesito marca, modelo, año y si querés todo riesgo o RC. ¿Me pasás esos datos?",
+      "Hola {{nombre}}, soy de MARXEN. Para cotizar tu seguro de auto/moto necesito marca, modelo, año y si querés todo riesgo o RC. ¿Me pasás esos datos?",
   },
   {
     id: "viajero",

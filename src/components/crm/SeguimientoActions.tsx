@@ -33,7 +33,7 @@ export function SeguimientoActions({
         <Link
           href={whatsappLink(
             celular,
-            `Hola ${nombre || ""}, te escribo de Marxel para seguir con tu cotización.`
+            `Hola ${nombre || ""}, te escribo de MARXEN para seguir con tu cotización.`
           )}
           target="_blank"
           rel="noopener noreferrer"
