@@ -4,6 +4,8 @@ import {
   getWhatsmeowApiKey,
   getWhatsmeowWebhookSecret,
   normalizeArPhone,
+  stripDeviceFromJid,
+  toWhatsappSendTarget,
 } from "@/lib/whatsmeow/config";
 
 type FetchResult = {
@@ -71,6 +73,12 @@ function extractMessageId(data: Record<string, unknown> | null) {
 
 function isJid(value: string) {
   return value.includes("@lid") || value.includes("@s.whatsapp.net") || value.includes("@g.us");
+}
+
+function sendRecipient(to: string, resolved: string) {
+  const fromTo = toWhatsappSendTarget(to);
+  if (fromTo && !fromTo.includes("@")) return fromTo;
+  return toWhatsappSendTarget(resolved) || fromTo;
 }
 
 export async function fetchWhatsmeowStatus(agentCode = getWhatsmeowAgentCode()) {
@@ -157,17 +165,17 @@ export async function logoutWhatsmeowSession(agentCode = getWhatsmeowAgentCode()
 }
 
 async function resolveJid(agentCode: string, to: string) {
-  const raw = String(to || "").trim();
-  if (!raw) return "";
-  if (isJid(raw)) return raw;
-  const phone = normalizeArPhone(raw);
+  const target = toWhatsappSendTarget(to);
+  if (!target) return "";
+  if (isJid(target)) return stripDeviceFromJid(target);
+  const phone = normalizeArPhone(target);
   if (!phone) return "";
   try {
     const result = await whatsmeowFetch(
       `/api/check-number?agent_code=${encodeURIComponent(agentCode)}&phone=${encodeURIComponent(phone)}`
     );
     const data = nestedData(result);
-    const jid = data?.jid ? String(data.jid) : "";
+    const jid = data?.jid ? stripDeviceFromJid(String(data.jid)) : "";
     if (result.ok && result.data?.success !== false && data?.registered && jid) return jid;
   } catch {
     // fallback al teléfono
@@ -182,7 +190,7 @@ export async function sendWhatsmeowText(agentCode: string, to: string, text: str
   }
   const dest = await resolveJid(agentCode, to);
   if (!dest) return { success: false as const, error: "number is not registered on WhatsApp" };
-  const phone = isJid(to) ? dest : normalizeArPhone(to) || dest;
+  const phone = sendRecipient(to, dest);
   const result = await whatsmeowFetch("/api/messages/send", {
     method: "POST",
     body: { agent_code: agentCode, phone, message },
@@ -209,7 +217,7 @@ export async function sendWhatsmeowPoll(
   }
   const dest = await resolveJid(agentCode, to);
   if (!dest) return { success: false as const, error: "number is not registered on WhatsApp" };
-  const number = isJid(to) ? dest : normalizeArPhone(to) || dest;
+  const number = sendRecipient(to, dest);
   const result = await whatsmeowFetch(
     `/v2/message/sendPoll/${encodeURIComponent(agentCode)}`,
     {

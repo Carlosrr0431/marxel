@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { runChatTurn } from "@/lib/chatbot/run-turn";
-import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret } from "@/lib/whatsmeow/config";
+import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret, toWhatsappSendTarget } from "@/lib/whatsmeow/config";
 import { sendWhatsmeowPoll, sendWhatsmeowText } from "@/lib/whatsmeow/client";
 import {
   ACCUMULATION_MS,
@@ -48,10 +48,7 @@ export function webhookSecretOk(request: Request) {
 }
 
 function destination(chatJid: string, phone: string) {
-  if (chatJid.includes("@") && !chatJid.includes("@g.us") && !chatJid.includes("@broadcast")) {
-    return chatJid;
-  }
-  return phone;
+  return toWhatsappSendTarget(phone) || toWhatsappSendTarget(chatJid);
 }
 
 function pollNameFrom(answer: string) {

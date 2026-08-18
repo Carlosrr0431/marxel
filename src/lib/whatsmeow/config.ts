@@ -38,6 +38,26 @@ export function normalizeArPhone(value: string) {
   return clean;
 }
 
+/** Quita `:device` de un JID (549...:12@s.whatsapp.net → 549...@s.whatsapp.net). */
+export function stripDeviceFromJid(value: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw.includes("@g.us") || raw.includes("@broadcast") || raw.includes("@status")) return "";
+  if (!raw.includes("@")) return raw.split(":")[0];
+  const at = raw.indexOf("@");
+  const user = raw.slice(0, at).split(":")[0];
+  const server = raw.slice(at);
+  if (!user) return "";
+  return `${user}${server}`;
+}
+
+/** Destino válido para send/poll: teléfono AR, o JID de usuario sin device. */
+export function toWhatsappSendTarget(value: string) {
+  const phone = normalizeArPhone(value);
+  if (phone) return phone;
+  return stripDeviceFromJid(value);
+}
+
 export function getMarxenLinePhone() {
   return normalizeArPhone(process.env.WHATSMEOW_PHONE || MARXEN_WA_PHONE);
 }
