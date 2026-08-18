@@ -10,6 +10,7 @@ const links = [
   { href: "/crm", label: "Dashboard", exact: true, icon: "grid" as const },
   { href: "/crm/inbox", label: "Inbox", icon: "inbox" as const },
   { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true, icon: "spark" as const },
+  { href: "/crm/whatsapp", label: "WhatsApp", icon: "phone" as const },
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
@@ -87,6 +88,13 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       <svg {...props}>
         <rect x="3.5" y="5" width="17" height="15" rx="2" />
         <path d="M8 3.5V7M16 3.5V7M3.5 10h17" />
+      </svg>
+    );
+  }
+  if (name === "phone") {
+    return (
+      <svg {...props}>
+        <path d="M7.2 3.8h3.2l1.2 3-1.8 1.1a12.5 12.5 0 0 0 5.1 5.1l1.1-1.8 3 1.2v3.2a1.6 1.6 0 0 1-1.7 1.6C9.8 16.8 7.2 8.4 7.3 5.4a1.6 1.6 0 0 1 1.6-1.6z" />
       </svg>
     );
   }

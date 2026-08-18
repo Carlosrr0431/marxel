@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import type { ModalidadIngreso, ProductoInteres } from "@/lib/crm/types";
+import type { LeadOrigen, ModalidadIngreso, ProductoInteres } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
 import {
   buildNotas,
@@ -44,7 +44,12 @@ function planInteres(data: QuoteData): string {
   return "Consulta chatbot";
 }
 
-function buildPayload(data: QuoteData, notas: string, tags: string[]) {
+function buildPayload(
+  data: QuoteData,
+  notas: string,
+  tags: string[],
+  channel?: QuoteState["channel"]
+) {
   const producto = toProducto(data);
   const payload = {
     nombre: data.nombre!,
@@ -59,13 +64,13 @@ function buildPayload(data: QuoteData, notas: string, tags: string[]) {
         .filter(Boolean)
         .join(" · ") || null,
     modalidad: toModalidad(data),
-    origen: "web" as const,
+    origen: (channel === "whatsapp" ? "whatsapp" : "web") as LeadOrigen,
     origen_detalle: "chatbot",
     estado: "interesado" as const,
     prioridad: "urgente" as const,
     tags,
     notas_iniciales: notas,
-    page_path: "/chatbot",
+    page_path: channel === "whatsapp" ? "/whatsapp" : "/chatbot",
     proximo_contacto_at: new Date(
       Date.now() + 2 * 60 * 60 * 1000
     ).toISOString(),
@@ -82,7 +87,7 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
   const supabase = createServiceClient();
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · listo para cotizar");
   const tags = ["chatbot", "caliente", "cotizar", toProducto(data)];
-  const payload = buildPayload(data, notas, tags);
+  const payload = buildPayload(data, notas, tags, state.channel);
 
   if (state.leadId) {
     const { data: updated, error } = await supabase

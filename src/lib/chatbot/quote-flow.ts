@@ -47,6 +47,7 @@ export type QuoteState = {
   data: QuoteData;
   leadId?: string;
   pendingSave?: "hot" | "optional" | null;
+  channel?: "web" | "whatsapp";
 };
 
 export type QuoteQuickReply = {
