@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero } from "@/components/SectionHeading";
 import { Icon, seguroIconMap } from "@/components/Icon";
+import { SanCristobalEmbed } from "@/components/SanCristobalEmbed";
 import { seguros } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "MARXEN Seguros",
   description:
-    "Autos y motos, accidentes personales, comercios, ART, mala praxis y hogar. Coberturas claras con MARXEN.",
+    "Cotizá online Auto, Hogar, Moto, Accidentes Personales e Integral de Comercio con San Cristóbal Seguros a través de MARXEN.",
 };
 
 export default function SegurosPage() {
@@ -15,13 +16,42 @@ export default function SegurosPage() {
     <>
       <PageHero
         eyebrow="MARXEN Seguros"
-        title="Coberturas pensadas para tu día a día"
-        description="Elegí la protección que necesitás. Te explicamos cada opción con claridad y te acompañamos en la contratación."
-        cta={{ href: "/cotizar?interes=Seguros", label: "Cotizar un seguro" }}
+        title="Cotizá online con San Cristóbal"
+        description="Elegí el ramo, cotizá en el momento y avanzá con el respaldo de San Cristóbal Seguros y el acompañamiento de MARXEN."
+        cta={{ href: "#cotizar-online", label: "Ir al cotizador" }}
       />
 
-      <section className="bg-cloud">
+      <section id="cotizar-online" className="scroll-mt-24 bg-cloud">
+        <div className="container-mx py-10 sm:py-14">
+          <div className="mb-6 max-w-2xl">
+            <p className="eyebrow">Sitio Seguro</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-navy sm:text-3xl">
+              Conocé más sobre nuestros seguros
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
+              Auto, Hogar, Moto, Accidentes Personales e Integral de Comercio.
+              Tocá cada opción dentro del cotizador para ver coberturas y pedir
+              tu cotización.
+            </p>
+          </div>
+
+          <SanCristobalEmbed minHeight={1200} />
+        </div>
+      </section>
+
+      <section className="border-t border-line/60 bg-mist/30">
         <div className="container-mx flex flex-col gap-5 py-14 sm:py-16 lg:gap-6 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="eyebrow">También te asesoramos</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">
+              Otras coberturas con MARXEN
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              ART, mala praxis y más. Si no está en el cotizador online, te
+              armamos la propuesta a medida.
+            </p>
+          </div>
+
           {seguros.map((item, index) => (
             <article
               key={item.slug}
@@ -56,12 +86,17 @@ export default function SegurosPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={`/cotizar?interes=${encodeURIComponent(item.title)}`}
-                  className="btn btn-primary mt-7 w-full sm:w-auto"
-                >
-                  Pedir cotización
-                </Link>
+                <div className="mt-7 flex flex-col gap-2 sm:flex-row">
+                  <a href="#cotizar-online" className="btn btn-primary w-full sm:w-auto">
+                    Cotizar online
+                  </a>
+                  <Link
+                    href={`/cotizar?interes=${encodeURIComponent(item.title)}`}
+                    className="btn btn-secondary w-full sm:w-auto"
+                  >
+                    Pedir asesoramiento
+                  </Link>
+                </div>
               </div>
             </article>
           ))}

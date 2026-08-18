@@ -39,8 +39,8 @@ export default function HomePage() {
             </p>
 
             <div className="animate-rise-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href="/cotizar" className="btn btn-primary btn-lg">
-                Cotizar ahora
+              <Link href="/seguros#cotizar-online" className="btn btn-primary btn-lg">
+                Cotizar seguros
               </Link>
               <Link href="/salud" className="btn btn-secondary btn-lg">
                 Prepagas A2 / A4
@@ -98,11 +98,11 @@ export default function HomePage() {
             {(
               [
                 {
-                  href: "/seguros",
+                  href: "/seguros#cotizar-online",
                   icon: "shield",
                   title: "MARXEN Seguros",
-                  text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cobertura para cada etapa de tu vida.",
-                  cta: "Explorar",
+                  text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cotizá online con San Cristóbal.",
+                  cta: "Cotizar online",
                   tone: "navy",
                   delay: 0,
                 },
@@ -154,7 +154,7 @@ export default function HomePage() {
             </Reveal>
             <Reveal delay={100}>
               <Link
-                href="/seguros"
+                href="/seguros#cotizar-online"
                 className="shrink-0 text-sm font-semibold text-navy underline-offset-4 hover:underline"
               >
                 Ver todas →
