@@ -183,7 +183,7 @@ async function resolveJid(agentCode: string, to: string) {
   return phone;
 }
 
-export async function sendWhatsmeowText(agentCode: string, to: string, text: string) {
+export async function sendWhatsmeowTextDirect(agentCode: string, to: string, text: string) {
   const message = String(text || "").trim();
   if (!agentCode || !to || !message) {
     return { success: false as const, error: "agentCode, to y text son requeridos" };
@@ -206,7 +206,43 @@ export async function sendWhatsmeowText(agentCode: string, to: string, text: str
   return { success: true as const, messageId: extractMessageId(result.data) };
 }
 
-export async function sendWhatsmeowPoll(
+export async function sendWhatsmeowText(
+  agentCode: string,
+  to: string,
+  text: string,
+  { bypassQueue = false, wake = true }: { bypassQueue?: boolean; wake?: boolean } = {}
+) {
+  const message = String(text || "").trim();
+  if (!agentCode || !to || !message) {
+    return { success: false as const, error: "agentCode, to y text son requeridos" };
+  }
+
+  if (!bypassQueue) {
+    try {
+      const { enqueueWhatsappOutbound, isWhatsappOutboundQueueEnabled } = await import(
+        "@/lib/whatsmeow/outbound-queue"
+      );
+      if (isWhatsappOutboundQueueEnabled()) {
+        const queued = await enqueueWhatsappOutbound({
+          agentCode,
+          to,
+          kind: "text",
+          payload: { text: message },
+          wake,
+        });
+        if (queued.success) return queued;
+        if (!queued.missingTable) return queued;
+        console.warn("[whatsmeow] cola ausente; envío directo", queued.error);
+      }
+    } catch (err) {
+      console.warn("[whatsmeow] cola falló; envío directo", err instanceof Error ? err.message : err);
+    }
+  }
+
+  return sendWhatsmeowTextDirect(agentCode, to, message);
+}
+
+export async function sendWhatsmeowPollDirect(
   agentCode: string,
   to: string,
   { name, options, maxSelections = 1 }: { name: string; options: string[]; maxSelections?: number }
@@ -240,4 +276,43 @@ export async function sendWhatsmeowPoll(
     };
   }
   return { success: true as const, messageId: extractMessageId(result.data) };
+}
+
+export async function sendWhatsmeowPoll(
+  agentCode: string,
+  to: string,
+  { name, options, maxSelections = 1 }: { name: string; options: string[]; maxSelections?: number },
+  { bypassQueue = false }: { bypassQueue?: boolean } = {}
+) {
+  const opts = (options || []).map((o) => String(o || "").trim()).filter(Boolean).slice(0, 8);
+  if (!agentCode || !to || opts.length < 2) {
+    return { success: false as const, error: "Se necesitan al menos 2 opciones" };
+  }
+
+  if (!bypassQueue) {
+    try {
+      const { enqueueWhatsappOutbound, isWhatsappOutboundQueueEnabled } = await import(
+        "@/lib/whatsmeow/outbound-queue"
+      );
+      if (isWhatsappOutboundQueueEnabled()) {
+        const queued = await enqueueWhatsappOutbound({
+          agentCode,
+          to,
+          kind: "poll",
+          payload: {
+            name: name || "Elegí una opción",
+            options: opts,
+            maxSelections: maxSelections > 0 ? maxSelections : 1,
+          },
+        });
+        if (queued.success) return queued;
+        if (!queued.missingTable) return queued;
+        console.warn("[whatsmeow] cola ausente; poll directo", queued.error);
+      }
+    } catch (err) {
+      console.warn("[whatsmeow] cola falló; poll directo", err instanceof Error ? err.message : err);
+    }
+  }
+
+  return sendWhatsmeowPollDirect(agentCode, to, { name, options: opts, maxSelections });
 }

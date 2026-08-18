@@ -91,7 +91,9 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
   const agentCode = getWhatsmeowAgentCode();
 
   if (result.answer) {
-    const sent = await sendWhatsmeowText(agentCode, dest, result.answer);
+    const sent = await sendWhatsmeowText(agentCode, dest, result.answer, {
+      wake: pollOptions.length < 2,
+    });
     if (!sent.success) {
       console.error("[whatsapp][send]", sent.error);
     }
@@ -114,6 +116,8 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
       console.error("[whatsapp][poll]", poll.error);
       const fallback = pollOptions.map((item, i) => `${i + 1}. ${item.label}`).join("\n");
       await sendWhatsmeowText(agentCode, dest, fallback).catch(() => null);
+    } else if (!poll.messageId) {
+      console.info("[whatsapp][poll]", "queued", dest);
     }
   }
 
