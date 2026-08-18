@@ -1,4 +1,4 @@
-import { MENU_WHATSAPP, type QuoteQuickReply } from "@/lib/chatbot/quote-flow";
+import type { QuoteQuickReply } from "@/lib/chatbot/quote-flow";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import type { PendingPoll } from "@/lib/whatsmeow/conversations";
 
@@ -138,15 +138,31 @@ export function parseInbound(body: unknown): InboundMessage | null {
   };
 }
 
+function fold(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function mapPollToValue(choice: string, pending: PendingPoll | null) {
   const raw = String(choice || "").trim();
   if (!raw) return "";
   if (!pending?.options?.length) return raw;
-  const norm = raw.toLowerCase();
+  const norm = fold(raw);
   const hit = pending.options.find((opt) => {
-    const label = opt.label.toLowerCase();
-    const value = opt.value.toLowerCase();
-    return label === norm || value === norm || norm.includes(label) || label.includes(norm);
+    const label = fold(opt.label);
+    const value = fold(opt.value);
+    return (
+      label === norm ||
+      value === norm ||
+      norm.includes(label) ||
+      label.includes(norm) ||
+      value.includes(norm) ||
+      norm.includes(value)
+    );
   });
   if (hit) return hit.value;
   const index = Number(raw);
@@ -163,7 +179,6 @@ export function mapPollToValue(choice: string, pending: PendingPoll | null) {
 
 export function pollOptionsFromReplies(replies: QuoteQuickReply[]) {
   return replies
-    .filter((item) => item.value !== MENU_WHATSAPP)
     .map((item) => ({
       ...item,
       label: item.label.slice(0, 80),

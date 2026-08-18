@@ -151,6 +151,22 @@ const HEALTH_COVERAGE =
 const SKIP =
   /^(no|nop|ahora\s+no|despu[eé]s|saltar|omitir|pasar|na|nada|prefiero\s+no)\b/i;
 
+export function isGreeting(text: string): boolean {
+  return /^(hola+|holis|buenas([,\s].*)?|buen\s*(d[ií]a|dia|tardes|noches)|hey|hi|hello|info|men[uú]|opciones|start|inicio)\.?\s*$/i.test(
+    text.trim()
+  );
+}
+
+export function menuForChannel(channel?: QuoteState["channel"]): QuoteQuickReply[] {
+  if (channel === "whatsapp") {
+    return [
+      ...PRODUCT_REPLIES,
+      { label: "Hablar con un asesor", value: MENU_WHATSAPP },
+    ];
+  }
+  return MAIN_MENU;
+}
+
 export function detectsQuoteIntent(text: string): boolean {
   const t = text.trim();
   return (
@@ -372,11 +388,19 @@ function finishQuote(state: QuoteState, extra?: string): QuoteFlowResult {
  */
 export function processQuoteFlow(
   message: string,
-  prev: QuoteState | null | undefined
+  prev: QuoteState | null | undefined,
+  channel?: QuoteState["channel"]
 ): QuoteFlowResult {
   const text = message.trim();
 
   if (text === MENU_WHATSAPP) {
+    if (channel === "whatsapp") {
+      return {
+        handled: true,
+        state: { active: true, step: "nombre", data: { ...(prev?.data || {}) } },
+        answer: "Dale, un asesor de MARXEN te va a escribir. ¿Me decís tu nombre?",
+      };
+    }
     return {
       handled: true,
       state: prev?.active ? prev : emptyQuoteState(),
@@ -640,13 +664,14 @@ export function processQuoteFlow(
 export async function processQuoteFlowBatch(
   lines: string[],
   prev: QuoteState,
-  persist: (s: QuoteState) => Promise<QuoteState>
+  persist: (s: QuoteState) => Promise<QuoteState>,
+  channel?: QuoteState["channel"]
 ): Promise<QuoteFlowResult | null> {
   let state = prev;
   let lastResult: QuoteFlowResult | null = null;
 
   for (const line of lines) {
-    const result = processQuoteFlow(line, state);
+    const result = processQuoteFlow(line, state, channel);
     if (!result.handled) break;
 
     if (result.state.pendingSave) {

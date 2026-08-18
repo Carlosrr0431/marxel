@@ -11,6 +11,10 @@ import {
   type ConversationRow,
 } from "@/lib/whatsmeow/conversations";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
+import {
+  detectsQuoteIntent,
+  isGreeting,
+} from "@/lib/chatbot/quote-flow";
 
 const IGNORE_EVENTS = new Set([
   "messages.status",
@@ -57,6 +61,17 @@ function pollNameFrom(answer: string) {
       .filter(Boolean)
       .at(-1) || "Elegí una opción";
   return line.slice(0, 80);
+}
+
+const CHOICE_STEPS = new Set(["idle", "producto", "seguro_tipo", "laboral", "grupo"]);
+
+function shouldReplyNow(text: string, conv: ConversationRow, isPoll: boolean) {
+  if (isPoll) return true;
+  if (conv.pending_poll) return true;
+  if (text.startsWith("menu:")) return true;
+  if (isGreeting(text) || detectsQuoteIntent(text)) return true;
+  if (!conv.quote_state.active) return true;
+  return CHOICE_STEPS.has(conv.quote_state.step);
 }
 
 async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string) {
@@ -185,24 +200,30 @@ export async function handleWhatsappInbound(body: unknown) {
   }
 
   const dest = destination(inbound.chatJid, inbound.phone);
+  const conv = await loadConversation(inbound.phone);
+  const mappedNow = conv.pending_poll
+    ? mapPollToValue(inbound.text, conv.pending_poll) || inbound.text
+    : inbound.text;
 
-  if (inbound.isPoll) {
-    const conv = await loadConversation(inbound.phone);
+  if (inbound.isPoll || shouldReplyNow(mappedNow || inbound.text, conv, inbound.isPoll)) {
     if (inbound.id && conv.last_message_id && inbound.id === conv.last_message_id) {
       return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
     }
-    const mapped = conv.pending_poll
-      ? mapPollToValue(inbound.text, conv.pending_poll)
-      : inbound.text;
-    const voteKey = mapped ? `vote:${inbound.phone}:${mapped}` : "";
+    const mapped = mappedNow;
+    const voteKey =
+      inbound.isPoll && mapped ? `vote:${inbound.phone}:${mapped}` : "";
     if (voteKey && conv.last_event === voteKey) {
       return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
     }
-    if (!mapped) {
+    if (!mapped.trim()) {
       return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
     }
     const result = await replyFromTurn(
-      { ...conv, last_message_id: inbound.id || conv.last_message_id, last_event: voteKey },
+      {
+        ...conv,
+        last_message_id: inbound.id || conv.last_message_id,
+        last_event: voteKey || conv.last_event,
+      },
       dest,
       mapped
     );

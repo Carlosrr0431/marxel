@@ -3,7 +3,9 @@ import {
   detectsHealthCoverageIntent,
   detectsQuoteIntent,
   emptyQuoteState,
+  isGreeting,
   isSaludHandoffReady,
+  menuForChannel,
   processQuoteFlow,
   processQuoteFlowBatch,
   stripMarkdownNoise,
@@ -126,12 +128,26 @@ export async function runChatTurn(input: {
     input.channel
   );
 
+  if (input.channel === "whatsapp" && !prevState.active && isGreeting(message)) {
+    return {
+      answer: "¡Hola! Bienvenido a MARXEN Protección Integral. ¿En qué te puedo ayudar hoy?",
+      quoteState: prevState,
+      quickReplies: menuForChannel("whatsapp"),
+      mode: "quote",
+    };
+  }
+
   const lines = message.includes("\n")
     ? message.split("\n").map((s) => s.trim()).filter(Boolean)
     : [message];
 
   if (lines.length > 1) {
-    const batch = await processQuoteFlowBatch(lines, prevState, persistQuoteSideEffects);
+    const batch = await processQuoteFlowBatch(
+      lines,
+      prevState,
+      persistQuoteSideEffects,
+      input.channel
+    );
     if (batch && batch.handled && batch.answer) {
       const skipped = await skipWhatsappIfKnown(
         withChannel(batch.state, input.channel),
@@ -149,7 +165,7 @@ export async function runChatTurn(input: {
     }
   }
 
-  const quote = processQuoteFlow(message, prevState);
+  const quote = processQuoteFlow(message, prevState, input.channel);
   if (quote.handled && quote.answer) {
     let state = await persistQuoteSideEffects(withChannel(quote.state, input.channel));
     const skipped = await skipWhatsappIfKnown(
@@ -227,12 +243,16 @@ export async function runChatTurn(input: {
       "No pude responder. Probá de nuevo o escribinos por WhatsApp."
   );
 
+  const menu = menuForChannel(input.channel);
   return {
     answer,
     quoteState: prevState,
-    quickReplies: detectsQuoteIntent(message)
-      ? [{ label: "Quiero cotizar", value: "Quiero cotizar" }]
-      : [],
+    quickReplies:
+      input.channel === "whatsapp" && !prevState.active
+        ? menu
+        : detectsQuoteIntent(message)
+          ? [{ label: "Quiero cotizar", value: "Quiero cotizar" }]
+          : [],
     mode: "rag",
   };
 }
