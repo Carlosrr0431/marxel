@@ -17,12 +17,11 @@ export default function SegurosPage() {
       <PageHero
         eyebrow="MARXEN Seguros"
         title="Cotizá online con San Cristóbal"
-        description="Elegí el ramo y cotizá en el momento, sin salir del sitio. Respaldo San Cristóbal + acompañamiento MARXEN."
-        cta={{ href: "#cotizar-online", label: "Ver seguros" }}
+        description="Elegí el ramo y cotizá en el momento, sin salir del sitio."
       />
 
       <section id="cotizar-online" className="scroll-mt-24 bg-cloud">
-        <div className="container-mx py-8 sm:py-12">
+        <div className="container-mx py-10 sm:py-14">
           <SanCristobalEmbed />
         </div>
       </section>

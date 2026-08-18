@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { QuoteForm } from "@/components/QuoteForm";
 import { PageHero } from "@/components/SectionHeading";
 import { SanCristobalEmbed } from "@/components/SanCristobalEmbed";
@@ -43,16 +42,8 @@ export default async function CotizarPage({
 
       {showSanCristobal ? (
         <section className="bg-cloud">
-          <div className="container-mx py-8 sm:py-10">
+          <div className="container-mx py-10 sm:py-14">
             <SanCristobalEmbed />
-            <p className="mt-4 text-center text-sm text-muted">
-              <Link
-                href="/seguros#cotizar-online"
-                className="font-semibold text-navy underline-offset-4 hover:underline"
-              >
-                Ver más coberturas →
-              </Link>
-            </p>
           </div>
         </section>
       ) : null}
