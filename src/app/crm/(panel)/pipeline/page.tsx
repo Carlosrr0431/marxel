@@ -32,13 +32,13 @@ export default async function PipelinePage() {
         description="Arrastrá el estado desde cada tarjeta. Ordenado por score comercial."
       />
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4">
         {columns.map((col) => {
           const items = leads.filter((l) => l.estado === col.value);
           return (
             <section
               key={col.value}
-              className="w-[300px] shrink-0 rounded-2xl border border-line/80 bg-white/80 shadow-[0_8px_30px_rgba(7,31,53,0.04)] backdrop-blur"
+              className="w-[min(300px,85vw)] shrink-0 snap-start rounded-2xl border border-line/80 bg-white/80 shadow-[0_8px_30px_rgba(7,31,53,0.04)] backdrop-blur"
             >
               <div className="flex items-center justify-between border-b border-line px-3.5 py-3.5">
                 <div>
@@ -47,7 +47,7 @@ export default async function PipelinePage() {
                 </div>
                 <span className={`crm-badge ${col.color}`}>{items.length}</span>
               </div>
-              <ul className="flex max-h-[72vh] flex-col gap-2.5 overflow-y-auto p-3">
+              <ul className="flex max-h-[min(68vh,calc(100dvh-13rem))] flex-col gap-2.5 overflow-y-auto p-3">
                 {items.map((lead) => (
                   <li
                     key={lead.id}

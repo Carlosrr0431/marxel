@@ -61,16 +61,6 @@ export default async function LeadsPage({
             ? "Calificados por el asistente: producto, localidad y datos para cotizar."
             : "Gestioná el pipeline comercial antes de la conversión a afiliado."
         }
-        actions={
-          <>
-            <Link href="/api/crm/export?type=leads" className="crm-btn crm-btn-ghost">
-              Exportar
-            </Link>
-            <Link href="/crm/leads/nuevo" className="crm-btn crm-btn-primary">
-              + Nuevo lead
-            </Link>
-          </>
-        }
       />
 
       <div className="flex flex-wrap gap-2">
@@ -100,14 +90,15 @@ export default async function LeadsPage({
         ) : null}
       </div>
 
-      <form className="crm-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <form className="crm-card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-6">
         <input
           name="q"
           defaultValue={params.q || ""}
           placeholder="Buscar nombre, celular, localidad…"
-          className="crm-input lg:col-span-2"
+          className="crm-input sm:col-span-2 xl:col-span-2"
+          aria-label="Buscar leads"
         />
-        <select name="estado" defaultValue={params.estado || ""} className="crm-input">
+        <select name="estado" defaultValue={params.estado || ""} className="crm-input" aria-label="Estado">
           <option value="">Todos los estados</option>
           {LEAD_ESTADOS.map((e) => (
             <option key={e.value} value={e.value}>
@@ -115,7 +106,7 @@ export default async function LeadsPage({
             </option>
           ))}
         </select>
-        <select name="producto" defaultValue={params.producto || ""} className="crm-input">
+        <select name="producto" defaultValue={params.producto || ""} className="crm-input" aria-label="Producto">
           <option value="">Producto</option>
           {PRODUCTOS.map((p) => (
             <option key={p.value} value={p.value}>
@@ -123,12 +114,12 @@ export default async function LeadsPage({
             </option>
           ))}
         </select>
-        <select name="origen" defaultValue={params.origen || ""} className="crm-input">
+        <select name="origen" defaultValue={params.origen || ""} className="crm-input" aria-label="Origen">
           <option value="">Origen</option>
           <option value="chatbot">Chatbot</option>
         </select>
-        <div className="flex gap-2">
-          <select name="modalidad" defaultValue={params.modalidad || ""} className="crm-input">
+        <div className="flex flex-col gap-2 sm:flex-row sm:col-span-2 xl:col-span-1 xl:flex-col">
+          <select name="modalidad" defaultValue={params.modalidad || ""} className="crm-input" aria-label="Modalidad">
             <option value="">Modalidad</option>
             {MODALIDADES.map((m) => (
               <option key={m.value} value={m.value}>
@@ -144,9 +135,63 @@ export default async function LeadsPage({
 
       {leads.length ? (
         <LeadsBulkBar leads={leads.map((l) => ({ id: l.id, nombre: l.nombre }))}>
-          <div className="crm-card overflow-hidden">
+          <div className="space-y-3 md:hidden">
+            {leads.map((lead) => (
+              <article key={lead.id} className="crm-card p-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="lead_ids"
+                    value={lead.id}
+                    className="lead-check mt-2 h-4 w-4 rounded border-line"
+                    form="bulk-form"
+                    aria-label={`Seleccionar ${lead.nombre}`}
+                  />
+                  <Avatar name={lead.nombre} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Link href={`/crm/leads/${lead.id}`} className="font-semibold text-navy hover:underline">
+                            {lead.nombre}
+                          </Link>
+                          {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                        </div>
+                        <p className="truncate text-xs text-muted">{lead.celular}</p>
+                      </div>
+                      <span className="font-display text-lg font-bold tabular-nums text-teal">{lead.puntaje}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <ProductoPill producto={lead.producto} />
+                      <span className={`crm-badge ${prioridadColor(lead.prioridad)}`}>{lead.prioridad}</span>
+                      {lead.localidad ? <span className="text-xs text-muted">{lead.localidad}</span> : null}
+                    </div>
+                    {lead.plan_interes ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted">{lead.plan_interes}</p>
+                    ) : null}
+                    <div className="mt-3">
+                      <LeadEstadoSelect leadId={lead.id} value={lead.estado} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      {(lead.tags || []).slice(0, 3).map((t) => (
+                        <Link
+                          key={t}
+                          href={`/crm/leads?tag=${encodeURIComponent(t)}`}
+                          className="crm-badge bg-mist text-navy"
+                        >
+                          #{t}
+                        </Link>
+                      ))}
+                      <span className="ml-auto text-[11px] text-muted">{relativeTime(lead.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="crm-card hidden overflow-hidden md:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
+              <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="bg-[#f7fafc] text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">Lead</th>
@@ -171,6 +216,7 @@ export default async function LeadsPage({
                               value={lead.id}
                               className="lead-check h-4 w-4 rounded border-line"
                               form="bulk-form"
+                              aria-label={`Seleccionar ${lead.nombre}`}
                             />
                             <Avatar name={lead.nombre} size="sm" />
                             <div>
@@ -188,7 +234,7 @@ export default async function LeadsPage({
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-display text-base font-bold text-teal">
+                          <span className="font-display text-base font-bold tabular-nums text-teal">
                             {lead.puntaje}
                           </span>
                         </td>

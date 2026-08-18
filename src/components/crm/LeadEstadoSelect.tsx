@@ -24,7 +24,8 @@ export function LeadEstadoSelect({
           await updateLeadEstado(leadId, next);
         });
       }}
-      className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm text-navy outline-none focus:border-sky"
+      className="max-w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm text-navy outline-none focus:border-sky focus-visible:ring-2 focus-visible:ring-sky/40"
+      aria-label="Estado del lead"
     >
       {LEAD_ESTADOS.map((e) => (
         <option key={e.value} value={e.value}>

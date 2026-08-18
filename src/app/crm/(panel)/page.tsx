@@ -90,9 +90,6 @@ export default async function CrmDashboardPage() {
             <Link href="/crm/inbox" className="crm-btn crm-btn-teal">
               Abrir inbox
             </Link>
-            <Link href="/crm/leads/nuevo" className="crm-btn crm-btn-primary">
-              + Nuevo lead
-            </Link>
           </>
         }
       />
@@ -147,7 +144,7 @@ export default async function CrmDashboardPage() {
           </div>
           <ul className="divide-y divide-line/70">
             {(chatbotRecent as Lead[]).map((lead) => (
-              <li key={lead.id} className="flex items-center gap-3 px-5 py-3">
+              <li key={lead.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                 <Avatar name={lead.nombre} size="sm" />
                 <Link href={`/crm/leads/${lead.id}`} className="min-w-0 flex-1">
                   <span className="font-semibold text-navy">{lead.nombre}</span>
@@ -156,8 +153,10 @@ export default async function CrmDashboardPage() {
                     {lead.localidad ? ` · ${lead.localidad}` : ""}
                   </span>
                 </Link>
-                <ProductoPill producto={lead.producto} />
-                <span className="text-[11px] text-muted">{relativeTime(lead.created_at)}</span>
+                <span className="hidden sm:inline-flex">
+                  <ProductoPill producto={lead.producto} />
+                </span>
+                <span className="shrink-0 text-[11px] text-muted">{relativeTime(lead.created_at)}</span>
               </li>
             ))}
           </ul>
@@ -284,14 +283,39 @@ export default async function CrmDashboardPage() {
       </section>
 
       <section className="crm-card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+        <div className="flex items-center justify-between border-b border-line px-4 py-4 sm:px-5">
           <h2 className="font-display text-lg font-semibold text-navy">Últimos leads</h2>
           <Link href="/crm/leads" className="text-sm font-semibold text-teal hover:underline">
             Ver todos →
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+        <ul className="divide-y divide-line/70 md:hidden">
+          {(recentLeads as Lead[] | null)?.map((lead) => {
+            const estado = LEAD_ESTADOS.find((e) => e.value === lead.estado);
+            return (
+              <li key={lead.id}>
+                <Link href={`/crm/leads/${lead.id}`} className="flex items-start gap-3 px-4 py-3.5">
+                  <Avatar name={lead.nombre} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5 font-semibold text-navy">
+                      {lead.nombre}
+                      {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-muted">{lead.celular}</span>
+                    <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <ProductoPill producto={lead.producto} />
+                      <span className={`crm-badge ${prioridadColor(lead.prioridad)}`}>{lead.prioridad}</span>
+                      <span className={`crm-badge ${estado?.color}`}>{estado?.label}</span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[11px] text-muted">{relativeTime(lead.created_at)}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wide text-muted">
                 <th className="px-5 py-3 font-medium">Persona</th>
@@ -309,12 +333,12 @@ export default async function CrmDashboardPage() {
                     <td className="px-5 py-3">
                       <Link href={`/crm/leads/${lead.id}`} className="flex items-center gap-3">
                         <Avatar name={lead.nombre} size="sm" />
-                        <span>
+                        <span className="min-w-0">
                           <span className="flex items-center gap-1.5 font-semibold text-navy">
                             {lead.nombre}
                             {isChatbotLead(lead) ? <ChatbotBadge /> : null}
                           </span>
-                          <span className="block text-xs text-muted">{lead.celular}</span>
+                          <span className="block truncate text-xs text-muted">{lead.celular}</span>
                         </span>
                       </Link>
                     </td>
@@ -359,7 +383,7 @@ function Stat({
   return (
     <div className={`crm-card crm-card-hover bg-gradient-to-br ${tones[tone]} p-5`}>
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-2 font-display text-3xl font-semibold text-navy">{value}</p>
+      <p className="mt-2 font-display text-3xl font-semibold tabular-nums text-navy">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>
     </div>
   );

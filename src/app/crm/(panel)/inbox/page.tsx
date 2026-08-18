@@ -105,7 +105,7 @@ export default async function InboxPage() {
               const summary = briefSummary(fields);
               const wa = chatbotWhatsAppText(l, fields);
               return (
-                <li key={l.id} className="flex items-start gap-3 px-5 py-3.5">
+                <li key={l.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
                   <Avatar name={l.nombre} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

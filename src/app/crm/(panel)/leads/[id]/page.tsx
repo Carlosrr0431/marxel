@@ -141,15 +141,15 @@ export default async function LeadDetailPage({
   return (
     <div className="space-y-6">
       <div className="crm-card overflow-hidden">
-        <div className="border-b border-line/70 bg-[linear-gradient(135deg,#eef2ff_0%,#ffffff_55%)] px-5 py-5 sm:px-6">
+        <div className="border-b border-line/70 bg-[linear-gradient(135deg,#eef2ff_0%,#ffffff_55%)] px-4 py-5 sm:px-6">
           <Link href="/crm/leads" className="text-sm text-teal hover:underline">
             ← Leads
           </Link>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex gap-4">
+            <div className="flex min-w-0 gap-4">
               <Avatar name={l.nombre} size="lg" />
-              <div>
-                <h1 className="font-display text-3xl font-semibold text-navy">
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl font-semibold text-pretty text-navy sm:text-3xl">
                   {l.nombre}
                 </h1>
                 <p className="mt-1 text-sm text-muted">

@@ -43,8 +43,9 @@ export default async function AfiliadosPage({
           defaultValue={params.q || ""}
           placeholder="Buscar nombre, DNI, celular…"
           className="crm-input flex-1"
+          aria-label="Buscar afiliados"
         />
-        <select name="estado" defaultValue={params.estado || ""} className="crm-input sm:max-w-[200px]">
+        <select name="estado" defaultValue={params.estado || ""} className="crm-input sm:max-w-[200px]" aria-label="Estado del afiliado">
           <option value="">Todos</option>
           {AFILIADO_ESTADOS.map((e) => (
             <option key={e.value} value={e.value}>

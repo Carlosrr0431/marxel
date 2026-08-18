@@ -40,7 +40,6 @@ export default async function CrmLoginPage({
             type="password"
             name="password"
             required
-            autoFocus
             className="crm-input"
             placeholder="••••••••"
           />

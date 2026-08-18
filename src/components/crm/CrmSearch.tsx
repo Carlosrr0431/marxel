@@ -29,7 +29,7 @@ export function CrmSearch({ items }: { items: SearchItem[] }) {
   }, [items, q]);
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className="relative min-w-0 w-full max-w-xl flex-1">
       <input
         value={q}
         onChange={(e) => {
@@ -41,6 +41,8 @@ export function CrmSearch({ items }: { items: SearchItem[] }) {
         placeholder="Buscar lead o afiliado…"
         className="crm-input bg-white/90 pl-10"
         aria-label="Buscar en CRM"
+        autoComplete="off"
+        spellCheck={false}
       />
       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">
         ⌕
