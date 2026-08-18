@@ -17,25 +17,13 @@ export default function SegurosPage() {
       <PageHero
         eyebrow="MARXEN Seguros"
         title="Cotizá online con San Cristóbal"
-        description="Elegí el ramo, cotizá en el momento y avanzá con el respaldo de San Cristóbal Seguros y el acompañamiento de MARXEN."
-        cta={{ href: "#cotizar-online", label: "Ir al cotizador" }}
+        description="Elegí el ramo y cotizá en el momento, sin salir del sitio. Respaldo San Cristóbal + acompañamiento MARXEN."
+        cta={{ href: "#cotizar-online", label: "Ver seguros" }}
       />
 
       <section id="cotizar-online" className="scroll-mt-24 bg-cloud">
-        <div className="container-mx py-10 sm:py-14">
-          <div className="mb-6 max-w-2xl">
-            <p className="eyebrow">Sitio Seguro</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-navy sm:text-3xl">
-              Conocé más sobre nuestros seguros
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-              Auto, Hogar, Moto, Accidentes Personales e Integral de Comercio.
-              Tocá cada opción dentro del cotizador para ver coberturas y pedir
-              tu cotización.
-            </p>
-          </div>
-
-          <SanCristobalEmbed minHeight={1200} />
+        <div className="container-mx py-8 sm:py-12">
+          <SanCristobalEmbed />
         </div>
       </section>
 

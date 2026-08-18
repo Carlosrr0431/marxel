@@ -5,6 +5,7 @@ type IconName =
   | "heart"
   | "plane"
   | "car"
+  | "bike"
   | "home"
   | "briefcase"
   | "users"
@@ -49,6 +50,19 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 15h16v2.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V15z" stroke="currentColor" strokeWidth="1.7" fill="none" />
       <circle cx="7.5" cy="18.5" r="1.2" fill="currentColor" />
       <circle cx="16.5" cy="18.5" r="1.2" fill="currentColor" />
+    </>
+  ),
+  bike: (
+    <>
+      <circle cx="6.5" cy="16.5" r="2.5" stroke="currentColor" strokeWidth="1.7" fill="none" />
+      <circle cx="17.5" cy="16.5" r="2.5" stroke="currentColor" strokeWidth="1.7" fill="none" />
+      <path
+        d="M6.5 16.5L10 9h4l3.5 7.5M10 9l2 4h3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        fill="none"
+        strokeLinejoin="round"
+      />
     </>
   ),
   home: (

@@ -1,68 +1,157 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
 
-export const SAN_CRISTOBAL_PAS_URL =
+export const SAN_CRISTOBAL_PAS_BASE =
   "https://www.sancristobal.com.ar/pas/marxen-seguros";
 
-type SanCristobalEmbedProps = {
-  /** Altura mínima del iframe (desktop) */
-  minHeight?: number;
+type ProductKey = "auto" | "hogar" | "moto" | "ap" | "comercio";
+
+type Product = {
+  key: ProductKey;
+  title: string;
+  text: string;
+  icon: "car" | "home" | "bike" | "heart" | "briefcase";
+  /** Ruta del cotizador en el Sitio Seguro (misma pestaña vía iframe) */
+  path: string;
 };
 
+const PRODUCTS: Product[] = [
+  {
+    key: "auto",
+    title: "Auto",
+    text: "Asegurá tu auto y manejá tranquilo",
+    icon: "car",
+    path: "/cotizar",
+  },
+  {
+    key: "hogar",
+    title: "Hogar",
+    text: "Tu casa siempre protegida con San Cristóbal Seguros",
+    icon: "home",
+    path: "/seguro-hogar",
+  },
+  {
+    key: "moto",
+    title: "Moto",
+    text: "Protegete a vos y a tu moto en todo momento",
+    icon: "bike",
+    path: "/cotizar",
+  },
+  {
+    key: "ap",
+    title: "Accidentes Personales",
+    text: "Trabajá tranquilo, seguro prestacional para independientes",
+    icon: "heart",
+    path: "/seguro-accidentes-personales/cotizar",
+  },
+  {
+    key: "comercio",
+    title: "Integral de Comercio",
+    text: "Asegurá tu mercadería y tu lugar de trabajo",
+    icon: "briefcase",
+    path: "/seguro-integral-de-comercio",
+  },
+];
+
+function productUrl(path: string) {
+  return `${SAN_CRISTOBAL_PAS_BASE}${path}`;
+}
+
 /**
- * Embebe el Sitio Seguro de San Cristóbal (PAS MARXEN).
- * El contenido y los links se actualizan en vivo desde sancristobal.com.ar.
+ * Selector de ramos + cotizador embebido.
+ * Al elegir un producto se actualiza el mismo panel (sin nueva pestaña).
  */
-export function SanCristobalEmbed({ minHeight = 1100 }: SanCristobalEmbedProps) {
+export function SanCristobalEmbed() {
+  const [active, setActive] = useState<Product | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-line/80 bg-white shadow-[0_16px_48px_rgba(5,30,54,0.08)]">
-      <div className="flex flex-col gap-3 border-b border-line/70 bg-mist/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal">
-            Cotización online
+  useEffect(() => {
+    setLoaded(false);
+  }, [active?.key]);
+
+  if (active) {
+    const src = productUrl(active.path);
+    return (
+      <div className="sc-panel">
+        <div className="sc-panel__bar">
+          <button
+            type="button"
+            className="sc-panel__back"
+            onClick={() => setActive(null)}
+          >
+            ← Volver a seguros
+          </button>
+          <p className="sc-panel__bar-title">
+            Cotizando · {active.title}
           </p>
-          <p className="mt-0.5 text-sm font-medium text-navy">
-            San Cristóbal Seguros · Sitio MARXEN
-          </p>
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sc-panel__external"
+          >
+            Pantalla completa ↗
+          </a>
         </div>
-        <a
-          href={SAN_CRISTOBAL_PAS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-semibold text-navy transition hover:border-sky/40 hover:bg-aqua"
-        >
-          Abrir en pantalla completa
-          <span aria-hidden>↗</span>
-        </a>
+
+        <div className="sc-panel__frame-wrap">
+          {!loaded ? (
+            <div className="sc-panel__loading">
+              <div className="sc-panel__spinner" />
+              <p>Cargando cotizador de {active.title}…</p>
+            </div>
+          ) : null}
+          <iframe
+            key={src}
+            src={src}
+            title={`Cotizar ${active.title} — San Cristóbal / MARXEN`}
+            className="sc-panel__iframe"
+            loading="eager"
+            referrerPolicy="no-referrer-when-downgrade"
+            allow="clipboard-write; payment"
+            onLoad={() => setLoaded(true)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sc-catalog">
+      <div className="sc-catalog__head">
+        <p className="eyebrow">Cotización online</p>
+        <h2 className="sc-catalog__title">Conocé más sobre nuestros seguros</h2>
+        <p className="sc-catalog__sub">
+          Elegí un ramo. El cotizador de San Cristóbal se abre acá mismo, sin
+          salir de MARXEN.
+        </p>
       </div>
 
-      <div className="relative w-full bg-[#f4f5f7]" style={{ minHeight }}>
-        {!loaded ? (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#f4f5f7] px-6 text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-navy/20 border-t-navy" />
-            <p className="text-sm text-muted">Cargando cotizador San Cristóbal…</p>
-          </div>
-        ) : null}
+      <ul className="sc-catalog__grid">
+        {PRODUCTS.map((p) => (
+          <li key={p.key}>
+            <button
+              type="button"
+              className="sc-product"
+              onClick={() => setActive(p)}
+            >
+              <span className="sc-product__icon">
+                <Icon name={p.icon} className="h-6 w-6" />
+              </span>
+              <span className="sc-product__body">
+                <span className="sc-product__title">{p.title}</span>
+                <span className="sc-product__text">{p.text}</span>
+              </span>
+              <span className="sc-product__cta">Cotizar →</span>
+            </button>
+          </li>
+        ))}
+      </ul>
 
-        <iframe
-          src={SAN_CRISTOBAL_PAS_URL}
-          title="Cotizá seguros San Cristóbal con MARXEN"
-          className="relative z-0 w-full border-0"
-          style={{ height: minHeight, minHeight }}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          allow="clipboard-write; payment"
-          onLoad={() => setLoaded(true)}
-        />
-      </div>
-
-      <p className="border-t border-line/60 px-4 py-3 text-[11px] leading-relaxed text-muted sm:px-5">
-        Cotizá Auto, Hogar, Moto, Accidentes Personales e Integral de Comercio
-        directamente en el sitio oficial de San Cristóbal. Los precios y coberturas
-        se actualizan en tiempo real.
+      <p className="sc-catalog__note">
+        Precios y coberturas se actualizan en vivo desde San Cristóbal Seguros.
       </p>
     </div>
   );

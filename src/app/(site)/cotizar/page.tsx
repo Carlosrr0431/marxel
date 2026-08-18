@@ -43,22 +43,16 @@ export default async function CotizarPage({
 
       {showSanCristobal ? (
         <section className="bg-cloud">
-          <div className="container-mx py-10 sm:py-12">
-            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="eyebrow">San Cristóbal Seguros</p>
-                <h2 className="mt-1 font-display text-xl font-semibold text-navy sm:text-2xl">
-                  Cotizador online MARXEN
-                </h2>
-              </div>
+          <div className="container-mx py-8 sm:py-10">
+            <SanCristobalEmbed />
+            <p className="mt-4 text-center text-sm text-muted">
               <Link
                 href="/seguros#cotizar-online"
-                className="text-sm font-semibold text-navy underline-offset-4 hover:underline"
+                className="font-semibold text-navy underline-offset-4 hover:underline"
               >
-                Ver página de seguros →
+                Ver más coberturas →
               </Link>
-            </div>
-            <SanCristobalEmbed minHeight={1150} />
+            </p>
           </div>
         </section>
       ) : null}
