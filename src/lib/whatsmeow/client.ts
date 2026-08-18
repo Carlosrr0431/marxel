@@ -48,6 +48,18 @@ function nestedData(result: FetchResult): Record<string, unknown> | null {
   return result.data;
 }
 
+export function extractWhatsmeowQr(data: Record<string, unknown> | null) {
+  if (!data) return null;
+  const inner =
+    data.data && typeof data.data === "object" && !Array.isArray(data.data)
+      ? (data.data as Record<string, unknown>)
+      : data;
+  const image = String(inner.qr_image || "").trim();
+  if (image) return image;
+  const code = String(inner.qr_code || inner.qr || "").trim();
+  return code || null;
+}
+
 function extractMessageId(data: Record<string, unknown> | null) {
   const inner = data?.data;
   if (inner && typeof inner === "object") {
@@ -76,8 +88,7 @@ export async function fetchWhatsmeowQr(agentCode = getWhatsmeowAgentCode()) {
     `/api/session/qr?agent_code=${encodeURIComponent(agentCode)}`
   );
   if (!result.ok || result.data?.success === false) return null;
-  const data = nestedData(result);
-  return String(data?.qr_image || data?.qr_code || "") || null;
+  return extractWhatsmeowQr(nestedData(result) || result.data);
 }
 
 export async function connectWhatsmeowSession(agentCode: string, webhookUrl: string) {

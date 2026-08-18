@@ -11,6 +11,7 @@ import {
   configureWhatsmeowWebhook,
   connectWhatsmeowSession,
   disconnectWhatsmeowSession,
+  extractWhatsmeowQr,
   fetchWhatsmeowQr,
   fetchWhatsmeowStatus,
   logoutWhatsmeowSession,
@@ -137,7 +138,7 @@ export async function GET() {
   if (!(await requireCrm())) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   }
-  const snapshot = await getSnapshot({ ensureWebhook: true });
+  const snapshot = await getSnapshot();
   return NextResponse.json(snapshot);
 }
 
@@ -184,7 +185,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const qr = await waitForQr(agentCode);
+    const qr =
+      extractWhatsmeowQr(connectResult.data) || (await waitForQr(agentCode));
     if (forceNewQr && !qr) {
       return NextResponse.json(
         { ok: false, error: "No se pudo regenerar el QR. Intentá de nuevo." },

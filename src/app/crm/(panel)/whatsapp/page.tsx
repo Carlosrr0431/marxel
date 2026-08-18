@@ -7,7 +7,7 @@ export default function WhatsappCrmPage() {
       <PageHeader
         eyebrow="Canal"
         title="WhatsApp"
-        description="Vinculá el 3876348199 con whatsmeow y mirá en vivo si el chatbot está conectado."
+        description="Generá un QR cuando quieras vincular el 3876348199 y mirá en vivo si el chatbot está conectado."
       />
       <WhatsappLinkPanel />
     </div>
