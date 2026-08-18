@@ -1,5 +1,6 @@
 -- Conversaciones del chatbot WhatsApp (whatsmeow).
 -- Ejecutar en SQL Editor de Supabase (proyecto vlezzeipzgyvehqndphs).
+-- La fila phone = '__agent__' guarda si el agente IA está activo (last_event agent:on / agent:off).
 
 create table if not exists public.whatsapp_conversations (
   phone text primary key,

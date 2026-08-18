@@ -15,6 +15,7 @@ import {
   detectsQuoteIntent,
   isGreeting,
 } from "@/lib/chatbot/quote-flow";
+import { whatsappAgentGate } from "@/lib/whatsmeow/agent-control";
 
 const IGNORE_EVENTS = new Set([
   "messages.status",
@@ -132,6 +133,8 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
 async function flushConversation(phone: string) {
   const claimed = await claimInbox(phone);
   if (!claimed) return { skipped: true as const };
+  const gate = await whatsappAgentGate(phone);
+  if (!gate.ok) return { skipped: true as const, reason: gate.reason };
   const texts = claimed.messages.map((row) => row.text).map((t) => t.trim()).filter(Boolean);
   if (!texts.length) return { skipped: true as const };
 
@@ -197,6 +200,11 @@ export async function handleWhatsappInbound(body: unknown) {
   }
   if (!inbound.phone) {
     return { status: 200, body: { success: true, ignored: true, reason: "invalid_phone" } };
+  }
+
+  const gate = await whatsappAgentGate(inbound.phone);
+  if (!gate.ok) {
+    return { status: 200, body: { success: true, ignored: true, reason: gate.reason } };
   }
 
   const dest = destination(inbound.chatJid, inbound.phone);
