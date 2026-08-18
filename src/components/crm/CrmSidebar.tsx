@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
 import { Logo } from "@/components/Logo";
@@ -108,58 +107,28 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
 
 export function CrmSidebar({
   badges,
-  open,
-  onOpenChange,
+  collapsed,
+  onCollapsedChange,
 }: {
   badges?: { inbox?: number; seguimientos?: number; chatbot?: number };
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
   const search = useSearchParams();
   const origen = search.get("origen");
-  const query = search.toString();
-
-  useEffect(() => {
-    onOpenChange(false);
-  }, [pathname, query, onOpenChange]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
-
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
 
   return (
-    <>
-      {open ? (
-        <button
-          type="button"
-          className="crm-sidebar-overlay lg:hidden"
-          aria-label="Cerrar menú"
-          onClick={() => onOpenChange(false)}
-        />
-      ) : null}
-
-      <aside
-        id="crm-sidebar"
-        className={`crm-sidebar ${open ? "is-open" : ""}`}
-        aria-label="Navegación del CRM"
-      >
+    <aside
+      id="crm-sidebar"
+      className="crm-sidebar"
+      aria-label="Navegación del CRM"
+    >
         <div className="crm-sidebar__brand">
-          <Link href="/crm" className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-soft/70">
+          <Link
+            href="/crm"
+            className="crm-sidebar__brand-copy block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-soft/70"
+          >
             <Logo href={null} light size="sm" />
             <span className="mt-2 flex items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-white/45">
               CRM
@@ -168,12 +137,18 @@ export function CrmSidebar({
           </Link>
           <button
             type="button"
-            className="crm-icon-btn lg:hidden"
-            aria-label="Cerrar menú"
-            onClick={() => onOpenChange(false)}
+            className="crm-icon-btn"
+            aria-label={collapsed ? "Expandir menú" : "Replegar menú"}
+            aria-expanded={!collapsed}
+            aria-controls="crm-sidebar"
+            onClick={() => onCollapsedChange(!collapsed)}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+              {collapsed ? (
+                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              )}
             </svg>
           </button>
         </div>
@@ -201,10 +176,11 @@ export function CrmSidebar({
               <Link
                 key={link.href}
                 href={link.href}
+                title={link.label}
                 className={`crm-nav-link ${active ? "is-active" : ""}`}
               >
                 <NavIcon name={link.icon} />
-                <span className="min-w-0 flex-1 truncate">{link.label}</span>
+                <span className="crm-nav-link__label min-w-0 flex-1 truncate">{link.label}</span>
                 {badge && badge > 0 ? (
                   <span className="crm-nav-badge">{badge > 99 ? "99+" : badge}</span>
                 ) : null}
@@ -214,19 +190,27 @@ export function CrmSidebar({
         </nav>
 
         <div className="crm-sidebar__foot">
-          <Link href="/crm/leads/nuevo" className="crm-sidebar__cta">
-            + Nuevo lead
-          </Link>
-          <Link href="/" className="crm-nav-link crm-nav-link--quiet">
-            ← Sitio
-          </Link>
           <form action={logoutCrm}>
-            <button type="submit" className="crm-nav-link crm-nav-link--quiet w-full text-left">
-              Cerrar sesión
+            <button
+              type="submit"
+              title="Cerrar sesión"
+              className="crm-nav-link crm-nav-link--quiet w-full text-left"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-[18px] w-[18px] shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <path d="M10 7V5.5A1.5 1.5 0 0 1 11.5 4h7A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 10 18.5V17" strokeLinecap="round" />
+                <path d="M4 12h10M7 9l-3 3 3 3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="crm-nav-link__label min-w-0 flex-1 truncate">Cerrar sesión</span>
             </button>
           </form>
         </div>
-      </aside>
-    </>
+    </aside>
   );
 }
