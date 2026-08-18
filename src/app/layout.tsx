@@ -9,24 +9,30 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const SITE_URL = "https://www.marxen.com.ar";
+const SHARE_TITLE = "Tu protección, sin vueltas.";
+const SHARE_DESCRIPTION =
+  "Seguros, prepagas y asistencia al viajero con asesoramiento claro, humano y a tu medida.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://marxel-omega.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: `${site.name} · Seguros, Salud y Viajero`,
     template: `%s · ${site.name}`,
   },
   description: site.description,
   openGraph: {
-    title: `${site.name} · Seguros, Salud y Viajero — Salta, Argentina`,
-    description: site.description,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    url: "/",
     locale: "es_AR",
     type: "website",
     siteName: site.name,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} · Seguros, Salud y Viajero`,
-    description: site.description,
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
   },
   icons: {
     icon: "/brand/marxel-mark.png",
