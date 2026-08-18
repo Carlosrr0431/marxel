@@ -28,7 +28,7 @@ export default function HomePage() {
           {/* Left */}
           <div className="relative z-10 max-w-2xl">
             <p className="animate-rise eyebrow">Productores de seguros - Salta</p>
-            <h1 className="animate-rise-delay-1 mt-5 font-display text-[2.65rem] font-semibold leading-[1.06] tracking-tight text-navy sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="animate-rise-delay-1 mt-5 font-display text-[2.65rem] font-semibold leading-[1.12] text-navy sm:text-5xl lg:text-[3.5rem]">
               Tu protección,
               <br />
               <span className="hero-gradient-text">sin vueltas.</span>
@@ -155,9 +155,9 @@ export default function HomePage() {
             <Reveal delay={100}>
               <Link
                 href="/seguros#cotizar-online"
-                className="shrink-0 text-sm font-semibold text-navy underline-offset-4 hover:underline"
+                className="btn btn-outline shrink-0"
               >
-                Ver todas →
+                Ver todas
               </Link>
             </Reveal>
           </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
           <Reveal>
             <div>
               <p className="eyebrow !text-teal-soft">MARXEN Salud</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              <h2 className="mt-3 font-display text-3xl font-semibold leading-tight sm:text-4xl">
                 Tu plan de salud ideal,
                 <br />
                 <span className="text-teal-soft">para vos y tu familia.</span>

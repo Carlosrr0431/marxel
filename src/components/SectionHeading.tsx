@@ -16,7 +16,7 @@ export function SectionHeading({
   return (
     <div className={align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       {eyebrow ? <p className="eyebrow mb-3">{eyebrow}</p> : null}
-      <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-navy sm:text-4xl">
+      <h2 className="font-display text-[1.85rem] font-semibold text-navy sm:text-4xl">
         {title}
       </h2>
       {description ? (
@@ -43,7 +43,7 @@ export function PageHero({
     <section className="relative overflow-hidden border-b border-line/70 bg-atmosphere">
       <div className="container-mx py-14 sm:py-16 lg:py-20">
         {eyebrow ? <p className="eyebrow mb-3">{eyebrow}</p> : null}
-        <h1 className="max-w-3xl font-display text-[2.1rem] font-semibold leading-[1.1] tracking-tight text-navy sm:text-5xl">
+        <h1 className="max-w-3xl font-display text-[2.1rem] font-semibold leading-[1.15] text-navy sm:text-5xl">
           {title}
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">

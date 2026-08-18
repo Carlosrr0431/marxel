@@ -8,7 +8,7 @@ export const site = {
   phone: "+54 9 387 534-8199",
   email: "hola@marxel.com.ar",
   whatsapp: "5493875348199",
-  location: "Argentina",
+  location: "Salta, Salta, Argentina.",
 };
 
 export const navLinks = [

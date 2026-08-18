@@ -142,7 +142,7 @@ export function StepForm({
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md">
       {title ? (
-        <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
+        <h2 className="font-display text-[1.65rem] font-semibold leading-tight text-navy sm:text-3xl">
           {title}
         </h2>
       ) : null}
@@ -303,7 +303,7 @@ export function PlansView({
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
+          <h2 className="font-display text-[1.65rem] font-semibold leading-tight text-navy sm:text-3xl">
             {title}
           </h2>
           <p className="mt-2 text-base text-muted">{subtitle}</p>

@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { Manrope, Syne } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { site } from "@/lib/content";
 import "./globals.css";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin", "latin-ext"],
   display: "swap",
 });
 
@@ -46,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${manrope.variable} ${syne.variable} h-full`}>
+    <html lang="es" className={`${jakarta.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-cloud font-sans text-ink antialiased">
         {children}
       </body>
