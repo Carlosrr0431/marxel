@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import type { ModalidadIngreso } from "@/lib/crm/types";
+import type { ModalidadIngreso, ProductoInteres } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
 import {
   buildNotas,
@@ -12,20 +12,52 @@ function toModalidad(data: QuoteData): ModalidadIngreso {
   if (data.modalidad === "monotributo") return "monotributo";
   if (data.modalidad === "relacion_dependencia") return "relacion_dependencia";
   if (data.modalidad === "particular") return "particular";
-  return "sin_definir";
+  return data.producto === "salud" ? "sin_definir" : "no_aplica";
+}
+
+function toProducto(data: QuoteData): ProductoInteres {
+  return data.producto || "general";
+}
+
+function planInteres(data: QuoteData): string {
+  const producto = toProducto(data);
+  if (producto === "salud") {
+    const extra = [data.grupoFamiliar, data.uso].filter(Boolean).join(" · ");
+    return extra ? `Salud · ${extra}` : "Salud · consulta chatbot";
+  }
+  if (producto === "seguros") {
+    const ramo =
+      data.seguroGrupo === "auto_moto"
+        ? "Auto/Moto"
+        : data.seguroGrupo === "hogar_comercio"
+          ? "Hogar/Comercio"
+          : data.seguroGrupo === "praxis_art_ap"
+            ? "Mala Praxis / ART / AP"
+            : null;
+    return ramo ? `Seguros · ${ramo}` : "Seguros · consulta chatbot";
+  }
+  if (producto === "viajero") {
+    return data.viajeroDestino
+      ? `Viajero · ${data.viajeroDestino}`
+      : "Viajero · consulta chatbot";
+  }
+  return "Consulta chatbot";
 }
 
 function buildPayload(data: QuoteData, notas: string, tags: string[]) {
+  const producto = toProducto(data);
   const payload = {
     nombre: data.nombre!,
     celular: data.celular!,
     edad: parseEdadTitular(data.edades),
     localidad: data.localidad || null,
     provincia: "Salta",
-    producto: "salud" as const,
-    plan_interes: "Prevención Salud · cotización chatbot",
+    producto,
+    plan_interes: planInteres(data),
     coberturas:
-      [data.prepaga, data.uso].filter(Boolean).join(" · ") || null,
+      [data.seguroDetalle, data.viajeroDestino, data.prepaga, data.uso]
+        .filter(Boolean)
+        .join(" · ") || null,
     modalidad: toModalidad(data),
     origen: "web" as const,
     origen_detalle: "chatbot",
@@ -49,7 +81,7 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
 
   const supabase = createServiceClient();
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · listo para cotizar");
-  const tags = ["chatbot", "caliente", "cotizar", "salud"];
+  const tags = ["chatbot", "caliente", "cotizar", toProducto(data)];
   const payload = buildPayload(data, notas, tags);
 
   if (state.leadId) {
@@ -102,11 +134,16 @@ export async function updateLeadOptionalFromQuote(state: QuoteState) {
   const supabase = createServiceClient();
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · datos opcionales cargados");
 
-  const tags = ["chatbot", "caliente", "cotizar", "salud", "completo"];
+  const producto = toProducto(data);
+  const tags = ["chatbot", "caliente", "cotizar", producto, "completo"];
   const patch = {
     localidad: data.localidad || null,
     provincia: "Salta",
-    coberturas: [data.prepaga, data.uso].filter(Boolean).join(" · ") || null,
+    producto,
+    plan_interes: planInteres(data),
+    coberturas: [data.seguroDetalle, data.viajeroDestino, data.prepaga, data.uso]
+      .filter(Boolean)
+      .join(" · ") || null,
     notas_iniciales: notas,
     tags,
     prioridad: "urgente" as const,
@@ -121,10 +158,8 @@ export async function updateLeadOptionalFromQuote(state: QuoteState) {
       ...patch,
       puntaje: scoreLead({
         ...patch,
-        producto: "salud",
         estado: "interesado",
         origen_detalle: "chatbot",
-        plan_interes: "Prevención Salud · cotización chatbot",
       }),
     })
     .eq("id", state.leadId);

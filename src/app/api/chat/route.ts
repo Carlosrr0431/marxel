@@ -1,6 +1,9 @@
 import {
+  buildNotas,
+  detectsHealthCoverageIntent,
   detectsQuoteIntent,
   emptyQuoteState,
+  isSaludHandoffReady,
   processQuoteFlow,
   processQuoteFlowBatch,
   stripMarkdownNoise,
@@ -17,6 +20,8 @@ import OpenAI from "openai";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const DEEPSEEK_PRO = "deepseek-v4-pro";
+
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 function getClient() {
@@ -27,7 +32,7 @@ function getClient() {
         apiKey: deepseekKey,
         baseURL: "https://api.deepseek.com",
       }),
-      model: process.env.AI_CHAT_MODEL || "deepseek-v4-pro",
+      model: DEEPSEEK_PRO,
       provider: "deepseek" as const,
     };
   }
@@ -148,13 +153,17 @@ export async function POST(req: Request) {
       )
       .slice(-10);
 
-    const chunks = retrieveChunks(message, 6);
+    const qualified = isSaludHandoffReady(prevState);
+    const allowSpecificPlans =
+      qualified || !detectsHealthCoverageIntent(message);
+    const chunks = allowSpecificPlans ? retrieveChunks(message, 6) : [];
     const context = formatContext(chunks);
+    const leadNotes = buildNotas(prevState.data);
 
     const completion = await ai.client.chat.completions.create({
       model: ai.model,
       temperature: 0.2,
-      max_tokens: 220,
+      max_tokens: qualified ? 420 : 220,
       messages: [
         {
           role: "system",
@@ -162,7 +171,7 @@ export async function POST(req: Request) {
         },
         {
           role: "system",
-          content: `CONTEXTO:\n${context}`,
+          content: `CALIFICADO=${qualified ? "si" : "no"}\nDATOS DEL LEAD:\n${leadNotes || "sin datos todavía"}\n\nCONTEXTO:\n${context || "sin contexto específico"}`,
         },
         ...history.map((m) => ({
           role: m.role,

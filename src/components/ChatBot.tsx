@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { site } from "@/lib/content";
 import {
   emptyQuoteState,
+  MAIN_MENU,
+  MENU_WHATSAPP,
+  usesChoiceGrid,
   type QuoteQuickReply,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
@@ -16,16 +19,16 @@ type Msg = {
   sources?: string[];
 };
 
-const DEBOUNCE_MS = 4_000;
-const STORAGE_KEY = "marxel-chat-v1";
-const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+const DEBOUNCE_MS = 700;
+const STORAGE_KEY = "marxel-chat-v3";
+const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_STORED_MSGS = 60;
 
 const WELCOME_MSG: Msg = {
   id: "welcome",
   role: "assistant",
   content:
-    "Hola. Podés preguntarme lo que quieras sobre los planes de salud, o decí 'quiero cotizar' y te enviamos la cotización lo antes posible.",
+    "¡Hola! Bienvenido a MARXEN Protección Integral. ¿En qué te puedo ayudar hoy?",
 };
 
 function loadStorage(): { messages: Msg[]; quoteState: QuoteState } | null {
@@ -59,19 +62,6 @@ function saveStorage(messages: Msg[], quoteState: QuoteState) {
   } catch {}
 }
 
-const SUGGESTIONS = [
-  "Quiero cotizar",
-  "¿Qué diferencia hay entre A2 y A4?",
-  "¿A2 cubre ortodoncia?",
-  "¿Qué farmacias están en cartilla?",
-];
-
-const LABORAL_OPTIONS: QuoteQuickReply[] = [
-  { label: "Monotributo", value: "Monotributo" },
-  { label: "Relación de dependencia", value: "Relación de dependencia" },
-  { label: "Particular", value: "Particular" },
-];
-
 export function ChatBot() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -82,23 +72,25 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Msg[]>([WELCOME_MSG]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  // Refs para acceder a valores actualizados dentro del setTimeout
   const messagesRef = useRef<Msg[]>(messages);
   const quoteStateRef = useRef<QuoteState>(quoteState);
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
-  useEffect(() => { quoteStateRef.current = quoteState; }, [quoteState]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    quoteStateRef.current = quoteState;
+  }, [quoteState]);
 
-  // Buffer de mensajes pendientes de enviar
   const pendingRef = useRef<string[]>([]);
-  const historySnapRef = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
+  const historySnapRef = useRef<{ role: "user" | "assistant"; content: string }[]>(
+    []
+  );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
-    "Hola MARXEN, quiero asesoramiento sobre Prevención Salud."
+    "Hola MARXEN, quiero asesoramiento."
   )}`;
 
-  // Cargar historial guardado al montar
   useEffect(() => {
     const saved = loadStorage();
     if (saved) {
@@ -107,14 +99,12 @@ export function ChatBot() {
     }
   }, []);
 
-  // Guardar historial en cada cambio
   useEffect(() => {
     if (messages.length > 1) {
       saveStorage(messages, quoteState);
     }
   }, [messages, quoteState]);
 
-  // Scroll al último mensaje
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open, loading, waitingDebounce, quickReplies, quoteState.step]);
@@ -133,8 +123,6 @@ export function ChatBot() {
     if (msgs.length === 0) return;
 
     setLoading(true);
-
-    // Si hubo varios mensajes, los unimos con salto de línea para que el bot los procese como contexto único
     const combined = msgs.join("\n");
     const history = historySnapRef.current;
 
@@ -186,11 +174,15 @@ export function ChatBot() {
     }
   }
 
-  function send(text: string) {
+  function send(text: string, immediate = false) {
     const content = text.trim();
     if (!content || loading) return;
 
-    // Snapshot de history solo antes del primer mensaje del batch
+    if (content === MENU_WHATSAPP) {
+      window.open(wa, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     if (pendingRef.current.length === 0) {
       historySnapRef.current = messagesRef.current
         .filter((m) => m.id !== "welcome")
@@ -198,26 +190,37 @@ export function ChatBot() {
         .slice(-10);
     }
 
-    // Mostrar en UI inmediatamente
+    const visible =
+      content.startsWith("menu:")
+        ? MAIN_MENU.find((item) => item.value === content)?.label || content
+        : content;
+
     setMessages((prev) => [
       ...prev,
-      { id: `u-${Date.now()}`, role: "user", content },
+      { id: `u-${Date.now()}`, role: "user", content: visible },
     ]);
     setInput("");
     setQuickReplies([]);
 
-    // Buffer y debounce
     pendingRef.current.push(content);
     setWaitingDebounce(true);
 
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (immediate) {
+      void flush();
+      return;
+    }
     timerRef.current = setTimeout(flush, DEBOUNCE_MS);
   }
 
   const inQuote = quoteState.active;
   const busy = loading || waitingDebounce;
-  const showLaboralButtons = !busy && quoteState.active && quoteState.step === "laboral";
-  const choiceButtons = showLaboralButtons ? LABORAL_OPTIONS : busy ? [] : quickReplies;
+  const showGrid = !busy && inQuote && usesChoiceGrid(quoteState.step);
+  const choiceButtons = busy ? [] : quickReplies;
+  const showMainMenu =
+    !busy && !inQuote && messages.length <= 2 && choiceButtons.length === 0;
+  const menuButtons = showMainMenu ? MAIN_MENU : choiceButtons;
+  const menuIsGrid = showMainMenu || showGrid;
 
   return (
     <>
@@ -226,35 +229,42 @@ export function ChatBot() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="marxel-chatbot"
-        aria-label={open ? "Cerrar asistente" : "Abrir asistente IA"}
-        className="fixed z-50 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-navy text-white shadow-[0_10px_28px_rgba(10,53,92,0.35)] transition hover:bg-navy-deep sm:h-14 sm:w-14"
+        aria-label={open ? "Cerrar asistente" : "Abrir Asistente MARXEN"}
+        className="fixed z-50 inline-flex flex-col items-end gap-1"
         style={{
-          right: "calc(5.4rem + env(safe-area-inset-right, 0px))",
-          bottom: "calc(1.1rem + env(safe-area-inset-bottom, 0px))",
+          right: "calc(1.1rem + env(safe-area-inset-right, 0px))",
+          bottom: "calc(7.6rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
-        {open ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M6 6l12 12M18 6L6 18"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H9l-4 3.5V6.5Z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-            />
-            <circle cx="9" cy="10" r="1" fill="currentColor" />
-            <circle cx="12" cy="10" r="1" fill="currentColor" />
-            <circle cx="15" cy="10" r="1" fill="currentColor" />
-          </svg>
+        {open ? null : (
+          <span className="rounded-full bg-navy px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            Asistente
+          </span>
         )}
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-navy text-white shadow-[0_10px_28px_rgba(10,53,92,0.35)] transition hover:bg-navy-deep sm:h-14 sm:w-14">
+          {open ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H9l-4 3.5V6.5Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <circle cx="9" cy="10" r="1" fill="currentColor" />
+              <circle cx="12" cy="10" r="1" fill="currentColor" />
+              <circle cx="15" cy="10" r="1" fill="currentColor" />
+            </svg>
+          )}
+        </span>
       </button>
 
       {open ? (
@@ -263,15 +273,15 @@ export function ChatBot() {
           className="fixed z-50 flex w-[min(100vw-1.25rem,24rem)] flex-col overflow-hidden rounded-2xl border border-line/80 bg-white shadow-[0_24px_60px_rgba(5,30,54,0.22)]"
           style={{
             right: "calc(1.1rem + env(safe-area-inset-right, 0px))",
-            bottom: "calc(5.4rem + env(safe-area-inset-bottom, 0px))",
-            height: "min(78vh, 38rem)",
+            bottom: "calc(12.2rem + env(safe-area-inset-bottom, 0px))",
+            height: "min(70vh, 36rem)",
           }}
         >
           <header className="flex h-10 shrink-0 items-center justify-between gap-2 bg-navy px-3 text-white">
-            <p className="truncate text-[13px] font-semibold tracking-tight">
+            <p className="truncate text-[13px] font-semibold">
               Asistente MARXEN
               <span className="ml-1.5 font-normal text-white/55">
-                {inQuote ? "· Cotización" : "· Salud"}
+                · Asesor virtual
               </span>
             </p>
             <div className="flex shrink-0 items-center gap-1">
@@ -318,16 +328,10 @@ export function ChatBot() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.content}</p>
-                  {m.sources && m.sources.length > 0 ? (
-                    <p className="mt-1.5 border-t border-line/60 pt-1.5 text-[10px] leading-snug text-muted">
-                      {m.sources.slice(0, 3).join(" · ")}
-                    </p>
-                  ) : null}
                 </div>
               </div>
             ))}
 
-            {/* Indicador de "escribiendo..." (espera debounce o respuesta API) */}
             {busy ? (
               <div className="flex justify-start">
                 <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-line/70 bg-white px-3.5 py-3">
@@ -341,38 +345,32 @@ export function ChatBot() {
             <div ref={bottomRef} />
           </div>
 
-          {choiceButtons.length > 0 ? (
+          {menuButtons.length > 0 ? (
             <div
               className={`shrink-0 border-t border-line/70 bg-white px-2.5 py-2 ${
-                showLaboralButtons ? "grid gap-1.5" : "flex flex-wrap gap-1.5"
+                menuIsGrid ? "grid gap-1.5" : "flex flex-wrap gap-1.5"
               }`}
             >
-              {choiceButtons.map((r) => (
+              {menuButtons.map((r) => (
                 <button
                   key={r.value}
                   type="button"
-                  onClick={() => send(r.value)}
+                  onClick={() => send(r.value, true)}
                   disabled={busy}
                   className={
-                    showLaboralButtons
-                      ? "w-full rounded-xl border border-line bg-mist/80 px-3 py-2.5 text-left text-[13px] font-semibold text-navy transition hover:border-teal/40 hover:bg-aqua disabled:opacity-50"
+                    menuIsGrid
+                      ? "w-full rounded-xl border border-line bg-mist/80 px-3 py-2.5 text-left transition hover:border-navy/30 hover:bg-aqua disabled:opacity-50"
                       : "rounded-full border border-line bg-mist/70 px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
                   }
                 >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          ) : messages.length <= 2 ? (
-            <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-line/70 bg-white px-2.5 py-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => send(s)}
-                  className="rounded-full border border-line bg-mist/70 px-2.5 py-1 text-[11px] font-medium text-navy hover:bg-aqua"
-                >
-                  {s}
+                  <span className="block text-[13px] font-semibold text-navy">
+                    {r.label}
+                  </span>
+                  {r.hint ? (
+                    <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                      {r.hint}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -389,11 +387,11 @@ export function ChatBot() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={
-                showLaboralButtons
+                showMainMenu || showGrid
                   ? "O elegí una opción arriba…"
                   : inQuote
                     ? "Respondé acá…"
-                    : "Preguntá o escribí quiero cotizar…"
+                    : "Escribí tu consulta…"
               }
               className="field !min-h-10 flex-1 !rounded-xl !py-2 text-[13px]"
               disabled={loading}
