@@ -22,23 +22,22 @@ export default function HomePage() {
   return (
     <>
       {/* ——— HERO ——— */}
-      <section className="hero-section relative overflow-hidden">
+      <section className="hero-section">
         <div className="hero-bg" aria-hidden />
-        <div className="container-mx grid items-center gap-12 py-16 sm:py-20 lg:min-h-[calc(100svh-4.25rem)] lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-12">
-          {/* Left */}
-          <div className="relative z-10 max-w-2xl">
+        <div className="container-mx hero-section__inner">
+          <div className="hero-copy">
             <p className="animate-rise eyebrow">Productores de seguros - Salta</p>
-            <h1 className="animate-rise-delay-1 mt-5 font-display text-[2.65rem] font-semibold leading-[1.12] text-navy sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="animate-rise-delay-1">
               Tu protección,
               <br />
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
-            <p className="animate-rise-delay-2 mt-6 max-w-lg text-base leading-relaxed text-muted sm:text-lg">
+            <p className="hero-lede animate-rise-delay-2">
               Seguros, prepagas y asistencia al viajero con asesoramiento claro,
               humano y a tu medida.
             </p>
 
-            <div className="animate-rise-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="hero-actions animate-rise-delay-3">
               <Link href="/seguros#cotizar-online" className="btn btn-primary btn-lg">
                 Cotizar seguros
               </Link>
@@ -57,8 +56,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right — orbit card */}
-          <div className="animate-rise-delay-2 relative mx-auto w-full max-w-[22rem] lg:max-w-none">
+          <div className="hero-visual animate-rise-delay-2">
             <div className="hero-card animate-float">
               <div className="hero-card__glow" aria-hidden />
               <div className="hero-card__inner">
@@ -68,10 +66,10 @@ export default function HomePage() {
                   </span>
                   <span>Confianza personal</span>
                 </div>
-                <div className="flex flex-1 items-center justify-center py-4">
+                <div className="flex flex-1 items-center justify-center py-2">
                   <HeroProtectionVisual />
                 </div>
-                <p className="font-display text-2xl font-semibold leading-snug text-white sm:text-3xl">
+                <p className="hero-card__title">
                   Tres pilares.
                   <br />
                   Un solo equipo.
