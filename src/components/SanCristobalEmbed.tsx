@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/Icon";
+import { AutoQuoteNative } from "@/components/AutoQuoteNative";
 
 export const SAN_CRISTOBAL_PAS_BASE =
   "https://www.sancristobal.com.ar/pas/marxen-seguros";
@@ -60,9 +61,9 @@ export function SanCristobalEmbed() {
   const [active, setActive] = useState<Product | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    setLoaded(false);
-  }, [active?.key]);
+  if (active?.key === "auto") {
+    return <AutoQuoteNative onBack={() => setActive(null)} />;
+  }
 
   if (active) {
     const src = productUrl(active.path);
@@ -110,7 +111,10 @@ export function SanCristobalEmbed() {
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {PRODUCTS.map((p) => (
         <li key={p.key} className={p.key === "comercio" ? "sm:col-span-2 lg:col-span-1" : ""}>
-          <button type="button" className="seguro-card group h-full w-full text-left" onClick={() => setActive(p)}>
+          <button type="button" className="seguro-card group h-full w-full text-left" onClick={() => {
+            setLoaded(false);
+            setActive(p);
+          }}>
             <span className="seguro-card__icon">
               <Icon name={p.icon} />
             </span>
