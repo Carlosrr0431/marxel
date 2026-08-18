@@ -186,21 +186,27 @@ export async function handleWhatsappInbound(body: unknown) {
   if (!inbound) {
     return { status: 200, body: { success: true, ignored: true, reason: "invalid_payload" } };
   }
-  if (["reaction", "protocol", "revoked"].includes(inbound.type)) {
+  if (["reaction", "protocol", "revoked"].includes(inbound.type) && !inbound.isPoll) {
     return { status: 200, body: { success: true, ignored: true, reason: "type_ignored" } };
   }
-  if (inbound.fromMe) {
+  if (inbound.fromMe && !inbound.isPoll) {
     return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
   }
   if (inbound.isGroup) {
     return { status: 200, body: { success: true, ignored: true, reason: "group" } };
   }
   if (!inbound.phone) {
+    if (inbound.isPoll) {
+      console.error("[whatsapp][poll-skip]", "invalid_phone", inbound.event, inbound.text);
+    }
     return { status: 200, body: { success: true, ignored: true, reason: "invalid_phone" } };
   }
 
   const gate = await whatsappAgentGate(inbound.phone);
   if (!gate.ok) {
+    if (inbound.isPoll) {
+      console.error("[whatsapp][poll-skip]", gate.reason, inbound.phone);
+    }
     return { status: 200, body: { success: true, ignored: true, reason: gate.reason } };
   }
 
@@ -211,7 +217,12 @@ export async function handleWhatsappInbound(body: unknown) {
     : inbound.text;
 
   if (inbound.isPoll || shouldReplyNow(mappedNow || inbound.text, conv, inbound.isPoll)) {
-    if (inbound.id && conv.last_message_id && inbound.id === conv.last_message_id) {
+    if (
+      !inbound.isPoll &&
+      inbound.id &&
+      conv.last_message_id &&
+      inbound.id === conv.last_message_id
+    ) {
       return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
     }
     const mapped = mappedNow;
@@ -221,7 +232,13 @@ export async function handleWhatsappInbound(body: unknown) {
       return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
     }
     if (!mapped.trim()) {
+      if (inbound.isPoll) {
+        console.error("[whatsapp][poll-skip]", "empty_text", inbound.event);
+      }
       return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
+    }
+    if (inbound.isPoll) {
+      console.info("[whatsapp][poll-in]", inbound.phone, mapped);
     }
     const result = await replyFromTurn(
       {

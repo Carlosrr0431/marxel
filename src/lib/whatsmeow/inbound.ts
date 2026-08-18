@@ -1,5 +1,5 @@
 import type { QuoteQuickReply } from "@/lib/chatbot/quote-flow";
-import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { isMarxenLinePhone, normalizeArPhone } from "@/lib/whatsmeow/config";
 import type { PendingPoll } from "@/lib/whatsmeow/conversations";
 
 export type InboundMessage = {
@@ -35,20 +35,33 @@ function pickPhone(data: RawRecord) {
   const key = asRecord(data.key) || {};
   const candidates = [
     data.sender_pn,
-    data.from,
+    data.chat_jid,
     key.cleanedSenderPn,
     key.senderPn,
-    data.chat_jid,
     key.remoteJid,
+    data.from,
     data.to,
   ];
   for (const candidate of candidates) {
     const s = String(candidate || "");
-    if (!s || s.includes("@lid") || s.includes("@g.us") || s.includes("@broadcast")) continue;
+    if (!s || s.includes("@g.us") || s.includes("@broadcast")) continue;
     const phone = digitsFrom(s);
-    if (phone.length >= 8) return phone;
+    if (phone.length >= 8 && !isMarxenLinePhone(phone)) return phone;
   }
   return "";
+}
+
+function looksLikePollVote(event: string, data: RawRecord) {
+  const type = String(data.type || "").toLowerCase();
+  return (
+    event === "messages.poll" ||
+    event === "messages.button" ||
+    event === "poll.results" ||
+    type === "poll_vote" ||
+    type === "button_reply" ||
+    Boolean(String(data.poll_option || "").trim()) ||
+    /^opt_\d+$/i.test(String(data.button_id || ""))
+  );
 }
 
 function pollChoiceFrom(data: RawRecord) {
@@ -86,7 +99,9 @@ export function parseInbound(body: unknown): InboundMessage | null {
       ? (data.pollResult as RawRecord[]).find((row) => Array.isArray(row.voters) && row.voters.length)
       : null;
     const voter = voted && Array.isArray(voted.voters) ? String(voted.voters[0] || "") : "";
-    const phone = digitsFrom(voter) || pickPhone(data);
+    const voterPhone = digitsFrom(voter);
+    const phone =
+      voterPhone && !isMarxenLinePhone(voterPhone) ? voterPhone : pickPhone(data);
     const text = pollChoiceFrom(data);
     if (!phone) return null;
     return {
@@ -106,16 +121,16 @@ export function parseInbound(body: unknown): InboundMessage | null {
   }
 
   const phone = pickPhone(data);
-  const text =
-    event === "messages.poll" || event === "messages.button" || event === "messages.list"
-      ? pollChoiceFrom(data) || String(data.body || "").trim()
-      : String(
-          data.body ||
-            data.messageBody ||
-            asRecord(data.message)?.conversation ||
-            asRecord(asRecord(data.message)?.extendedTextMessage)?.text ||
-            ""
-        ).trim();
+  const isPoll = looksLikePollVote(event, data);
+  const text = isPoll
+    ? pollChoiceFrom(data) || String(data.body || "").trim()
+    : String(
+        data.body ||
+          data.messageBody ||
+          asRecord(data.message)?.conversation ||
+          asRecord(asRecord(data.message)?.extendedTextMessage)?.text ||
+          ""
+      ).trim();
 
   const type = String(data.type || "").toLowerCase();
   return {
@@ -123,17 +138,11 @@ export function parseInbound(body: unknown): InboundMessage | null {
     id: String(data.id || asRecord(data.key)?.id || ""),
     phone,
     text,
-    fromMe: Boolean(data.is_from_me || asRecord(data.key)?.fromMe),
+    fromMe: Boolean(data.is_from_me || asRecord(data.key)?.fromMe) && !isPoll,
     isGroup: Boolean(data.is_group) || String(data.chat_jid || data.from || "").includes("@g.us"),
     pushName: String(data.push_name || data.pushName || ""),
     chatJid: String(data.chat_jid || data.from || asRecord(data.key)?.remoteJid || ""),
-    isPoll:
-      event === "messages.poll" ||
-      event === "messages.button" ||
-      event === "messages.list" ||
-      type === "poll_vote" ||
-      Boolean(data.poll_option) ||
-      /^opt_\d+$/i.test(String(data.button_id || "")),
+    isPoll,
     type,
   };
 }

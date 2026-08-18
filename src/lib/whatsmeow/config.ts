@@ -62,6 +62,12 @@ export function getMarxenLinePhone() {
   return normalizeArPhone(process.env.WHATSMEOW_PHONE || MARXEN_WA_PHONE);
 }
 
+export function isMarxenLinePhone(value: string) {
+  const own = getMarxenLinePhone();
+  const got = normalizeArPhone(value);
+  return Boolean(own && got && own === got);
+}
+
 export function getAppBaseUrl() {
   const explicit = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
   if (explicit) return explicit.replace(/\/$/, "");
