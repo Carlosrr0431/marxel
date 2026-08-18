@@ -21,36 +21,9 @@ type Snapshot = {
   webhookUrl?: string;
   status?: string;
   connected?: boolean;
-  qr?: string | null;
+  hasQr?: boolean;
   livePhone?: string | null;
 };
-
-function toQrSrc(qr: string | null | undefined) {
-  if (!qr) return null;
-  const value = qr.trim();
-  if (value.startsWith("data:image")) return value;
-  if (/^https?:\/\//i.test(value)) return value;
-  const compact = value.replace(/\s/g, "");
-  if (compact.length > 80 && /^[A-Za-z0-9+/]+=*$/.test(compact.slice(0, 120))) {
-    return `data:image/png;base64,${compact}`;
-  }
-  return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&ecc=M&data=${encodeURIComponent(value)}`;
-}
-
-function mergeSnapshot(prev: Snapshot | null, next: Snapshot) {
-  if (!next || next.ok === false) return prev;
-  const keepQr =
-    !next.qr &&
-    Boolean(prev?.qr) &&
-    next.status !== "connected" &&
-    ["need_scan", "connecting", "logged_out", "disconnected", "expired", "unknown"].includes(
-      String(next.status || "")
-    );
-  return {
-    ...next,
-    qr: keepQr ? prev?.qr || null : next.qr || null,
-  };
-}
 
 function WhatsappMark({ className }: { className?: string }) {
   return (
@@ -69,9 +42,9 @@ export function WhatsappLinkPanel() {
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [copied, setCopied] = useState(false);
+  const [qrNonce, setQrNonce] = useState<number | null>(null);
   const [qrBroken, setQrBroken] = useState(false);
   const actingRef = useRef(false);
-  const lastQrRef = useRef<string | null>(null);
 
   const applySnapshot = useCallback((data: Snapshot) => {
     if (!data || data.ok === false) {
@@ -80,16 +53,11 @@ export function WhatsappLinkPanel() {
       return;
     }
     setError("");
-    setSnapshot((prev) => {
-      const merged = mergeSnapshot(prev, data) || data;
-      const nextQr = merged.qr || null;
-      if (nextQr && nextQr !== lastQrRef.current) {
-        lastQrRef.current = nextQr;
-        setQrBroken(false);
-      }
-      if (!nextQr && merged.status === "connected") lastQrRef.current = null;
-      return merged;
-    });
+    setSnapshot(data);
+    if (data.connected || data.status === "connected") {
+      setQrNonce(null);
+      setQrBroken(false);
+    }
   }, []);
 
   const load = useCallback(async () => {
@@ -149,8 +117,7 @@ export function WhatsappLinkPanel() {
   }, [load]);
 
   const connected = Boolean(snapshot?.connected || snapshot?.status === "connected");
-  const qrSrc = toQrSrc(snapshot?.qr);
-  const waitingScan = Boolean(qrSrc) && !connected;
+  const waitingScan = Boolean(qrNonce) && !connected;
 
   useEffect(() => {
     const ms = connected ? 8000 : waitingScan ? 2500 : 10000;
@@ -173,10 +140,18 @@ export function WhatsappLinkPanel() {
   const tone = connected ? "ok" : waitingScan || acting ? "warn" : "bad";
 
   const generateQr = async () => {
-    const data = await runAction({ action: snapshot?.qr ? "refresh-qr" : "connect" });
-    if (data && !data.connected && !toQrSrc(data.qr)) {
-      setError("No se pudo generar el QR. Intentá de nuevo.");
+    const data = await runAction({ action: qrNonce ? "refresh-qr" : "connect" });
+    if (!data) return;
+    if (data.connected) {
+      setQrNonce(null);
+      return;
     }
+    if (data.hasQr) {
+      setQrBroken(false);
+      setQrNonce(Date.now());
+      return;
+    }
+    setError("No se pudo generar el QR. Intentá de nuevo.");
   };
 
   const copyWebhook = async () => {
@@ -246,14 +221,14 @@ export function WhatsappLinkPanel() {
                   {snapshot?.livePhone ? ` · ${snapshot.livePhone}` : ""}.
                 </p>
               </div>
-            ) : waitingScan && qrSrc && !qrBroken ? (
+            ) : waitingScan && qrNonce && !qrBroken ? (
               <div className="flex flex-col items-center gap-5">
                 <div className="relative rounded-[1.6rem] bg-[linear-gradient(160deg,#051e36,#0a355c_60%,#0d5752)] p-4 shadow-[0_18px_40px_rgba(5,30,54,0.18)]">
                   <div className="rounded-[1.1rem] bg-white p-3">
                     <div className="size-[220px] overflow-hidden sm:size-[240px]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={qrSrc}
+                        src={`/api/whatsapp/qr?n=${qrNonce}`}
                         alt="Código QR para vincular WhatsApp"
                         width={240}
                         height={240}
@@ -336,7 +311,7 @@ export function WhatsappLinkPanel() {
                 disabled={acting}
                 onClick={() => {
                   if (!window.confirm("¿Cerrar la sesión de WhatsApp de MARXEN?")) return;
-                  lastQrRef.current = null;
+                  setQrNonce(null);
                   setQrBroken(false);
                   void runAction({ action: "reset" });
                 }}

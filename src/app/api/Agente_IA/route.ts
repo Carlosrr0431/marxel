@@ -1,11 +1,17 @@
 import { handleWhatsappInbound, webhookSecretOk } from "@/lib/whatsmeow/handle-inbound";
+import { ACCUMULATION_MS } from "@/lib/whatsmeow/conversations";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET() {
-  return Response.json({ ok: true, service: "Agente_IA", line: "MARXEN" });
+  return Response.json({
+    ok: true,
+    service: "Agente_IA",
+    line: "MARXEN",
+    accumulationMs: ACCUMULATION_MS,
+  });
 }
 
 export async function POST(request: Request) {

@@ -12,7 +12,7 @@ import {
   connectWhatsmeowSession,
   disconnectWhatsmeowSession,
   extractWhatsmeowQr,
-  fetchWhatsmeowQr,
+  fetchWhatsmeowQrPng,
   fetchWhatsmeowStatus,
   logoutWhatsmeowSession,
 } from "@/lib/whatsmeow/client";
@@ -50,16 +50,7 @@ function isConnected(statusData: Record<string, unknown> | null) {
   return normalizeStatus(statusData.status) === "connected";
 }
 
-const DISCONNECTED = new Set([
-  "need_scan",
-  "connecting",
-  "disconnected",
-  "logged_out",
-  "expired",
-  "unknown",
-]);
-
-async function getSnapshot({ includeQr = false, ensureWebhook = false } = {}) {
+async function getSnapshot({ ensureWebhook = false } = {}) {
   const agentCode = getWhatsmeowAgentCode();
   const phone = getMarxenLinePhone();
   const webhookUrl = getAgenteWebhookUrl();
@@ -75,7 +66,7 @@ async function getSnapshot({ includeQr = false, ensureWebhook = false } = {}) {
       webhookUrl,
       status: "disconnected",
       connected: false,
-      qr: null,
+      hasQr: false,
     };
   }
 
@@ -83,11 +74,7 @@ async function getSnapshot({ includeQr = false, ensureWebhook = false } = {}) {
     const statusData = await fetchWhatsmeowStatus(agentCode);
     const connected = isConnected(statusData);
     let status = normalizeStatus(connected ? "connected" : statusData?.status || "disconnected");
-    let qr: string | null = null;
-    if (includeQr && !connected && DISCONNECTED.has(status)) {
-      qr = await fetchWhatsmeowQr(agentCode).catch(() => null);
-    }
-    if (!connected && !qr && (status === "need_scan" || status === "unknown" || status === "connecting")) {
+    if (!connected && (status === "need_scan" || status === "unknown" || status === "connecting")) {
       status = "disconnected";
     }
     if (ensureWebhook) {
@@ -106,7 +93,7 @@ async function getSnapshot({ includeQr = false, ensureWebhook = false } = {}) {
       webhookUrl,
       status,
       connected,
-      qr,
+      hasQr: false,
       livePhone: statusData?.phone ? String(statusData.phone) : null,
     };
   } catch (err) {
@@ -119,19 +106,18 @@ async function getSnapshot({ includeQr = false, ensureWebhook = false } = {}) {
       webhookUrl,
       status: "disconnected",
       connected: false,
-      qr: null,
+      hasQr: false,
     };
   }
 }
 
 async function waitForQr(agentCode: string) {
-  let qr: string | null = null;
   for (let i = 0; i < 12; i += 1) {
-    qr = await fetchWhatsmeowQr(agentCode);
-    if (qr) break;
+    const png = await fetchWhatsmeowQrPng(agentCode);
+    if (png) return true;
     await new Promise((r) => setTimeout(r, 700));
   }
-  return qr;
+  return false;
 }
 
 export async function GET() {
@@ -161,11 +147,12 @@ export async function POST(request: NextRequest) {
       await new Promise((r) => setTimeout(r, 350));
       await disconnectWhatsmeowSession(agentCode).catch(() => null);
       await new Promise((r) => setTimeout(r, 250));
-      const snapshot = await getSnapshot({ includeQr: false });
+      const snapshot = await getSnapshot();
       return NextResponse.json({
         ...snapshot,
         ok: true,
         reset: true,
+        hasQr: false,
         status: snapshot.connected ? snapshot.status : "disconnected",
       });
     }
@@ -185,17 +172,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const qr =
-      extractWhatsmeowQr(connectResult.data) || (await waitForQr(agentCode));
-    if (forceNewQr && !qr) {
+    const fromConnect = extractWhatsmeowQr(connectResult.data) || "";
+    const hasQr =
+      fromConnect.startsWith("data:image") || (await waitForQr(agentCode));
+    if (forceNewQr && !hasQr) {
       return NextResponse.json(
         { ok: false, error: "No se pudo regenerar el QR. Intentá de nuevo." },
         { status: 400 }
       );
     }
 
-    const snapshot = await getSnapshot({ includeQr: Boolean(qr) });
-    return NextResponse.json({ ...snapshot, qr: qr || snapshot.qr });
+    const snapshot = await getSnapshot();
+    return NextResponse.json({
+      ...snapshot,
+      hasQr,
+      status: snapshot.connected ? snapshot.status : hasQr ? "need_scan" : snapshot.status,
+    });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Error interno" },

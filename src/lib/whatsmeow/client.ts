@@ -82,6 +82,16 @@ export async function fetchWhatsmeowStatus(agentCode = getWhatsmeowAgentCode()) 
   return nestedData(result);
 }
 
+function pngFromDataUrl(value: string) {
+  const match = value.trim().match(/^data:image\/(?:png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) return null;
+  try {
+    return Buffer.from(match[1].replace(/\s/g, ""), "base64");
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWhatsmeowQr(agentCode = getWhatsmeowAgentCode()) {
   if (!agentCode) return null;
   const result = await whatsmeowFetch(
@@ -89,6 +99,25 @@ export async function fetchWhatsmeowQr(agentCode = getWhatsmeowAgentCode()) {
   );
   if (!result.ok || result.data?.success === false) return null;
   return extractWhatsmeowQr(nestedData(result) || result.data);
+}
+
+export async function fetchWhatsmeowQrPng(agentCode = getWhatsmeowAgentCode()) {
+  if (!agentCode || !getWhatsmeowApiKey()) return null;
+  const response = await fetch(
+    `${getWhatsmeowApiBase()}/api/session/qr?agent_code=${encodeURIComponent(agentCode)}&format=image`,
+    {
+      headers: { "X-API-Key": getWhatsmeowApiKey(), Accept: "image/png" },
+      cache: "no-store",
+    }
+  );
+  const ctype = response.headers.get("content-type") || "";
+  if (response.ok && ctype.includes("image")) {
+    const buf = Buffer.from(await response.arrayBuffer());
+    return buf.length > 80 ? buf : null;
+  }
+  const qr = await fetchWhatsmeowQr(agentCode);
+  if (qr?.startsWith("data:image")) return pngFromDataUrl(qr);
+  return null;
 }
 
 export async function connectWhatsmeowSession(agentCode: string, webhookUrl: string) {

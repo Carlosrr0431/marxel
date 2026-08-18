@@ -1,7 +1,15 @@
+import { after } from "next/server";
 import { runChatTurn } from "@/lib/chatbot/run-turn";
 import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret } from "@/lib/whatsmeow/config";
 import { sendWhatsmeowPoll, sendWhatsmeowText } from "@/lib/whatsmeow/client";
-import { loadConversation, saveConversation } from "@/lib/whatsmeow/conversations";
+import {
+  ACCUMULATION_MS,
+  claimInbox,
+  enqueueInbound,
+  loadConversation,
+  saveConversation,
+  type ConversationRow,
+} from "@/lib/whatsmeow/conversations";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
 
 const IGNORE_EVENTS = new Set([
@@ -51,56 +59,13 @@ function pollNameFrom(answer: string) {
   return line.slice(0, 80);
 }
 
-export async function handleWhatsappInbound(body: unknown) {
-  const root = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-  const event = String(root.event || "").trim();
-
-  if (LIFECYCLE_EVENTS.has(event)) {
-    return { status: 200, body: { success: true, ignored: true, reason: event || "lifecycle" } };
-  }
-  if (IGNORE_EVENTS.has(event)) {
-    return { status: 200, body: { success: true, ignored: true, reason: "event_ignored" } };
-  }
-
-  const inbound = parseInbound(body);
-  if (!inbound) {
-    return { status: 200, body: { success: true, ignored: true, reason: "invalid_payload" } };
-  }
-  if (["reaction", "protocol", "revoked"].includes(inbound.type)) {
-    return { status: 200, body: { success: true, ignored: true, reason: "type_ignored" } };
-  }
-  if (inbound.fromMe) {
-    return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
-  }
-  if (inbound.isGroup) {
-    return { status: 200, body: { success: true, ignored: true, reason: "group" } };
-  }
-  if (!inbound.phone) {
-    return { status: 200, body: { success: true, ignored: true, reason: "invalid_phone" } };
-  }
-
-  const conv = await loadConversation(inbound.phone);
-  if (inbound.id && conv.last_message_id && inbound.id === conv.last_message_id) {
-    return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
-  }
-
-  const mapped = conv.pending_poll
-    ? mapPollToValue(inbound.text, conv.pending_poll)
-    : inbound.text;
-  const voteKey = inbound.isPoll && mapped ? `vote:${inbound.phone}:${mapped}` : "";
-  if (voteKey && conv.last_event === voteKey) {
-    return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
-  }
-  if (!mapped) {
-    return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
-  }
-
+async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string) {
   const result = await runChatTurn({
     message: mapped,
     history: conv.history,
     quoteState: conv.quote_state,
     channel: "whatsapp",
-    knownPhone: inbound.phone,
+    knownPhone: conv.phone,
   });
 
   const history = [
@@ -110,7 +75,6 @@ export async function handleWhatsappInbound(body: unknown) {
   ].slice(-20);
 
   const pollOptions = pollOptionsFromReplies(result.quickReplies);
-  const dest = destination(inbound.chatJid, inbound.phone);
   const agentCode = getWhatsmeowAgentCode();
 
   if (result.answer) {
@@ -141,21 +105,138 @@ export async function handleWhatsappInbound(body: unknown) {
   }
 
   await saveConversation({
-    phone: inbound.phone,
+    ...conv,
     quote_state: result.quoteState,
     history,
     pending_poll: pendingPoll,
-    last_message_id: inbound.id || conv.last_message_id,
-    last_event: voteKey || inbound.event,
   });
+
+  return { mode: result.mode, poll: Boolean(pendingPoll) };
+}
+
+async function flushConversation(phone: string) {
+  const claimed = await claimInbox(phone);
+  if (!claimed) return { skipped: true as const };
+  const texts = claimed.messages.map((row) => row.text).map((t) => t.trim()).filter(Boolean);
+  if (!texts.length) return { skipped: true as const };
+
+  const last = texts[texts.length - 1];
+  const mappedBatch = claimed.conv.pending_poll
+    ? texts.map((text) => mapPollToValue(text, claimed.conv.pending_poll) || text)
+    : texts;
+  const mapped = mappedBatch.join("\n");
+  const dest = claimed.dest || claimed.conv.phone;
+  const voteKey =
+    claimed.conv.pending_poll && last
+      ? `vote:${phone}:${mapPollToValue(last, claimed.conv.pending_poll)}`
+      : "";
+
+  const result = await replyFromTurn(
+    {
+      ...claimed.conv,
+      last_event: voteKey || claimed.conv.last_event,
+    },
+    dest,
+    mapped
+  );
+  return { skipped: false as const, ...result };
+}
+
+function scheduleFlush(phone: string, waitMs: number) {
+  after(async () => {
+    const delay = Math.min(Math.max(waitMs, 0), ACCUMULATION_MS);
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    try {
+      await flushConversation(phone);
+    } catch (err) {
+      console.error("[whatsapp][flush]", err);
+    }
+  });
+}
+
+export async function handleWhatsappInbound(body: unknown) {
+  const root = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const event = String(root.event || "").trim();
+
+  if (LIFECYCLE_EVENTS.has(event)) {
+    return { status: 200, body: { success: true, ignored: true, reason: event || "lifecycle" } };
+  }
+  if (IGNORE_EVENTS.has(event)) {
+    return { status: 200, body: { success: true, ignored: true, reason: "event_ignored" } };
+  }
+
+  const inbound = parseInbound(body);
+  if (!inbound) {
+    return { status: 200, body: { success: true, ignored: true, reason: "invalid_payload" } };
+  }
+  if (["reaction", "protocol", "revoked"].includes(inbound.type)) {
+    return { status: 200, body: { success: true, ignored: true, reason: "type_ignored" } };
+  }
+  if (inbound.fromMe) {
+    return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
+  }
+  if (inbound.isGroup) {
+    return { status: 200, body: { success: true, ignored: true, reason: "group" } };
+  }
+  if (!inbound.phone) {
+    return { status: 200, body: { success: true, ignored: true, reason: "invalid_phone" } };
+  }
+
+  const dest = destination(inbound.chatJid, inbound.phone);
+
+  if (inbound.isPoll) {
+    const conv = await loadConversation(inbound.phone);
+    if (inbound.id && conv.last_message_id && inbound.id === conv.last_message_id) {
+      return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
+    }
+    const mapped = conv.pending_poll
+      ? mapPollToValue(inbound.text, conv.pending_poll)
+      : inbound.text;
+    const voteKey = mapped ? `vote:${inbound.phone}:${mapped}` : "";
+    if (voteKey && conv.last_event === voteKey) {
+      return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
+    }
+    if (!mapped) {
+      return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
+    }
+    const result = await replyFromTurn(
+      { ...conv, last_message_id: inbound.id || conv.last_message_id, last_event: voteKey },
+      dest,
+      mapped
+    );
+    return {
+      status: 200,
+      body: { success: true, event: inbound.event, immediate: true, ...result },
+    };
+  }
+
+  if (!inbound.text.trim()) {
+    return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
+  }
+
+  const queued = await enqueueInbound(inbound.phone, {
+    id: inbound.id,
+    text: inbound.text,
+    dest,
+  });
+  if (queued.duplicate) {
+    return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
+  }
+
+  if (queued.collector) {
+    scheduleFlush(inbound.phone, queued.waitMs || ACCUMULATION_MS);
+  }
 
   return {
     status: 200,
     body: {
       success: true,
+      queued: true,
+      collector: queued.collector,
+      waitMs: queued.collector ? queued.waitMs : 0,
       event: inbound.event,
-      mode: result.mode,
-      poll: Boolean(pendingPoll),
     },
   };
 }
