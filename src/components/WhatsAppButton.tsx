@@ -12,7 +12,7 @@ export function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribir por WhatsApp"
-      className="safe-bottom group fixed z-50 inline-flex flex-col items-end gap-1"
+      className="wa-fab safe-bottom group fixed z-50 inline-flex flex-col items-end gap-1"
     >
       <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#128C4A] shadow-sm">
         WhatsApp

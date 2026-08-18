@@ -1106,6 +1106,78 @@ button.seguro-card .seguro-card__arrow {
   right: calc(1.1rem + env(safe-area-inset-right, 0px));
 }
 
+.chatbot-fab {
+  right: calc(1.1rem + env(safe-area-inset-right, 0px));
+  bottom: calc(7.6rem + env(safe-area-inset-bottom, 0px));
+}
+
+.chatbot-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  border: 0;
+  background: rgba(5, 30, 54, 0.4);
+}
+
+.chatbot-panel {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  top: max(0.5rem, env(safe-area-inset-top, 0px));
+  right: 0.5rem;
+  bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  left: 0.5rem;
+  width: auto;
+  max-height: none;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, white);
+  border-radius: 1.15rem;
+  background: white;
+  box-shadow: 0 24px 60px rgba(5, 30, 54, 0.22);
+}
+
+.chatbot-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: color-mix(in srgb, var(--cloud) 80%, white);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .chatbot-backdrop {
+    display: none;
+  }
+
+  .chatbot-panel {
+    top: auto;
+    left: auto;
+    right: calc(5.75rem + env(safe-area-inset-right, 0px));
+    bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+    width: min(24rem, calc(100vw - 7.5rem));
+    height: min(36rem, calc(100dvh - 2.2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
+    max-height: calc(100dvh - 2.2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 639px) {
+  html.chat-open .wa-fab,
+  html.chat-open .chatbot-fab {
+    display: none;
+  }
+
+  html.chat-open,
+  html.chat-open body {
+    overflow: hidden;
+  }
+}
+
 /* ——— CHATBOT TYPING DOTS ——— */
 .chatbot-dot {
   display: inline-block;

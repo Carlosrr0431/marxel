@@ -109,6 +109,45 @@ export function ChatBot() {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open, loading, waitingDebounce, quickReplies, quoteState.step]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("chat-open", open);
+    return () => document.documentElement.classList.remove("chat-open");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = document.getElementById("marxel-chatbot");
+    const vv = window.visualViewport;
+    if (!panel || !vv) return;
+
+    const sync = () => {
+      if (window.matchMedia("(min-width: 640px)").matches) {
+        panel.style.bottom = "";
+        return;
+      }
+      const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      panel.style.bottom = `max(0.5rem, env(safe-area-inset-bottom, 0px), ${covered + 8}px)`;
+    };
+
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    sync();
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+      panel.style.bottom = "";
+    };
+  }, [open]);
+
   function clearHistory() {
     localStorage.removeItem(STORAGE_KEY);
     setMessages([WELCOME_MSG]);
@@ -230,11 +269,7 @@ export function ChatBot() {
         aria-expanded={open}
         aria-controls="marxel-chatbot"
         aria-label={open ? "Cerrar asistente" : "Abrir Asistente MARXEN"}
-        className="fixed z-50 inline-flex flex-col items-end gap-1"
-        style={{
-          right: "calc(1.1rem + env(safe-area-inset-right, 0px))",
-          bottom: "calc(7.6rem + env(safe-area-inset-bottom, 0px))",
-        }}
+        className="chatbot-fab fixed z-50 inline-flex flex-col items-end gap-1"
       >
         {open ? null : (
           <span className="rounded-full bg-navy px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
@@ -268,23 +303,29 @@ export function ChatBot() {
       </button>
 
       {open ? (
+        <button
+          type="button"
+          className="chatbot-backdrop"
+          aria-label="Cerrar asistente"
+          onClick={() => setOpen(false)}
+        />
+      ) : null}
+
+      {open ? (
         <div
           id="marxel-chatbot"
-          className="fixed z-50 flex w-[min(100vw-1.25rem,24rem)] flex-col overflow-hidden rounded-2xl border border-line/80 bg-white shadow-[0_24px_60px_rgba(5,30,54,0.22)]"
-          style={{
-            right: "calc(1.1rem + env(safe-area-inset-right, 0px))",
-            bottom: "calc(12.2rem + env(safe-area-inset-bottom, 0px))",
-            height: "min(70vh, 36rem)",
-          }}
+          className="chatbot-panel"
+          role="dialog"
+          aria-label="Asistente MARXEN"
         >
-          <header className="flex h-10 shrink-0 items-center justify-between gap-2 bg-navy px-3 text-white">
-            <p className="truncate text-[13px] font-semibold">
+          <header className="flex min-h-11 shrink-0 items-center justify-between gap-2 bg-navy px-3 py-2 text-white">
+            <p className="min-w-0 truncate text-[13px] font-semibold">
               Asistente MARXEN
-              <span className="ml-1.5 font-normal text-white/55">
+              <span className="ml-1.5 hidden font-normal text-white/55 sm:inline">
                 · Asesor virtual
               </span>
             </p>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-0.5">
               {messages.length > 1 ? (
                 <button
                   type="button"
@@ -311,10 +352,25 @@ export function ChatBot() {
               >
                 WA
               </Link>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar asistente"
+                className="rounded-md p-1.5 text-white/80 hover:bg-white/10 hover:text-white sm:hidden"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
             </div>
           </header>
 
-          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-cloud/80 px-3 py-3">
+          <div className="chatbot-scroll">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -342,39 +398,39 @@ export function ChatBot() {
               </div>
             ) : null}
 
+            {menuButtons.length > 0 ? (
+              <div
+                className={
+                  menuIsGrid ? "grid gap-1.5 pt-1" : "flex flex-wrap gap-1.5 pt-1"
+                }
+              >
+                {menuButtons.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => send(r.value, true)}
+                    disabled={busy}
+                    className={
+                      menuIsGrid
+                        ? "w-full rounded-xl border border-line bg-white px-3 py-2 text-left transition hover:border-navy/30 hover:bg-aqua disabled:opacity-50"
+                        : "rounded-full border border-line bg-white px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
+                    }
+                  >
+                    <span className="block text-[13px] font-semibold text-navy">
+                      {r.label}
+                    </span>
+                    {r.hint ? (
+                      <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                        {r.hint}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div ref={bottomRef} />
           </div>
-
-          {menuButtons.length > 0 ? (
-            <div
-              className={`shrink-0 border-t border-line/70 bg-white px-2.5 py-2 ${
-                menuIsGrid ? "grid gap-1.5" : "flex flex-wrap gap-1.5"
-              }`}
-            >
-              {menuButtons.map((r) => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => send(r.value, true)}
-                  disabled={busy}
-                  className={
-                    menuIsGrid
-                      ? "w-full rounded-xl border border-line bg-mist/80 px-3 py-2.5 text-left transition hover:border-navy/30 hover:bg-aqua disabled:opacity-50"
-                      : "rounded-full border border-line bg-mist/70 px-2.5 py-1.5 text-[11px] font-medium text-navy hover:bg-aqua disabled:opacity-50"
-                  }
-                >
-                  <span className="block text-[13px] font-semibold text-navy">
-                    {r.label}
-                  </span>
-                  {r.hint ? (
-                    <span className="mt-0.5 block text-[11px] font-normal text-muted">
-                      {r.hint}
-                    </span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
 
           <form
             className="flex shrink-0 gap-2 border-t border-line/70 bg-white p-2.5"
