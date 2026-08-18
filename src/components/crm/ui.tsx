@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ProductoInteres } from "@/lib/crm/types";
+import { productoLabel, productoTone } from "@/lib/crm/utils";
 
 export function PageHeader({
   eyebrow,
@@ -78,6 +80,20 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md"
     >
       {initials || "?"}
     </span>
+  );
+}
+
+export function ProductoPill({ producto }: { producto: ProductoInteres }) {
+  return (
+    <span className={`crm-badge ${productoTone(producto)}`}>
+      {productoLabel(producto)}
+    </span>
+  );
+}
+
+export function ChatbotBadge() {
+  return (
+    <span className="crm-badge bg-indigo-100 text-indigo-800">Chatbot</span>
   );
 }
 

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { CrmStats, Lead, Seguimiento } from "@/lib/crm/types";
 import { LEAD_ESTADOS } from "@/lib/crm/types";
-import { PageHeader, Avatar, EmptyState } from "@/components/crm/ui";
+import { PageHeader, Avatar, EmptyState, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
 import { relativeTime, productoLabel, prioridadColor } from "@/lib/crm/utils";
+import { isChatbotLead } from "@/lib/crm/chatbot-brief";
 
 export default async function CrmDashboardPage() {
   const supabase = createServiceClient();
@@ -15,6 +16,8 @@ export default async function CrmDashboardPage() {
     { data: byEstado },
     { data: byProducto },
     { data: activities },
+    { count: chatbotWeek },
+    { data: chatbotRecent },
   ] = await Promise.all([
     supabase.from("crm_stats").select("*").maybeSingle(),
     supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5),
@@ -32,6 +35,18 @@ export default async function CrmDashboardPage() {
       .select("*, leads(nombre)")
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("origen_detalle", "chatbot")
+      .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+    supabase
+      .from("leads")
+      .select("*")
+      .eq("origen_detalle", "chatbot")
+      .not("estado", "in", "(ganado,perdido)")
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const stats = (statsRow || {
@@ -82,7 +97,13 @@ export default async function CrmDashboardPage() {
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Stat
+          label="Chatbot semana"
+          value={chatbotWeek || 0}
+          hint="Leads calificados por el asistente"
+          tone="navy"
+        />
         <Stat
           label="Leads abiertos"
           value={stats.leads_abiertos}
@@ -108,6 +129,40 @@ export default async function CrmDashboardPage() {
           tone="gold"
         />
       </section>
+
+      {(chatbotRecent as Lead[] | null)?.length ? (
+        <section className="crm-card overflow-hidden border-cta/20">
+          <div className="flex items-center justify-between border-b border-line/80 bg-[linear-gradient(135deg,#eef2ff_0%,#ffffff_60%)] px-5 py-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--cta)]">
+                Chatbot
+              </p>
+              <h2 className="font-display text-lg font-semibold text-navy">
+                Para cotizar ahora
+              </h2>
+            </div>
+            <Link href="/crm/leads?origen=chatbot" className="text-sm font-semibold text-teal hover:underline">
+              Ver cola →
+            </Link>
+          </div>
+          <ul className="divide-y divide-line/70">
+            {(chatbotRecent as Lead[]).map((lead) => (
+              <li key={lead.id} className="flex items-center gap-3 px-5 py-3">
+                <Avatar name={lead.nombre} size="sm" />
+                <Link href={`/crm/leads/${lead.id}`} className="min-w-0 flex-1">
+                  <span className="font-semibold text-navy">{lead.nombre}</span>
+                  <span className="mt-0.5 block truncate text-xs text-muted">
+                    {lead.plan_interes || lead.producto}
+                    {lead.localidad ? ` · ${lead.localidad}` : ""}
+                  </span>
+                </Link>
+                <ProductoPill producto={lead.producto} />
+                <span className="text-[11px] text-muted">{relativeTime(lead.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div className="crm-card p-5 sm:p-6">
@@ -255,7 +310,10 @@ export default async function CrmDashboardPage() {
                       <Link href={`/crm/leads/${lead.id}`} className="flex items-center gap-3">
                         <Avatar name={lead.nombre} size="sm" />
                         <span>
-                          <span className="font-semibold text-navy">{lead.nombre}</span>
+                          <span className="flex items-center gap-1.5 font-semibold text-navy">
+                            {lead.nombre}
+                            {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                          </span>
                           <span className="block text-xs text-muted">{lead.celular}</span>
                         </span>
                       </Link>

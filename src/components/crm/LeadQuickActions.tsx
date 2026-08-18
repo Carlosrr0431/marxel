@@ -1,37 +1,65 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { useTransition, type ReactNode } from "react";
 import { logWhatsApp, convertLead } from "@/lib/crm/actions";
 import { whatsappLink } from "@/lib/crm/types";
+
+export function WhatsAppLogLink({
+  leadId,
+  celular,
+  text,
+  className,
+  children,
+}: {
+  leadId: string;
+  celular: string;
+  text: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [, start] = useTransition();
+  return (
+    <Link
+      href={whatsappLink(celular, text)}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => start(async () => logWhatsApp(leadId, null, text))}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function LeadQuickActions({
   leadId,
   nombre,
   celular,
   estado,
+  mensaje,
 }: {
   leadId: string;
   nombre: string;
   celular: string;
   estado: string;
+  mensaje?: string;
 }) {
   const [pending, start] = useTransition();
+  const text =
+    mensaje ||
+    `Hola ${nombre}, te escribo de MARXEN. ¿Seguimos con tu cotización?`;
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Link
-        href={whatsappLink(
-          celular,
-          `Hola ${nombre}, te escribo de MARXEN. ¿Seguimos con tu cotización?`
-        )}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => start(async () => logWhatsApp(leadId, null))}
+      <WhatsAppLogLink
+        leadId={leadId}
+        celular={celular}
+        text={text}
         className="rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white"
       >
         WhatsApp
-      </Link>
+      </WhatsAppLogLink>
       {estado !== "ganado" ? (
         <button
           type="button"

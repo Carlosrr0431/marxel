@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/crm/ui";
 
 export default function PlantillasPage() {
   const [nombre, setNombre] = useState("María");
-  const [interes, setInteres] = useState("Prevención Salud");
+  const [interes, setInteres] = useState("consulta de salud");
+  const [localidad, setLocalidad] = useState("Salta Capital");
   const [celular, setCelular] = useState("");
   const [filtro, setFiltro] = useState<string>("todas");
   const [copied, setCopied] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export default function PlantillasPage() {
         description="Mensajes listos para apertura, seguimiento, documentación y cierre."
       />
 
-      <div className="crm-card grid gap-4 p-5 sm:grid-cols-3">
+      <div className="crm-card grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-sm">
           <span className="mb-1.5 block font-medium text-ink">Nombre</span>
           <input className="crm-input" value={nombre} onChange={(e) => setNombre(e.target.value)} />
@@ -33,6 +34,10 @@ export default function PlantillasPage() {
         <label className="text-sm">
           <span className="mb-1.5 block font-medium text-ink">Interés</span>
           <input className="crm-input" value={interes} onChange={(e) => setInteres(e.target.value)} />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1.5 block font-medium text-ink">Localidad</span>
+          <input className="crm-input" value={localidad} onChange={(e) => setLocalidad(e.target.value)} />
         </label>
         <label className="text-sm">
           <span className="mb-1.5 block font-medium text-ink">Celular</span>
@@ -68,7 +73,7 @@ export default function PlantillasPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {list.map((t) => {
-          const text = fillTemplate(t.cuerpo, { nombre, interes });
+          const text = fillTemplate(t.cuerpo, { nombre, interes, localidad });
           return (
             <article key={t.id} className="crm-card crm-card-hover flex flex-col p-5">
               <p className="font-display text-lg font-semibold text-navy">{t.titulo}</p>

@@ -51,6 +51,9 @@ export function scoreLead(lead: Partial<Lead>): number {
   if (tags.includes("chatbot") || tags.includes("caliente")) score += 15;
   if (tags.includes("completo")) score += 5;
   if (lead.origen_detalle === "chatbot") score += 10;
+  if (lead.localidad) score += 8;
+  if (lead.coberturas) score += 5;
+  if (tags.includes("cotizar")) score += 5;
   if (lead.notas_iniciales && lead.notas_iniciales.length > 40) score += 5;
   return Math.min(100, score);
 }
@@ -78,6 +81,19 @@ export function productoLabel(p: ProductoInteres) {
       return "Viajero";
     default:
       return "General";
+  }
+}
+
+export function productoTone(p: ProductoInteres) {
+  switch (p) {
+    case "salud":
+      return "bg-sky/20 text-blue";
+    case "seguros":
+      return "bg-navy/10 text-navy";
+    case "viajero":
+      return "bg-teal/15 text-teal";
+    default:
+      return "bg-mist text-muted";
   }
 }
 
@@ -109,4 +125,20 @@ export const DOC_CHECKLIST_SALUD = [
   "Constancia monotributo / recibo de sueldo",
   "Comprobante opción de cambio (Mi SSSalud)",
   "CBU o tarjeta para débito",
+];
+
+export const DOC_CHECKLIST_SEGUROS = [
+  "Marca, modelo y año del bien",
+  "Uso (particular / comercial)",
+  "Cédula verde o título",
+  "Código postal / localidad de guarda",
+  "Si ya tiene póliza: vencimiento y compañía",
+];
+
+export const DOC_CHECKLIST_VIAJERO = [
+  "Destino y fechas de ida / vuelta",
+  "Cantidad de viajeros y edades",
+  "Nacional o internacional",
+  "Si hay preexistencia o deporte",
+  "Pasaporte o DNI según destino",
 ];

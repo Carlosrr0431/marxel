@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
 import { Logo } from "@/components/Logo";
 
 const links = [
   { href: "/crm", label: "Dashboard", exact: true },
   { href: "/crm/inbox", label: "Inbox" },
+  { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true },
   { href: "/crm/pipeline", label: "Pipeline" },
   { href: "/crm/leads", label: "Leads" },
   { href: "/crm/afiliados", label: "Afiliados" },
@@ -18,9 +19,11 @@ const links = [
 export function CrmSidebar({
   badges,
 }: {
-  badges?: { inbox?: number; seguimientos?: number };
+  badges?: { inbox?: number; seguimientos?: number; chatbot?: number };
 }) {
   const pathname = usePathname();
+  const search = useSearchParams();
+  const origen = search.get("origen");
 
   return (
     <aside className="flex w-full flex-col border-b border-white/10 bg-[linear-gradient(180deg,#051e36_0%,#0a355c_100%)] text-white lg:min-h-screen lg:w-60 lg:border-b-0 lg:border-r">
@@ -36,11 +39,18 @@ export function CrmSidebar({
 
       <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible lg:px-3">
         {links.map((link) => {
-          const active = link.exact
-            ? pathname === link.href
-            : pathname === link.href || pathname.startsWith(`${link.href}/`);
-          const badge =
-            link.href === "/crm/inbox"
+          const isChatbot = "chatbot" in link && link.chatbot;
+          const active = isChatbot
+            ? pathname === "/crm/leads" && origen === "chatbot"
+            : link.href === "/crm/leads"
+              ? (pathname === "/crm/leads" && origen !== "chatbot") ||
+                pathname.startsWith("/crm/leads/")
+              : link.exact
+                ? pathname === link.href
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const badge = isChatbot
+            ? badges?.chatbot
+            : link.href === "/crm/inbox"
               ? badges?.inbox
               : link.href === "/crm/seguimientos"
                 ? badges?.seguimientos

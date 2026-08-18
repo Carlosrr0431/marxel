@@ -3,8 +3,9 @@ import { createServiceClient } from "@/lib/supabase/server";
 import type { Lead } from "@/lib/crm/types";
 import { LEAD_ESTADOS } from "@/lib/crm/types";
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
-import { PageHeader, Avatar } from "@/components/crm/ui";
+import { PageHeader, Avatar, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
 import { prioridadColor, productoLabel, scoreLead } from "@/lib/crm/utils";
+import { isChatbotLead } from "@/lib/crm/chatbot-brief";
 
 export default async function PipelinePage() {
   const supabase = createServiceClient();
@@ -61,9 +62,12 @@ export default async function PipelinePage() {
                         >
                           {lead.nombre}
                         </Link>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          <ProductoPill producto={lead.producto} />
+                          {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                        </div>
                         <p className="mt-0.5 text-xs text-muted">
-                          {productoLabel(lead.producto)}
-                          {lead.plan_interes ? ` · ${lead.plan_interes}` : ""}
+                          {lead.localidad || lead.plan_interes || productoLabel(lead.producto)}
                         </p>
                       </div>
                       <span className="font-display text-sm font-bold text-teal">

@@ -13,7 +13,15 @@ export const WA_TEMPLATES: WaTemplate[] = [
     categoria: "apertura",
     producto: "salud",
     cuerpo:
-      "Hola {{nombre}} 👋 Soy tu asesor de MARXEN. Vi tu consulta por Prevención Salud. ¿Tenés unos minutos para armarte una cotización a medida? Con aportes de monotributo o sueldo a menudo la diferencia queda muy baja.",
+      "Hola {{nombre}} 👋 Soy tu asesor de MARXEN. Vi tu consulta de salud. Te armo una propuesta a medida según tu situación (aportes, grupo y cartilla). ¿Tenés unos minutos?",
+  },
+  {
+    id: "apertura-chatbot",
+    titulo: "Post-chatbot (calificado)",
+    categoria: "apertura",
+    producto: "general",
+    cuerpo:
+      "Hola {{nombre}}, te escribo de MARXEN. Recibimos tu consulta del asistente por {{interes}}. Ya tengo tus datos para cotizar. ¿Seguimos ahora?",
   },
   {
     id: "apertura-general",
@@ -52,7 +60,7 @@ export const WA_TEMPLATES: WaTemplate[] = [
     categoria: "apertura",
     producto: "seguros",
     cuerpo:
-      "Hola {{nombre}}, soy de MARXEN. Para cotizar tu seguro de auto/moto necesito marca, modelo, año y si querés todo riesgo o RC. ¿Me pasás esos datos?",
+      "Hola {{nombre}}, soy de MARXEN. Vi tu consulta de {{ramo}}. Te armo las opciones claras para cotizar. ¿Seguimos?",
   },
   {
     id: "viajero",
@@ -73,9 +81,20 @@ export const WA_TEMPLATES: WaTemplate[] = [
 
 export function fillTemplate(
   cuerpo: string,
-  vars: { nombre?: string; interes?: string }
+  vars: {
+    nombre?: string;
+    interes?: string;
+    localidad?: string;
+    modalidad?: string;
+    busca?: string;
+    ramo?: string;
+  }
 ) {
   return cuerpo
     .replaceAll("{{nombre}}", vars.nombre || "")
-    .replaceAll("{{interes}}", vars.interes || "tu consulta");
+    .replaceAll("{{interes}}", vars.interes || "tu consulta")
+    .replaceAll("{{localidad}}", vars.localidad || "")
+    .replaceAll("{{modalidad}}", vars.modalidad || "")
+    .replaceAll("{{busca}}", vars.busca || "")
+    .replaceAll("{{ramo}}", vars.ramo || "seguros");
 }
