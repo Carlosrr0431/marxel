@@ -26,9 +26,19 @@ function planInteres(data: QuoteData): string {
     return extra ? `Salud · ${extra}` : "Salud · consulta chatbot";
   }
   if (producto === "seguros") {
+    if (data.seguroGrupo === "auto") {
+      const car =
+        data.seguroDetalle ||
+        [data.auto?.year, data.auto?.brand?.description, data.auto?.model?.description]
+          .filter(Boolean)
+          .join(" ");
+      const plan = data.auto?.planElegido;
+      const extra = [car, plan].filter(Boolean).join(" · ");
+      return extra ? `Seguros · Auto · ${extra}` : "Seguros · Auto";
+    }
     const ramo =
       data.seguroGrupo === "auto_moto"
-        ? "Auto/Moto"
+        ? "Moto"
         : data.seguroGrupo === "hogar_comercio"
           ? "Hogar/Comercio"
           : data.seguroGrupo === "praxis_art_ap"
@@ -60,7 +70,13 @@ function buildPayload(
     producto,
     plan_interes: planInteres(data),
     coberturas:
-      [data.seguroDetalle, data.viajeroDestino, data.prepaga, data.uso]
+      [
+        data.seguroDetalle,
+        data.auto?.planElegido,
+        data.viajeroDestino,
+        data.prepaga,
+        data.uso,
+      ]
         .filter(Boolean)
         .join(" · ") || null,
     modalidad: toModalidad(data),
@@ -146,7 +162,7 @@ export async function updateLeadOptionalFromQuote(state: QuoteState) {
     provincia: "Salta",
     producto,
     plan_interes: planInteres(data),
-    coberturas: [data.seguroDetalle, data.viajeroDestino, data.prepaga, data.uso]
+    coberturas: [data.seguroDetalle, data.auto?.planElegido, data.viajeroDestino, data.prepaga, data.uso]
       .filter(Boolean)
       .join(" · ") || null,
     notas_iniciales: notas,

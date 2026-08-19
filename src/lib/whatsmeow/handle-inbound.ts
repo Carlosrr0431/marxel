@@ -61,7 +61,20 @@ function pollNameFrom(answer: string) {
   return line.slice(0, 80);
 }
 
-const CHOICE_STEPS = new Set(["idle", "producto", "seguro_tipo", "laboral", "grupo"]);
+const CHOICE_STEPS = new Set([
+  "idle",
+  "producto",
+  "seguro_tipo",
+  "laboral",
+  "grupo",
+  "auto_anio",
+  "auto_marca",
+  "auto_modelo",
+  "auto_version",
+  "auto_cp",
+  "auto_localidad",
+  "auto_plan",
+]);
 
 function shouldReplyNow(text: string, conv: ConversationRow, isPoll: boolean) {
   if (isPoll) return true;

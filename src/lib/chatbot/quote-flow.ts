@@ -1,11 +1,23 @@
 import type { ProductoInteres } from "@/lib/crm/types";
+import type {
+  AutoCatalogItem,
+  AutoLocation,
+  AutoPlan,
+  AutoVersion,
+} from "@/lib/sc-auto";
+import {
+  handleAutoQuoteStep,
+  isAutoQuoteStep,
+  startAutoQuote,
+  submitAutoQuote,
+} from "@/lib/chatbot/auto-quote-flow";
 
 export type ModalidadQuote =
   | "monotributo"
   | "relacion_dependencia"
   | "particular";
 
-export type SeguroGrupo = "auto_moto" | "hogar_comercio" | "praxis_art_ap";
+export type SeguroGrupo = "auto" | "auto_moto" | "hogar_comercio" | "praxis_art_ap";
 
 export type QuoteStep =
   | "idle"
@@ -22,7 +34,28 @@ export type QuoteStep =
   | "whatsapp"
   | "localidad"
   | "prepaga"
+  | "auto_anio"
+  | "auto_marca"
+  | "auto_modelo"
+  | "auto_version"
+  | "auto_cp"
+  | "auto_localidad"
+  | "auto_plan"
   | "done";
+
+export type AutoQuoteDraft = {
+  year?: number;
+  is0km?: boolean;
+  brand?: AutoCatalogItem;
+  model?: AutoCatalogItem;
+  version?: AutoVersion;
+  cp?: string;
+  location?: AutoLocation;
+  page?: number;
+  plans?: AutoPlan[];
+  quoteId?: number;
+  planElegido?: string;
+};
 
 export type QuoteData = {
   producto?: ProductoInteres;
@@ -39,6 +72,7 @@ export type QuoteData = {
   sueldoBruto?: string;
   prepaga?: string;
   uso?: string;
+  auto?: AutoQuoteDraft;
 };
 
 export type QuoteState = {
@@ -96,7 +130,8 @@ const PRODUCT_REPLIES: QuoteQuickReply[] = MAIN_MENU.filter(
 );
 
 const SEGURO_REPLIES: QuoteQuickReply[] = [
-  { label: "Auto / Moto", value: "Auto/Moto" },
+  { label: "Auto", value: "Auto" },
+  { label: "Moto", value: "Moto" },
   { label: "Hogar / Comercio", value: "Hogar/Comercio" },
   { label: "Mala Praxis / ART / AP", value: "Mala Praxis / ART / AP" },
 ];
@@ -135,7 +170,13 @@ export function usesChoiceGrid(step: QuoteStep): boolean {
     step === "producto" ||
     step === "seguro_tipo" ||
     step === "laboral" ||
-    step === "grupo"
+    step === "grupo" ||
+    step === "auto_anio" ||
+    step === "auto_marca" ||
+    step === "auto_modelo" ||
+    step === "auto_version" ||
+    step === "auto_localidad" ||
+    step === "auto_plan"
   );
 }
 
@@ -234,7 +275,8 @@ function productLabel(p: ProductoInteres): string {
 }
 
 function seguroLabel(grupo: SeguroGrupo): string {
-  if (grupo === "auto_moto") return "Auto / Moto";
+  if (grupo === "auto") return "Auto";
+  if (grupo === "auto_moto") return "Moto";
   if (grupo === "hogar_comercio") return "Hogar / Comercio";
   return "Mala Praxis / ART / AP";
 }
@@ -253,7 +295,11 @@ function normalizeLaboral(text: string): ModalidadQuote | null {
 
 function normalizeSeguro(text: string): SeguroGrupo | null {
   const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/auto|moto|vehiculo|veh[ií]culo/.test(t)) return "auto_moto";
+  const hasAuto = /auto|vehiculo|veh[ií]culo/.test(t);
+  const hasMoto = /\bmoto/.test(t);
+  if (hasAuto && hasMoto) return null;
+  if (hasAuto) return "auto";
+  if (hasMoto) return "auto_moto";
   if (/hogar|casa|vivienda|comercio|local|negocio/.test(t)) return "hogar_comercio";
   if (/praxis|art\b|accidente|ap\b/.test(t)) return "praxis_art_ap";
   return null;
@@ -272,6 +318,17 @@ export function buildNotas(data: QuoteData, extra?: string): string {
     data.producto ? `Interés: ${productLabel(data.producto)}` : null,
     data.seguroGrupo ? `Ramo: ${seguroLabel(data.seguroGrupo)}` : null,
     data.seguroDetalle ? `Detalle seguro: ${data.seguroDetalle}` : null,
+    data.auto?.year
+      ? `Vehículo: ${data.auto.year}${data.auto.is0km ? " 0km" : ""} ${[
+          data.auto.brand?.description,
+          data.auto.model?.description,
+          data.auto.version?.description,
+        ]
+          .filter(Boolean)
+          .join(" ")}`.trim()
+      : null,
+    data.auto?.cp ? `CP auto: ${data.auto.cp}` : null,
+    data.auto?.planElegido ? `Plan auto: ${data.auto.planElegido}` : null,
     data.viajeroDestino ? `Viaje: ${data.viajeroDestino}` : null,
     data.nombre ? `Nombre: ${data.nombre}` : null,
     data.celular ? `WhatsApp: ${data.celular}` : null,
@@ -324,7 +381,7 @@ function startViajero(): QuoteFlowResult {
   };
 }
 
-function startFromMessage(text: string): QuoteFlowResult {
+function startFromMessage(text: string, channel?: QuoteState["channel"]): QuoteFlowResult {
   if (text === MENU_SALUD || detectsHealthCoverageIntent(text)) return startSalud();
   if (text === MENU_SEGUROS) return startSeguros();
   if (text === MENU_VIAJERO) return startViajero();
@@ -334,6 +391,7 @@ function startFromMessage(text: string): QuoteFlowResult {
   if (/salud|prepaga|obra\s+social/.test(t)) return startSalud();
   if (/seguro|auto|moto|hogar|comercio|praxis|\bart\b/.test(t)) {
     const grupo = normalizeSeguro(text);
+    if (grupo === "auto") return startAutoQuote({ producto: "seguros", seguroGrupo: "auto" }, channel);
     return grupo
       ? askSeguroDetalle({ producto: "seguros", seguroGrupo: grupo })
       : startSeguros();
@@ -351,7 +409,7 @@ function askSeguroDetalle(data: QuoteData): QuoteFlowResult {
   const grupo = data.seguroGrupo;
   const prompt =
     grupo === "auto_moto"
-      ? "Ingresá el año y modelo de tu vehículo."
+      ? "Ingresá el año y modelo de tu moto."
       : grupo === "hogar_comercio"
         ? "Contanos el tipo de vivienda o el rubro del comercio."
         : "Contanos tu actividad o profesión.";
@@ -362,7 +420,10 @@ function askSeguroDetalle(data: QuoteData): QuoteFlowResult {
   };
 }
 
-function afterWhatsapp(state: QuoteState): QuoteFlowResult {
+async function afterWhatsapp(state: QuoteState): Promise<QuoteFlowResult> {
+  if (state.data.seguroGrupo === "auto" && state.data.auto?.version && state.data.auto.location) {
+    return submitAutoQuote(state);
+  }
   const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
   state.step = "localidad";
   state.pendingSave = "hot";
@@ -386,11 +447,21 @@ function finishQuote(state: QuoteState, extra?: string): QuoteFlowResult {
 /**
  * Flujo corto: una sola pregunta por mensaje.
  */
-export function processQuoteFlow(
+function cloneQuoteState(prev: QuoteState): QuoteState {
+  return {
+    ...prev,
+    data: {
+      ...prev.data,
+      auto: prev.data.auto ? { ...prev.data.auto } : undefined,
+    },
+  };
+}
+
+export async function processQuoteFlow(
   message: string,
   prev: QuoteState | null | undefined,
   channel?: QuoteState["channel"]
-): QuoteFlowResult {
+): Promise<QuoteFlowResult> {
   const text = message.trim();
 
   if (text === MENU_WHATSAPP) {
@@ -415,12 +486,11 @@ export function processQuoteFlow(
     QUOTE_RESTART.test(text) ||
     (!prev?.active && detectsQuoteIntent(text))
   ) {
-    return startFromMessage(text);
+    return startFromMessage(text, channel);
   }
 
-  let state: QuoteState = prev?.active
-    ? { ...prev, data: { ...prev.data } }
-    : emptyQuoteState();
+  const state: QuoteState = prev?.active ? cloneQuoteState(prev) : emptyQuoteState();
+  if (channel) state.channel = channel;
 
   if (!state.active) {
     if (
@@ -431,7 +501,7 @@ export function processQuoteFlow(
       return { handled: false, state: prev || emptyQuoteState() };
     }
     if (detectsQuoteIntent(text) || detectsHealthCoverageIntent(text)) {
-      return startFromMessage(text);
+      return startFromMessage(text, channel);
     }
     return { handled: false, state };
   }
@@ -447,7 +517,7 @@ export function processQuoteFlow(
 
   switch (state.step) {
     case "producto":
-      return startFromMessage(text);
+      return startFromMessage(text, channel);
 
     case "seguro_tipo": {
       const grupo = normalizeSeguro(text);
@@ -458,6 +528,9 @@ export function processQuoteFlow(
           answer: "Elegí qué querés proteger:",
           quickReplies: SEGURO_REPLIES,
         };
+      }
+      if (grupo === "auto") {
+        return startAutoQuote({ ...state.data, seguroGrupo: "auto" }, channel);
       }
       return askSeguroDetalle({ ...state.data, seguroGrupo: grupo });
     }
@@ -657,6 +730,9 @@ export function processQuoteFlow(
     }
 
     default:
+      if (isAutoQuoteStep(state.step)) {
+        return handleAutoQuoteStep(text, state);
+      }
       return { handled: false, state: emptyQuoteState() };
   }
 }
@@ -671,7 +747,7 @@ export async function processQuoteFlowBatch(
   let lastResult: QuoteFlowResult | null = null;
 
   for (const line of lines) {
-    const result = processQuoteFlow(line, state, channel);
+    const result = await processQuoteFlow(line, state, channel);
     if (!result.handled) break;
 
     if (result.state.pendingSave) {

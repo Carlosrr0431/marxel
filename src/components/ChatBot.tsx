@@ -71,6 +71,7 @@ export function ChatBot() {
   const [quickReplies, setQuickReplies] = useState<QuoteQuickReply[]>([]);
   const [messages, setMessages] = useState<Msg[]>([WELCOME_MSG]);
 
+  const quickRepliesRef = useRef<QuoteQuickReply[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Msg[]>(messages);
   const quoteStateRef = useRef<QuoteState>(quoteState);
@@ -80,6 +81,9 @@ export function ChatBot() {
   useEffect(() => {
     quoteStateRef.current = quoteState;
   }, [quoteState]);
+  useEffect(() => {
+    quickRepliesRef.current = quickReplies;
+  }, [quickReplies]);
 
   const pendingRef = useRef<string[]>([]);
   const historySnapRef = useRef<{ role: "user" | "assistant"; content: string }[]>(
@@ -229,10 +233,9 @@ export function ChatBot() {
         .slice(-10);
     }
 
-    const visible =
-      content.startsWith("menu:")
-        ? MAIN_MENU.find((item) => item.value === content)?.label || content
-        : content;
+    const visible = content.startsWith("menu:")
+      ? MAIN_MENU.find((item) => item.value === content)?.label || content
+      : quickRepliesRef.current.find((item) => item.value === content)?.label || content;
 
     setMessages((prev) => [
       ...prev,

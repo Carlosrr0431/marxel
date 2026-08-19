@@ -95,7 +95,7 @@ async function skipWhatsappIfKnown(
   if (!knownPhone || state.step !== "whatsapp" || state.data.celular) {
     return { state, answer, quickReplies };
   }
-  const skipped = processQuoteFlow(knownPhone, withChannel(state, channel));
+  const skipped = await processQuoteFlow(knownPhone, withChannel(state, channel));
   if (!skipped.handled) return { state, answer, quickReplies };
   const next = await persistQuoteSideEffects(withChannel(skipped.state, channel));
   return {
@@ -165,7 +165,7 @@ export async function runChatTurn(input: {
     }
   }
 
-  const quote = processQuoteFlow(message, prevState, input.channel);
+  const quote = await processQuoteFlow(message, prevState, input.channel);
   if (quote.handled && quote.answer) {
     let state = await persistQuoteSideEffects(withChannel(quote.state, input.channel));
     const skipped = await skipWhatsappIfKnown(
