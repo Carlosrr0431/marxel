@@ -104,9 +104,6 @@ export function Header() {
                 </Link>
               );
             })}
-            <Link href="/contacto" className="rounded-xl px-4 py-3.5 text-base font-medium text-navy">
-              Contacto
-            </Link>
             <div className="mt-4 grid gap-2">
               <Link href="/cotizar" className="btn btn-primary w-full py-3.5">
                 Cotizar ahora

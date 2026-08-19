@@ -4,7 +4,7 @@ export const site = {
   tagline:
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
-    "Productores de seguros, prepagas y asistencia al viajero. Asesoramiento claro, humano y a tu medida.",
+    "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá asistencia al viajero.",
   phone: "+54 9 387 534-8199",
   email: "hola@marxel.com.ar",
   whatsapp: "5493875348199",
@@ -16,6 +16,7 @@ export const navLinks = [
   { href: "/salud", label: "Salud" },
   { href: "/viajero", label: "Viajero" },
   { href: "/cotizar", label: "Cotizar" },
+  { href: "/contacto", label: "Contacto" },
 ];
 
 export const seguros = [
@@ -118,6 +119,70 @@ export const modalidadesIngreso = [
 ] as const;
 
 export type FaqItem = { q: string; a: string };
+
+export const faqHome: FaqItem[] = [
+  {
+    q: "¿Qué es MARXEN y dónde está?",
+    a: "MARXEN Protección Integral es un productor asesor de Salta Capital, Argentina. Cotizamos y tramitamos seguros, prepagas y asistencia al viajero: no somos la compañía que emite la póliza, te representamos frente a ella.",
+  },
+  {
+    q: "¿Puedo cotizar un seguro de auto en Salta por internet?",
+    a: "Sí. En marxen.com.ar/seguros cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 534-8199 o en el chat del sitio.",
+  },
+  {
+    q: "¿Con qué compañías trabajan?",
+    a: "En seguros cotizamos con San Cristóbal. En salud asesoramos planes de Prevención Salud (A2, A4 y el resto de la grilla). En viajero trabajamos con asistencias como GoAssistance y New Travel.",
+  },
+  {
+    q: "¿También ayudan con prepaga y aportes?",
+    a: "Sí. Armamos la comparativa de cartilla y te guiamos si sos monotributista, estás en relación de dependencia o ingresás de forma particular, para aprovechar aportes cuando corresponde.",
+  },
+  {
+    q: "¿El asesoramiento tiene costo?",
+    a: "No. Cotizar y pedir una propuesta no tiene costo ni te obliga a contratar. Te respondemos por WhatsApp, en general en menos de 24 horas.",
+  },
+];
+
+export const faqSeguros: FaqItem[] = [
+  {
+    q: "¿Cómo cotizo un seguro de auto o moto?",
+    a: "Usá el cotizador de esta página: cargás año, marca, modelo, versión y código postal. Ves planes (terceros básico, terceros completo y todo riesgo) y dejás tu WhatsApp para cerrar con un asesor de MARXEN en Salta.",
+  },
+  {
+    q: "¿Qué cubre un seguro de auto con MARXEN?",
+    a: "Según el plan: responsabilidad civil, granizo, cristales, ruedas, asistencia en ruta y todo riesgo con franquicia. La cotización concreta depende del vehículo y se confirma en el cotizador de San Cristóbal.",
+  },
+  {
+    q: "¿Hacen seguro de hogar y de comercio?",
+    a: "Sí. Hogar cubre vivienda y contenido (incendio, robo, daños por agua, RC familiar). Integral de comercios cubre local, mercadería, incendio, robo y responsabilidad civil. Si no está en el cotizador online, te armamos la propuesta a medida.",
+  },
+  {
+    q: "¿También tramitan ART, accidentes personales y mala praxis?",
+    a: "Sí. ART para empresas, accidentes personales para vos o tu familia, y mala praxis para profesionales de la salud. Pedí asesoramiento en el formulario o por WhatsApp.",
+  },
+];
+
+export const faqViajero: FaqItem[] = [
+  {
+    q: "¿Qué cubre la asistencia al viajero?",
+    a: "Emergencias médicas en el destino, orientación telefónica las 24 horas y, según el plan, pérdida de equipaje y otras asistencias. El alcance depende del país y de los días de viaje.",
+  },
+  {
+    q: "¿Puedo contratar asistencia al viajero desde Salta?",
+    a: "Sí. MARXEN arma el plan desde Salta para viajes nacionales e internacionales. Contanos destino y fechas en /cotizar o por WhatsApp.",
+  },
+];
+
+export const faqContacto: FaqItem[] = [
+  {
+    q: "¿Cómo contacto a MARXEN en Salta?",
+    a: "WhatsApp +54 9 387 534-8199, email hola@marxel.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+  },
+  {
+    q: "¿Tienen chat o cotizador en el sitio?",
+    a: "Sí. El asistente del sitio cotiza autos paso a paso y deriva el resto de ramos. El cotizador de San Cristóbal está en /seguros y /cotizar.",
+  },
+];
 
 export const faqSalud: { titulo: string; items: FaqItem[] }[] = [
   {

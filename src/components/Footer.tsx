@@ -35,13 +35,21 @@ export function Footer() {
               <WhatsAppIcon />
               Escribinos por WhatsApp
             </a>
-            <p className="mt-4 text-sm text-muted">{site.location}</p>
-            <p className="mt-2 text-sm text-muted">
-              E-mail:{" "}
-              <a href={`mailto:${site.email}`} className="footer-link">
-                {site.email}
-              </a>
-            </p>
+            <address className="mt-4 not-italic">
+              <p className="text-sm text-muted">{site.location}</p>
+              <p className="mt-2 text-sm text-muted">
+                E-mail:{" "}
+                <a href={`mailto:${site.email}`} className="footer-link">
+                  {site.email}
+                </a>
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                WhatsApp:{" "}
+                <a href={wa} className="footer-link" target="_blank" rel="noopener noreferrer">
+                  {site.phone}
+                </a>
+              </p>
+            </address>
           </div>
 
           <div>
@@ -54,11 +62,6 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link href="/contacto" className="footer-link text-sm">
-                  Contacto
-                </Link>
-              </li>
             </ul>
           </div>
 

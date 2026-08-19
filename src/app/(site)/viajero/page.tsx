@@ -2,12 +2,26 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { Icon } from "@/components/Icon";
+import { FaqAccordion } from "@/components/FaqAccordion";
+import { JsonLd } from "@/components/JsonLd";
+import { faqViajero } from "@/lib/content";
+import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Asistencia al viajero",
-  description:
-    "Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y viajá sin preocupaciones con MARXEN.",
-};
+const TITLE = "Asistencia al viajero desde Salta";
+const DESCRIPTION =
+  "Asistencia médica internacional, pérdida de equipaje y cobertura 24 hs. Contratá asistencia al viajero con MARXEN desde Salta.";
+
+export const metadata: Metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/viajero",
+  keywords: [
+    "asistencia al viajero Salta",
+    "seguro de viaje",
+    "GoAssistance",
+    "MARXEN Viajero",
+  ],
+});
 
 const partners = [
   {
@@ -25,14 +39,30 @@ const partners = [
 export default function ViajeroPage() {
   return (
     <>
+      <JsonLd
+        data={pageJsonLd({
+          path: "/viajero",
+          title: TITLE,
+          description: DESCRIPTION,
+          crumbs: [
+            { name: "Inicio", path: "/" },
+            { name: "Viajero", path: "/viajero" },
+          ],
+          faqs: faqViajero,
+        })}
+      />
       <PageHero
         eyebrow="MARXEN Viajero"
-        title="Viajá con la espalda cubierta"
-        description="Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y disfrutá de tu viaje sin preocupaciones."
+        title="Asistencia al viajero desde Salta"
+        description="Asistencia médica global, pérdida de equipaje y orientación 24 hs. Elegí tu plan y viajá sin preocupaciones."
         cta={{
           href: "/cotizar?interes=Asistencia%20al%20viajero",
           label: "Ver coberturas",
         }}
+        crumbs={[
+          { href: "/", label: "Inicio" },
+          { href: "/viajero", label: "Viajero" },
+        ]}
       />
 
       <section className="bg-cloud">
@@ -107,6 +137,16 @@ export default function ViajeroPage() {
             >
               Cotizar ahora
             </Link>
+          </div>
+
+          <div className="mt-14">
+            <SectionHeading
+              eyebrow="Preguntas frecuentes"
+              title="Antes de viajar"
+            />
+            <div className="mt-8">
+              <FaqAccordion items={faqViajero} />
+            </div>
           </div>
         </div>
       </section>

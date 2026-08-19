@@ -3,21 +3,51 @@ import Link from "next/link";
 import { PageHero } from "@/components/SectionHeading";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SanCristobalEmbed } from "@/components/SanCristobalEmbed";
-import { seguros } from "@/lib/content";
+import { FaqAccordion } from "@/components/FaqAccordion";
+import { JsonLd } from "@/components/JsonLd";
+import { faqSeguros, seguros } from "@/lib/content";
+import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "MARXEN Seguros",
-  description:
-    "Cotizá online Auto, Hogar, Moto, Accidentes Personales e Integral de Comercio con San Cristóbal Seguros a través de MARXEN.",
-};
+const TITLE = "Seguro de auto, moto y hogar en Salta";
+const DESCRIPTION =
+  "Cotizá online seguro de auto, moto, hogar y comercio con San Cristóbal a través de MARXEN en Salta. También ART, accidentes personales y mala praxis.";
+
+export const metadata: Metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/seguros",
+  keywords: [
+    "seguro de auto Salta",
+    "cotizar seguro San Cristóbal",
+    "seguro de moto Salta",
+    "seguro de hogar Salta",
+    "MARXEN Seguros",
+  ],
+});
 
 export default function SegurosPage() {
   return (
     <>
+      <JsonLd
+        data={pageJsonLd({
+          path: "/seguros",
+          title: TITLE,
+          description: DESCRIPTION,
+          crumbs: [
+            { name: "Inicio", path: "/" },
+            { name: "Seguros", path: "/seguros" },
+          ],
+          faqs: faqSeguros,
+        })}
+      />
       <PageHero
         eyebrow="MARXEN Seguros"
-        title="Cotizá online con San Cristóbal"
-        description="Elegí el ramo y cotizá en el momento, sin salir del sitio."
+        title="Seguros de auto, moto y hogar en Salta"
+        description="Cotizá online con San Cristóbal: año, marca y modelo. También te asesoramos en comercio, ART, accidentes personales y mala praxis."
+        crumbs={[
+          { href: "/", label: "Inicio" },
+          { href: "/seguros", label: "Seguros" },
+        ]}
       />
 
       <section id="cotizar-online" className="scroll-mt-24 bg-cloud">
@@ -87,6 +117,13 @@ export default function SegurosPage() {
               </div>
             </article>
           ))}
+
+          <div className="mt-6">
+            <h2 className="mb-4 font-display text-2xl font-semibold text-navy sm:text-3xl">
+              Preguntas frecuentes de seguros
+            </h2>
+            <FaqAccordion items={faqSeguros} />
+          </div>
         </div>
       </section>
     </>

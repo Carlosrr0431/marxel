@@ -1,10 +1,25 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { QuoteForm } from "@/components/QuoteForm";
 import { HeroProtectionVisual } from "@/components/HeroProtectionVisual";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/Reveal";
-import { site, seguros } from "@/lib/content";
+import { FaqAccordion } from "@/components/FaqAccordion";
+import { JsonLd } from "@/components/JsonLd";
+import { faqHome, site, seguros } from "@/lib/content";
+import { pageJsonLd, pageMetadata } from "@/lib/seo";
+
+const HOME_TITLE = "MARXEN | Productores de seguros y prepagas en Salta";
+const HOME_DESCRIPTION =
+  "Productores asesores en Salta: cotizá seguro de auto, moto y hogar con San Cristóbal, compará prepagas Prevención Salud y contratá asistencia al viajero.";
+
+export const metadata: Metadata = pageMetadata({
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  path: "/",
+  absoluteTitle: true,
+});
 
 const STATS = [
   { value: "+500", label: "Clientes activos" },
@@ -21,20 +36,30 @@ const STEPS = [
 export default function HomePage() {
   return (
     <>
+      <JsonLd
+        data={pageJsonLd({
+          path: "/",
+          title: HOME_TITLE,
+          description: HOME_DESCRIPTION,
+          crumbs: [{ name: "Inicio", path: "/" }],
+          faqs: faqHome,
+        })}
+      />
       {/* ——— HERO ——— */}
       <section className="hero-section">
         <div className="hero-bg" aria-hidden />
         <div className="container-mx hero-section__inner">
           <div className="hero-copy">
-            <p className="animate-rise eyebrow">Productores de seguros - Salta</p>
+            <p className="animate-rise eyebrow">Productores de seguros en Salta</p>
             <h1 className="animate-rise-delay-1">
               Tu protección,
               <br />
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
-            <p className="hero-lede animate-rise-delay-2">
-              Seguros, prepagas y asistencia al viajero con asesoramiento claro,
-              humano y a tu medida.
+            <p className="hero-lede animate-rise-delay-2" data-seo-lede>
+              Cotizá seguro de auto, moto y hogar, compará prepagas y armá tu
+              asistencia al viajero. Asesoramiento claro, humano y a tu medida
+              en Salta.
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
@@ -275,6 +300,21 @@ export default function HomePage() {
           <Reveal delay={100}>
             <QuoteForm />
           </Reveal>
+        </div>
+      </section>
+
+      <section className="border-t border-line/60 bg-cloud">
+        <div className="container-mx py-20 sm:py-24">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Preguntas frecuentes"
+              title="Seguros y prepagas en Salta, sin vueltas"
+              description="Lo que más preguntan antes de cotizar con MARXEN."
+            />
+          </Reveal>
+          <div className="mt-10">
+            <FaqAccordion items={faqHome} />
+          </div>
         </div>
       </section>
     </>

@@ -254,6 +254,14 @@ a {
     transform 0.68s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+@media (prefers-reduced-motion: reduce), (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .reveal-in {
   opacity: 1;
   transform: translateY(0);

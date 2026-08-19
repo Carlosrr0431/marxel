@@ -4,26 +4,57 @@ import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { QuoteForm } from "@/components/QuoteForm";
 import { PlanesComparador } from "@/components/PlanesComparador";
+import { JsonLd } from "@/components/JsonLd";
 import {
   faqSalud,
   modalidadesIngreso,
   planesSalud,
 } from "@/lib/content";
+import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "MARXEN Salud",
-  description:
-    "Compará Plan A2 y Plan A4 de Prevención Salud con MARXEN: coberturas, odontología, óptica y cotización.",
-};
+const TITLE = "Prepaga en Salta: planes A2 y A4";
+const DESCRIPTION =
+  "Compará planes de Prevención Salud con MARXEN en Salta. A2, A4 y derivación de aportes de monotributo o relación de dependencia.";
+const FAQ_ITEMS = faqSalud.flatMap((bloque) => bloque.items);
+
+export const metadata: Metadata = pageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/salud",
+  keywords: [
+    "prepaga Salta",
+    "Prevención Salud",
+    "plan A2",
+    "plan A4",
+    "derivar aportes monotributo",
+    "MARXEN Salud",
+  ],
+});
 
 export default function SaludPage() {
   return (
     <>
+      <JsonLd
+        data={pageJsonLd({
+          path: "/salud",
+          title: TITLE,
+          description: DESCRIPTION,
+          crumbs: [
+            { name: "Inicio", path: "/" },
+            { name: "Salud", path: "/salud" },
+          ],
+          faqs: FAQ_ITEMS,
+        })}
+      />
       <PageHero
         eyebrow="MARXEN Salud"
-        title="Prepagas con asesoramiento de verdad"
+        title="Prepaga en Salta, con asesoramiento de verdad"
         description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular."
         cta={{ href: "#planes-a2-a4", label: "Comparar A2 y A4" }}
+        crumbs={[
+          { href: "/", label: "Inicio" },
+          { href: "/salud", label: "Salud" },
+        ]}
       />
 
       <section
