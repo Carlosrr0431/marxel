@@ -1,3 +1,8 @@
+/**
+ * Cliente HTTP hacia whatsmeow-api.
+ * Envío: dígitos o JID tal cual. No llamar check-number (IsOnWhatsApp) en cada
+ * send: esa consulta es la que más bloqueos genera. El server resuelve JID con cache.
+ */
 import {
   getWhatsmeowAgentCode,
   getWhatsmeowApiBase,
@@ -5,8 +10,11 @@ import {
   getWhatsmeowWebhookSecret,
   normalizeArPhone,
   stripDeviceFromJid,
-  toWhatsappSendTarget,
 } from "@/lib/whatsmeow/config";
+import {
+  isWhatsappBanLikeError,
+  WHATSAPP_BAN_PAUSE_MS,
+} from "@/lib/whatsmeow/anti-ban";
 
 type FetchResult = {
   ok: boolean;
@@ -75,10 +83,24 @@ function isJid(value: string) {
   return value.includes("@lid") || value.includes("@s.whatsapp.net") || value.includes("@g.us");
 }
 
-function sendRecipient(to: string, resolved: string) {
-  const fromTo = toWhatsappSendTarget(to);
-  if (fromTo && !fromTo.includes("@")) return fromTo;
-  return toWhatsappSendTarget(resolved) || fromTo;
+/** Dígitos o JID tal cual. No llamar check-number: IsOnWhatsApp es lo que más penaliza Meta. */
+function sendTarget(to: string) {
+  const raw = String(to || "").trim();
+  if (!raw) return "";
+  if (isJid(raw)) return stripDeviceFromJid(raw);
+  return normalizeArPhone(raw) || raw.replace(/\D/g, "");
+}
+
+function extractSendError(result: FetchResult) {
+  return (
+    String(result.data?.message || result.data?.error || result.text).slice(0, 200) ||
+    `HTTP ${result.status}`
+  );
+}
+
+function failSend(error: string) {
+  if (isWhatsappBanLikeError(error)) markWhatsappLinePaused(WHATSAPP_BAN_PAUSE_MS);
+  return { success: false as const, error };
 }
 
 export async function fetchWhatsmeowStatus(agentCode = getWhatsmeowAgentCode()) {
@@ -98,6 +120,41 @@ function pngFromDataUrl(value: string) {
   } catch {
     return null;
   }
+}
+
+const DIRECT_GAP_MS = Math.max(
+  20_000,
+  Math.round(Number(process.env.WHATSAPP_OUTBOUND_INTERVAL_MS || 30_000) || 30_000)
+);
+
+let lastDirectSendAt = 0;
+let linePausedUntil = 0;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function markWhatsappLinePaused(ms: number) {
+  const wait = Math.max(0, Math.trunc(ms) || 0);
+  if (wait <= 0) return;
+  linePausedUntil = Math.max(linePausedUntil, Date.now() + wait);
+}
+
+export function isWhatsappLinePaused() {
+  return Date.now() < linePausedUntil;
+}
+
+async function waitOutboundGap() {
+  if (isWhatsappLinePaused()) {
+    const wait = linePausedUntil - Date.now();
+    if (wait > 0) await sleep(Math.min(wait, DIRECT_GAP_MS));
+  }
+  const wait = lastDirectSendAt + DIRECT_GAP_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+}
+
+function markDirectSent() {
+  lastDirectSendAt = Date.now();
 }
 
 export async function fetchWhatsmeowQr(agentCode = getWhatsmeowAgentCode()) {
@@ -164,44 +221,22 @@ export async function logoutWhatsmeowSession(agentCode = getWhatsmeowAgentCode()
   });
 }
 
-async function resolveJid(agentCode: string, to: string) {
-  const target = toWhatsappSendTarget(to);
-  if (!target) return "";
-  if (isJid(target)) return stripDeviceFromJid(target);
-  const phone = normalizeArPhone(target);
-  if (!phone) return "";
-  try {
-    const result = await whatsmeowFetch(
-      `/api/check-number?agent_code=${encodeURIComponent(agentCode)}&phone=${encodeURIComponent(phone)}`
-    );
-    const data = nestedData(result);
-    const jid = data?.jid ? stripDeviceFromJid(String(data.jid)) : "";
-    if (result.ok && result.data?.success !== false && data?.registered && jid) return jid;
-  } catch {
-    // fallback al teléfono
-  }
-  return phone;
-}
-
 export async function sendWhatsmeowTextDirect(agentCode: string, to: string, text: string) {
   const message = String(text || "").trim();
   if (!agentCode || !to || !message) {
     return { success: false as const, error: "agentCode, to y text son requeridos" };
   }
-  const dest = await resolveJid(agentCode, to);
-  if (!dest) return { success: false as const, error: "number is not registered on WhatsApp" };
-  const phone = sendRecipient(to, dest);
+  if (isWhatsappLinePaused()) {
+    return { success: false as const, error: "linea en pausa anti-bloqueo" };
+  }
+  const phone = sendTarget(to);
+  if (!phone) return { success: false as const, error: "destinatario inválido" };
   const result = await whatsmeowFetch("/api/messages/send", {
     method: "POST",
     body: { agent_code: agentCode, phone, message },
   });
   if (!result.ok || result.data?.success === false) {
-    return {
-      success: false as const,
-      error:
-        String(result.data?.message || result.data?.error || result.text).slice(0, 200) ||
-        `HTTP ${result.status}`,
-    };
+    return failSend(extractSendError(result));
   }
   return { success: true as const, messageId: extractMessageId(result.data) };
 }
@@ -210,7 +245,11 @@ export async function sendWhatsmeowText(
   agentCode: string,
   to: string,
   text: string,
-  { bypassQueue = false, wake = true }: { bypassQueue?: boolean; wake?: boolean } = {}
+  {
+    bypassQueue = false,
+    wake = true,
+    delayMs = 0,
+  }: { bypassQueue?: boolean; wake?: boolean; delayMs?: number } = {}
 ) {
   const message = String(text || "").trim();
   if (!agentCode || !to || !message) {
@@ -229,6 +268,7 @@ export async function sendWhatsmeowText(
           kind: "text",
           payload: { text: message },
           wake,
+          delayMs,
         });
         if (queued.success) return queued;
         if (!queued.missingTable) return queued;
@@ -239,7 +279,11 @@ export async function sendWhatsmeowText(
     }
   }
 
-  return sendWhatsmeowTextDirect(agentCode, to, message);
+  if (delayMs > 0) await sleep(delayMs);
+  await waitOutboundGap();
+  const sent = await sendWhatsmeowTextDirect(agentCode, to, message);
+  markDirectSent();
+  return sent;
 }
 
 export async function sendWhatsmeowPollDirect(
@@ -251,9 +295,11 @@ export async function sendWhatsmeowPollDirect(
   if (!agentCode || !to || opts.length < 2) {
     return { success: false as const, error: "Se necesitan al menos 2 opciones" };
   }
-  const dest = await resolveJid(agentCode, to);
-  if (!dest) return { success: false as const, error: "number is not registered on WhatsApp" };
-  const number = sendRecipient(to, dest);
+  if (isWhatsappLinePaused()) {
+    return { success: false as const, error: "linea en pausa anti-bloqueo" };
+  }
+  const number = sendTarget(to);
+  if (!number) return { success: false as const, error: "destinatario inválido" };
   const result = await whatsmeowFetch(
     `/v2/message/sendPoll/${encodeURIComponent(agentCode)}`,
     {
@@ -268,12 +314,7 @@ export async function sendWhatsmeowPollDirect(
     }
   );
   if (!result.ok || result.data?.success === false) {
-    return {
-      success: false as const,
-      error:
-        String(result.data?.message || result.data?.error || result.text).slice(0, 200) ||
-        `HTTP ${result.status}`,
-    };
+    return failSend(extractSendError(result));
   }
   return { success: true as const, messageId: extractMessageId(result.data) };
 }
@@ -282,7 +323,11 @@ export async function sendWhatsmeowPoll(
   agentCode: string,
   to: string,
   { name, options, maxSelections = 1 }: { name: string; options: string[]; maxSelections?: number },
-  { bypassQueue = false }: { bypassQueue?: boolean } = {}
+  {
+    bypassQueue = false,
+    wake = true,
+    delayMs = 0,
+  }: { bypassQueue?: boolean; wake?: boolean; delayMs?: number } = {}
 ) {
   const opts = (options || []).map((o) => String(o || "").trim()).filter(Boolean).slice(0, 8);
   if (!agentCode || !to || opts.length < 2) {
@@ -304,6 +349,8 @@ export async function sendWhatsmeowPoll(
             options: opts,
             maxSelections: maxSelections > 0 ? maxSelections : 1,
           },
+          wake,
+          delayMs,
         });
         if (queued.success) return queued;
         if (!queued.missingTable) return queued;
@@ -314,5 +361,9 @@ export async function sendWhatsmeowPoll(
     }
   }
 
-  return sendWhatsmeowPollDirect(agentCode, to, { name, options: opts, maxSelections });
+  if (delayMs > 0) await sleep(delayMs);
+  await waitOutboundGap();
+  const sent = await sendWhatsmeowPollDirect(agentCode, to, { name, options: opts, maxSelections });
+  markDirectSent();
+  return sent;
 }

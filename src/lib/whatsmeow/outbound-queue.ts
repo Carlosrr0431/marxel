@@ -4,11 +4,19 @@ import { getWhatsmeowWebhookSecret } from "@/lib/whatsmeow/config";
 import {
   sendWhatsmeowPollDirect,
   sendWhatsmeowTextDirect,
+  markWhatsappLinePaused,
 } from "@/lib/whatsmeow/client";
+import {
+  isWhatsappBanLikeError,
+  isWhatsappPermanentSendError,
+  isWhatsappTransientDisconnect,
+  WHATSAPP_BAN_PAUSE_MS,
+  WHATSAPP_DISCONNECT_PAUSE_MS,
+} from "@/lib/whatsmeow/anti-ban";
 
 export const WHATSAPP_OUTBOUND_INTERVAL_MS = Math.max(
-  1000,
-  Math.round(Number(process.env.WHATSAPP_OUTBOUND_INTERVAL_MS || 15_000) || 15_000)
+  20_000,
+  Math.round(Number(process.env.WHATSAPP_OUTBOUND_INTERVAL_MS || 30_000) || 30_000)
 );
 
 export const OUTBOUND_PRIORITY = Object.freeze({
@@ -126,6 +134,7 @@ export async function enqueueWhatsappOutbound({
   meta = {},
   maxAttempts = 5,
   wake = true,
+  delayMs = 0,
 }: {
   agentCode: string;
   to: string;
@@ -135,6 +144,7 @@ export async function enqueueWhatsappOutbound({
   meta?: Record<string, unknown>;
   maxAttempts?: number;
   wake?: boolean;
+  delayMs?: number;
 }): Promise<EnqueueResult> {
   const dest = String(to || "").trim();
   const code = String(agentCode || "").trim();
@@ -150,6 +160,8 @@ export async function enqueueWhatsappOutbound({
   }
 
   const dedupKey = buildOutboundDedupKey({ kind: messageKind, dest, payload });
+  const jitter = 400 + Math.floor(Math.random() * 1600);
+  const waitMs = Math.max(0, Math.trunc(delayMs) || 0) + (delayMs > 0 ? jitter : 0);
 
   try {
     const supabase = createServiceClient();
@@ -164,7 +176,7 @@ export async function enqueueWhatsappOutbound({
         max_attempts: Math.max(1, Math.trunc(maxAttempts) || 5),
         meta: meta && typeof meta === "object" ? meta : {},
         status: "pending",
-        available_at: new Date().toISOString(),
+        available_at: new Date(Date.now() + waitMs).toISOString(),
         dedup_key: dedupKey,
       })
       .select("id")
@@ -204,7 +216,7 @@ export function triggerWhatsappQueueWorker() {
   const run = () =>
     processWhatsappOutboundBatch({
       claimer: "wake",
-      maxMessages: 4,
+      maxMessages: 2,
       deadlineMs: 55_000,
     }).catch((err) => {
       console.warn("[whatsapp-queue]", err instanceof Error ? err.message : err);
@@ -225,10 +237,12 @@ export function triggerWhatsappQueueWorker() {
 
 async function hasPendingOutbound() {
   const supabase = createServiceClient();
+  const readyBefore = new Date(Date.now() + WHATSAPP_OUTBOUND_INTERVAL_MS + 2000).toISOString();
   const { data, error } = await supabase
     .from("whatsapp_outbound_queue")
     .select("id")
     .eq("status", "pending")
+    .lte("available_at", readyBefore)
     .limit(1)
     .maybeSingle();
   if (error) return false;
@@ -250,11 +264,18 @@ async function markSent(id: string, messageId: string | null) {
     .eq("id", id);
 }
 
-async function markRetryOrFailed(row: QueueRow, errorMessage: string) {
+async function markRetryOrFailed(
+  row: QueueRow,
+  errorMessage: string,
+  { forceFailed = false, pauseMs = 0 }: { forceFailed?: boolean; pauseMs?: number } = {}
+) {
   const attempts = Number(row.attempts || 0);
   const maxAttempts = Number(row.max_attempts || 5);
-  const permanent = attempts >= maxAttempts;
-  const backoffMs = Math.min(5 * 60_000, WHATSAPP_OUTBOUND_INTERVAL_MS * Math.max(1, attempts));
+  const permanent = forceFailed || attempts >= maxAttempts;
+  const backoffMs =
+    pauseMs > 0
+      ? pauseMs
+      : Math.min(5 * 60_000, WHATSAPP_OUTBOUND_INTERVAL_MS * Math.max(1, attempts));
   const supabase = createServiceClient();
   await supabase
     .from("whatsapp_outbound_queue")
@@ -269,6 +290,41 @@ async function markRetryOrFailed(row: QueueRow, errorMessage: string) {
     })
     .eq("id", row.id);
   return { permanent };
+}
+
+async function pauseWhatsappLine(pauseMs: number) {
+  markWhatsappLinePaused(pauseMs);
+  const nowIso = new Date().toISOString();
+  try {
+    const supabase = createServiceClient();
+    await supabase.from("whatsapp_send_throttle").upsert(
+      {
+        id: 1,
+        last_sent_at: nowIso,
+        interval_ms: Math.max(60_000, Math.trunc(pauseMs) || WHATSAPP_BAN_PAUSE_MS),
+        updated_at: nowIso,
+      },
+      { onConflict: "id" }
+    );
+  } catch {
+    // si la tabla no está migrada, queda la pausa en memoria de este isolate
+  }
+}
+
+async function restoreLineInterval() {
+  try {
+    const supabase = createServiceClient();
+    await supabase
+      .from("whatsapp_send_throttle")
+      .update({
+        interval_ms: WHATSAPP_OUTBOUND_INTERVAL_MS,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1)
+      .gt("interval_ms", WHATSAPP_OUTBOUND_INTERVAL_MS + 2000);
+  } catch {
+    // no-op
+  }
 }
 
 async function sendClaimedRow(row: QueueRow) {
@@ -308,28 +364,68 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
 
   const result = await sendClaimedRow(row);
   if (result.success) {
+    await restoreLineInterval();
     await markSent(row.id, result.messageId);
     return { claimed: true as const, sent: true as const, queueId: row.id, messageId: result.messageId };
   }
 
-  const fail = await markRetryOrFailed(row, result.error);
+  const failError = result.error || "send_failed";
+  if (isWhatsappBanLikeError(failError)) {
+    await pauseWhatsappLine(WHATSAPP_BAN_PAUSE_MS);
+    const fail = await markRetryOrFailed(row, failError, {
+      forceFailed: true,
+      pauseMs: WHATSAPP_BAN_PAUSE_MS,
+    });
+    return {
+      claimed: true as const,
+      sent: false as const,
+      queueId: row.id,
+      error: failError,
+      permanentFailure: fail.permanent,
+      pausedMs: WHATSAPP_BAN_PAUSE_MS,
+    };
+  }
+  if (isWhatsappPermanentSendError(failError)) {
+    const fail = await markRetryOrFailed(row, failError, { forceFailed: true });
+    return {
+      claimed: true as const,
+      sent: false as const,
+      queueId: row.id,
+      error: failError,
+      permanentFailure: fail.permanent,
+    };
+  }
+  if (isWhatsappTransientDisconnect(failError)) {
+    await pauseWhatsappLine(WHATSAPP_DISCONNECT_PAUSE_MS);
+    const fail = await markRetryOrFailed(row, failError, { pauseMs: WHATSAPP_DISCONNECT_PAUSE_MS });
+    return {
+      claimed: true as const,
+      sent: false as const,
+      queueId: row.id,
+      error: failError,
+      permanentFailure: fail.permanent,
+      pausedMs: WHATSAPP_DISCONNECT_PAUSE_MS,
+    };
+  }
+
+  const fail = await markRetryOrFailed(row, failError);
   return {
     claimed: true as const,
     sent: false as const,
     queueId: row.id,
-    error: result.error,
+    error: failError,
     permanentFailure: fail.permanent,
   };
 }
 
 export async function processWhatsappOutboundBatch({
   claimer = "worker",
-  maxMessages = 4,
+  maxMessages = 2,
   deadlineMs = 55_000,
 } = {}) {
   const started = Date.now();
   const results: Awaited<ReturnType<typeof processOneWhatsappOutbound>>[] = [];
-  const limit = Math.max(1, Math.min(8, Math.trunc(maxMessages) || 4));
+  const limit = Math.max(1, Math.min(2, Math.trunc(maxMessages) || 2));
 
   for (let i = 0; i < limit; i += 1) {
     if (Date.now() - started > deadlineMs) break;
@@ -338,6 +434,7 @@ export async function processWhatsappOutboundBatch({
     results.push(one);
 
     if ("missingTable" in one && one.missingTable) break;
+    if ("pausedMs" in one && one.pausedMs) break;
 
     if (one.claimed && one.sent) {
       const more = await hasPendingOutbound();
@@ -364,18 +461,43 @@ export async function processWhatsappOutboundBatch({
   };
 }
 
+function header(request: Request, name: string) {
+  return String(request.headers.get(name) || "").trim();
+}
+
+function secretsEqual(provided: string, expected: string) {
+  const a = String(provided || "").trim();
+  const b = String(expected || "").trim();
+  if (!a || !b || a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i += 1) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return out === 0;
+}
+
+export function isVercelCronRequest(request: Request) {
+  const ua = header(request, "user-agent").toLowerCase();
+  if (ua.includes("vercel-cron")) return true;
+  if (header(request, "x-vercel-cron") === "1") return true;
+  if (header(request, "x-vercel-cron-auth-token")) return true;
+  if (header(request, "x-vercel-cron-schedule")) return true;
+  return false;
+}
+
 export function queueWorkerAuthOk(request: Request) {
-  if (request.headers.get("x-vercel-cron") === "1") return true;
-  const cron = String(process.env.CRON_SECRET || "").trim();
+  if (isVercelCronRequest(request)) return true;
+
+  const cron = String(process.env.CRON_SECRET || "").trim().replace(/[\r\n]/g, "");
   const webhook = getWhatsmeowWebhookSecret();
-  const auth = request.headers.get("authorization") || "";
+  const auth = header(request, "authorization");
   const bearer = auth.replace(/^Bearer\s+/i, "").trim();
-  const headerSecret =
-    request.headers.get("x-webhook-secret") || request.headers.get("x-cron-secret") || "";
-  if (cron && (bearer === cron || headerSecret === cron)) return true;
-  if (webhook && (bearer === webhook || headerSecret === webhook)) return true;
+  const headerSecret = header(request, "x-webhook-secret") || header(request, "x-cron-secret");
+  if (cron && (secretsEqual(bearer, cron) || secretsEqual(headerSecret, cron))) return true;
+  if (webhook && (secretsEqual(bearer, webhook) || secretsEqual(headerSecret, webhook))) {
+    return true;
+  }
   const url = new URL(request.url);
-  if (cron && url.searchParams.get("secret") === cron) return true;
-  if (webhook && url.searchParams.get("secret") === webhook) return true;
+  const querySecret = url.searchParams.get("secret") || url.searchParams.get("cron_secret") || "";
+  if (cron && secretsEqual(querySecret, cron)) return true;
+  if (webhook && secretsEqual(querySecret, webhook)) return true;
   return !cron && !webhook;
 }

@@ -1,7 +1,8 @@
 import { after } from "next/server";
 import { runChatTurn } from "@/lib/chatbot/run-turn";
-import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret, toWhatsappSendTarget } from "@/lib/whatsmeow/config";
+import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret, stripDeviceFromJid, toWhatsappSendTarget } from "@/lib/whatsmeow/config";
 import { sendWhatsmeowPoll, sendWhatsmeowText } from "@/lib/whatsmeow/client";
+import { WHATSAPP_OUTBOUND_INTERVAL_MS } from "@/lib/whatsmeow/outbound-queue";
 import {
   ACCUMULATION_MS,
   claimInbox,
@@ -48,17 +49,9 @@ export function webhookSecretOk(request: Request) {
 }
 
 function destination(chatJid: string, phone: string) {
+  const jid = stripDeviceFromJid(chatJid);
+  if (jid.includes("@lid") || jid.includes("@s.whatsapp.net")) return jid;
   return toWhatsappSendTarget(phone) || toWhatsappSendTarget(chatJid);
-}
-
-function pollNameFrom(answer: string) {
-  const line =
-    answer
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .at(-1) || "Elegí una opción";
-  return line.slice(0, 80);
 }
 
 const CHOICE_STEPS = new Set([
@@ -102,10 +95,11 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
 
   const pollOptions = pollOptionsFromReplies(result.quickReplies);
   const agentCode = getWhatsmeowAgentCode();
+  const hasPoll = pollOptions.length >= 2;
 
   if (result.answer) {
     const sent = await sendWhatsmeowText(agentCode, dest, result.answer, {
-      wake: pollOptions.length < 2,
+      wake: !hasPoll,
     });
     if (!sent.success) {
       console.error("[whatsapp][send]", sent.error);
@@ -113,22 +107,28 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
   }
 
   let pendingPoll = null;
-  if (pollOptions.length >= 2) {
-    const name = pollNameFrom(result.answer);
-    const poll = await sendWhatsmeowPoll(agentCode, dest, {
-      name,
-      options: pollOptions.map((item) => item.label),
-      maxSelections: 1,
-    });
+  if (hasPoll) {
+    const poll = await sendWhatsmeowPoll(
+      agentCode,
+      dest,
+      {
+        name: "Elegí una opción",
+        options: pollOptions.map((item) => item.label),
+        maxSelections: 1,
+      },
+      { delayMs: WHATSAPP_OUTBOUND_INTERVAL_MS }
+    );
     pendingPoll = {
-      name,
+      name: "Elegí una opción",
       options: pollOptions,
       messageId: poll.success ? poll.messageId : null,
     };
     if (!poll.success) {
       console.error("[whatsapp][poll]", poll.error);
       const fallback = pollOptions.map((item, i) => `${i + 1}. ${item.label}`).join("\n");
-      await sendWhatsmeowText(agentCode, dest, fallback).catch(() => null);
+      await sendWhatsmeowText(agentCode, dest, fallback, {
+        delayMs: WHATSAPP_OUTBOUND_INTERVAL_MS,
+      }).catch(() => null);
     } else if (!poll.messageId) {
       console.info("[whatsapp][poll]", "queued", dest);
     }
