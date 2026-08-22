@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
 import { site } from "@/lib/content";
 
 type Option = { id: string; label: string };
@@ -101,7 +102,13 @@ async function fetchJson(url: string, init?: RequestInit) {
   return data;
 }
 
-export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
+export function AutoQuoteNative({
+  onBack,
+  onSwitchToMoto,
+}: {
+  onBack: () => void;
+  onSwitchToMoto?: (plate: string) => void;
+}) {
   const years = useMemo(yearOptions, []);
   const [yearId, setYearId] = useState("");
   const [brandId, setBrandId] = useState("");
@@ -135,6 +142,8 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
 
   const year = parseYear(yearId);
   const is0km = yearId.endsWith("-0km");
+  const plate = normalizeArPlate(licensePlate);
+  const plateKind = classifyArPlate(plate);
   const brand = brands.find((b) => b.id === brandId) || null;
   const model = models.find((m) => m.id === modelId) || null;
   const version = versions.find((v) => String(v.id) === versionId) || null;
@@ -262,6 +271,18 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
+    if (!is0km && plateKind === "moto") {
+      if (onSwitchToMoto) {
+        onSwitchToMoto(plate);
+        return;
+      }
+      setError("Esta patente es de moto. Cotizala en el cotizador de motos.");
+      return;
+    }
+    if (!is0km && plateKind !== "auto") {
+      setError("Ingresá una patente de auto válida, o elegí año 0km.");
+      return;
+    }
     if (
       !yearId ||
       !brand ||
@@ -296,6 +317,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           age: ageNum,
           hasGnc: hasGnc === "si",
           hasTracker: hasTracker === "si",
+          licensePlate: plate,
         }),
       })) as QuoteResult;
       setQuote(data);
@@ -316,7 +338,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
       setError("Completá DNI, género, email y la autorización para continuar.");
       return;
     }
-    if (!is0km && licensePlate.replace(/[\s-]/g, "").length < 6) {
+    if (!is0km && plateKind !== "auto") {
       setError("Ingresá la patente del auto.");
       return;
     }
@@ -346,7 +368,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           gender,
           location,
           is0km,
-          licensePlate,
+          licensePlate: plate,
           vin: digitsOnly(vin),
           engineNumber: digitsOnly(engineNumber),
         }),
@@ -357,7 +379,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
         `Vehículo: ${quote.carDescription}`,
         `DNI: ${dni.replace(/\D/g, "")}`,
         `Email: ${email.trim()}`,
-        licensePlate ? `Patente: ${licensePlate.toUpperCase()}` : "0km sin patente",
+        plate ? `Patente: ${plate}` : "0km sin patente",
         vin ? `Chasis: ${vin}` : "",
         engineNumber ? `Motor: ${engineNumber}` : "",
         `GNC: ${hasGnc === "si" ? "Sí" : "No"} · Rastreador: ${hasTracker === "si" ? "Sí" : "No"}`,
@@ -396,7 +418,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
       `Código: ${quote.opportunityId}`,
       `DNI: ${dni.replace(/\D/g, "")}`,
       `Email: ${email.trim()}`,
-      licensePlate ? `Patente: ${licensePlate.toUpperCase()}` : null,
+      plate ? `Patente: ${plate}` : null,
       `Precio: ${money(plan.monthly)} / mes`,
     ].filter(Boolean);
     window.open(
@@ -484,12 +506,13 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
             {is0km ? (
               <p className="sm:col-span-2 text-sm text-muted">Es 0km: no hace falta patente.</p>
             ) : (
-              <Field label="Patente" invalid={touched && licensePlate.replace(/[\s-]/g, "").length < 6}>
+              <Field label="Patente" invalid={touched && plateKind !== "auto"}>
                 <input
                   className="field"
                   placeholder="AB123CD"
+                  autoComplete="off"
                   value={licensePlate}
-                  onChange={(e) => setLicensePlate(e.target.value.toUpperCase().slice(0, 8))}
+                  onChange={(e) => setLicensePlate(normalizeArPlate(e.target.value))}
                 />
               </Field>
             )}
@@ -535,15 +558,49 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           </button>
         </form>
       ) : quote ? (
-        <PlansView quote={quote} onSelect={setPlan} />
+        <PlansView quote={quote} plate={is0km ? "" : plate} onSelect={setPlan} />
       ) : (
         <form onSubmit={onSubmit} className="mx-auto max-w-lg">
           <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
             ¡Asegurá tu auto con hasta 37% Off!
           </h2>
-          <p className="mt-3 text-base text-muted">Completá los datos y ves los planes al toque.</p>
+          <p className="mt-3 text-base text-muted">
+            Ingresá la patente, completá el auto y cotizamos en San Cristóbal. Los planes salen al toque.
+          </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {is0km ? (
+              <p className="sm:col-span-2 text-sm text-muted">Es 0km: no hace falta patente.</p>
+            ) : (
+              <Field label="Patente" invalid={touched && plateKind !== "auto" && plateKind !== "moto"}>
+                <input
+                  className="field"
+                  placeholder="AB123CD"
+                  autoComplete="off"
+                  value={licensePlate}
+                  onChange={(e) => setLicensePlate(normalizeArPlate(e.target.value))}
+                />
+              </Field>
+            )}
+
+            {plateKind === "moto" ? (
+              <div className="sm:col-span-2 rounded-xl border border-sky/20 bg-sky/5 p-4">
+                <p className="text-sm text-navy">
+                  La patente <span className="font-semibold">{plate}</span> es de motovehículo. San Cristóbal
+                  cotiza motos en otro formulario.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary mt-3"
+                  onClick={() => onSwitchToMoto?.(plate)}
+                >
+                  Cotizar esta moto
+                </button>
+              </div>
+            ) : null}
+
+            {plateKind === "moto" ? null : (
+              <>
             <Field label="Año" invalid={touched && !yearId}>
               <select
                 className="field"
@@ -696,13 +753,17 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Field>
+              </>
+            )}
           </div>
 
           {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
 
-          <button type="submit" disabled={quoting} className="btn btn-primary mt-6 w-full disabled:opacity-60">
-            {quoting ? "Cotizando…" : "Ver planes"}
-          </button>
+          {plateKind === "moto" ? null : (
+            <button type="submit" disabled={quoting} className="btn btn-primary mt-6 w-full disabled:opacity-60">
+              {quoting ? "Cotizando…" : "Ver planes"}
+            </button>
+          )}
         </form>
       )}
     </div>
@@ -729,9 +790,11 @@ function Field({
 
 function PlansView({
   quote,
+  plate,
   onSelect,
 }: {
   quote: QuoteResult;
+  plate?: string;
   onSelect: (plan: Plan) => void;
 }) {
   return (
@@ -744,6 +807,12 @@ function PlansView({
           <p className="mt-2 text-base text-muted">Compará y elegí el plan que mejor se adapte a vos.</p>
         </div>
         <dl className="text-sm text-navy/80 sm:text-right">
+          {plate ? (
+            <div>
+              <dt className="inline font-semibold">Patente: </dt>
+              <dd className="inline">{plate}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="inline font-semibold">Modelo: </dt>
             <dd className="inline">{quote.carDescription}</dd>

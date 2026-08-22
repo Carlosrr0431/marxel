@@ -23,7 +23,13 @@ import {
 type Range = { id: string; label: string; plans: Plan[] };
 type Step = "cc" | "vehicle" | "postal" | "contact" | "plans";
 
-export function MotoQuoteNative({ onBack }: { onBack: () => void }) {
+export function MotoQuoteNative({
+  onBack,
+  initialPlate = "",
+}: {
+  onBack: () => void;
+  initialPlate?: string;
+}) {
   const [step, setStep] = useState<Step>("cc");
   const [title, setTitle] = useState("Asegurá tu moto");
   const [subtitle, setSubtitle] = useState("Protegete a vos y a tu moto en todo momento.");
@@ -33,7 +39,7 @@ export function MotoQuoteNative({ onBack }: { onBack: () => void }) {
   const [landingId, setLandingId] = useState<number | null>(null);
   const [ranges, setRanges] = useState<Range[]>([]);
   const [ccId, setCcId] = useState("");
-  const [vehicle, setVehicle] = useState("");
+  const [vehicle, setVehicle] = useState(initialPlate ? `Patente ${initialPlate}` : "");
   const [postalCode, setPostalCode] = useState("");
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState("");
@@ -172,7 +178,13 @@ export function MotoQuoteNative({ onBack }: { onBack: () => void }) {
     <div>
       <BackButton onClick={onBack} />
       {step === "cc" ? (
-        <StepForm title={title} subtitle={formTitle} loading={loading} error={error} onSubmit={onCc}>
+        <StepForm
+          title={title}
+          subtitle={initialPlate ? `Patente ${initialPlate}. ${formTitle}` : formTitle}
+          loading={loading}
+          error={error}
+          onSubmit={onCc}
+        >
           <ChoiceList
             options={ranges.map((range) => ({ id: range.id, label: range.label }))}
             value={ccId}

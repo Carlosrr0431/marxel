@@ -69,6 +69,7 @@ export async function POST(req: Request) {
       age: Number(body.age) || undefined,
       hasGnc: Boolean(body.hasGnc),
       hasTracker: Boolean(body.hasTracker),
+      licensePlate: String(body.licensePlate || ""),
       source: "web",
     });
     return NextResponse.json(result);

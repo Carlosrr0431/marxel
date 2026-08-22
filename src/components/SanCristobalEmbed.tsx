@@ -50,11 +50,25 @@ const PRODUCTS: Product[] = [
 
 export function SanCristobalEmbed() {
   const [active, setActive] = useState<Product["key"] | null>(null);
-  const onBack = () => setActive(null);
+  const [motoPlate, setMotoPlate] = useState("");
+  const onBack = () => {
+    setMotoPlate("");
+    setActive(null);
+  };
 
-  if (active === "auto") return <AutoQuoteNative onBack={onBack} />;
+  if (active === "auto") {
+    return (
+      <AutoQuoteNative
+        onBack={onBack}
+        onSwitchToMoto={(plate) => {
+          setMotoPlate(plate);
+          setActive("moto");
+        }}
+      />
+    );
+  }
   if (active === "hogar") return <HogarQuoteNative onBack={onBack} />;
-  if (active === "moto") return <MotoQuoteNative onBack={onBack} />;
+  if (active === "moto") return <MotoQuoteNative onBack={onBack} initialPlate={motoPlate} />;
   if (active === "ap") return <ApQuoteNative onBack={onBack} />;
   if (active === "comercio") return <ComercioQuoteNative onBack={onBack} />;
 

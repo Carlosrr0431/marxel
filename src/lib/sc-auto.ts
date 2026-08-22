@@ -1,3 +1,5 @@
+import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+
 const SC_API = "https://api.sancristobal.com.ar/marketing-marketing/api";
 const PRODUCER_URL = "marxen-seguros";
 const CARD_DISCOUNT = -7;
@@ -96,6 +98,7 @@ export type QuoteAutoInput = {
   age?: number;
   hasGnc?: boolean;
   hasTracker?: boolean;
+  licensePlate?: string;
   source?: "web" | "chat";
 };
 
@@ -461,6 +464,16 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
     throw new AutoQuoteError("Faltan datos para cotizar", 400);
   }
 
+  if (!input.is0km && input.source !== "chat") {
+    const plateKind = classifyArPlate(input.licensePlate || "");
+    if (plateKind === "moto") {
+      throw new AutoQuoteError("Esta patente es de moto. Cotizala en el cotizador de motos.", 400);
+    }
+    if (plateKind !== "auto") {
+      throw new AutoQuoteError("Ingresá una patente de auto válida", 400);
+    }
+  }
+
   const phone = parseArPhone(celular);
   if (!phone) throw new AutoQuoteError("WhatsApp inválido", 400);
 
@@ -649,11 +662,13 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
     : splitName(nombre);
   const gender = normalizeGender(person?.gender || input.gender || "Male");
   const producer = await getProducer();
-  const licensePlate = String(input.licensePlate || "")
-    .replace(/[\s-]/g, "")
-    .toUpperCase();
+  const licensePlate = normalizeArPlate(input.licensePlate || "");
+  const plateKind = classifyArPlate(licensePlate);
 
-  if (!input.is0km && licensePlate.length < 6) {
+  if (!input.is0km && plateKind === "moto") {
+    throw new AutoQuoteError("Esta patente es de moto. Cotizala en el cotizador de motos.", 400);
+  }
+  if (!input.is0km && plateKind !== "auto") {
     throw new AutoQuoteError("Ingresá la patente del auto", 400);
   }
   if (String(input.vin || "").replace(/\D/g, "").length !== 10) {
