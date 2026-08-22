@@ -6,6 +6,7 @@ import { WHATSAPP_OUTBOUND_INTERVAL_MS } from "@/lib/whatsmeow/outbound-queue";
 import {
   ACCUMULATION_MS,
   claimInbox,
+  claimConversationEvent,
   enqueueInbound,
   loadConversation,
   saveConversation,
@@ -243,16 +244,22 @@ export async function handleWhatsappInbound(body: unknown) {
       return { status: 200, body: { success: true, ignored: true, reason: "duplicate" } };
     }
     const mapped = mappedNow;
-    const voteKey =
-      inbound.isPoll && mapped ? `vote:${inbound.phone}:${mapped}` : "";
-    if (voteKey && conv.last_event === voteKey) {
-      return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
-    }
     if (!mapped.trim()) {
       if (inbound.isPoll) {
         console.error("[whatsapp][poll-skip]", "empty_text", inbound.event);
       }
       return { status: 200, body: { success: true, ignored: true, reason: "empty_text" } };
+    }
+    const voteKey = inbound.isPoll
+      ? `vote:${inbound.phone}:${mapped}`
+      : inbound.id
+        ? `msg:${inbound.id}`
+        : "";
+    if (voteKey) {
+      const claimed = await claimConversationEvent(inbound.phone, voteKey);
+      if (!claimed) {
+        return { status: 200, body: { success: true, ignored: true, reason: "duplicate_vote" } };
+      }
     }
     if (inbound.isPoll) {
       console.info("[whatsapp][poll-in]", inbound.phone, mapped);

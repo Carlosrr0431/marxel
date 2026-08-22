@@ -85,3 +85,6 @@ begin
   end loop;
 end;
 $$;
+
+grant select, insert, update, delete on table public.whatsapp_outbound_queue to anon, authenticated, service_role;
+grant select, insert, update, delete on table public.whatsapp_send_throttle to anon, authenticated, service_role;

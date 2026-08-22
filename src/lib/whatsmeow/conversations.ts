@@ -102,6 +102,82 @@ export async function loadConversation(phone: string): Promise<ConversationRow> 
   }
 }
 
+const inflightEvents = new Map<string, number>();
+
+function eventLockKey(phone: string, token: string) {
+  return `${phone}:${token}`;
+}
+
+/** Toma un voto/mensaje una sola vez. Los 3 webhooks del poll pierden la carrera salvo el primero. */
+export async function claimConversationEvent(phone: string, token: string) {
+  const key = normalizeArPhone(phone) || phone;
+  const claimed = String(token || "").trim();
+  if (!key || !claimed) return false;
+
+  const lock = eventLockKey(key, claimed);
+  const now = Date.now();
+  const prev = inflightEvents.get(lock) || 0;
+  if (prev && now - prev < 60_000) return false;
+  inflightEvents.set(lock, now);
+
+  try {
+    const supabase = createServiceClient();
+    const { data: existing, error: loadError } = await supabase
+      .from("whatsapp_conversations")
+      .select("last_event")
+      .eq("phone", key)
+      .maybeSingle();
+    if (loadError) {
+      inflightEvents.delete(lock);
+      console.error("[whatsapp][claim]", loadError.message);
+      return false;
+    }
+    if (existing?.last_event === claimed) {
+      return false;
+    }
+
+    if (!existing) {
+      const { error } = await supabase.from("whatsapp_conversations").insert({
+        phone: key,
+        quote_state: emptyQuoteState(),
+        history: [],
+        last_event: claimed,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) {
+        inflightEvents.delete(lock);
+        if (String(error.code || "") === "23505") return false;
+        console.error("[whatsapp][claim]", error.message);
+        return false;
+      }
+      return true;
+    }
+
+    let query = supabase
+      .from("whatsapp_conversations")
+      .update({ last_event: claimed, updated_at: new Date().toISOString() })
+      .eq("phone", key);
+    query = existing.last_event
+      ? query.eq("last_event", existing.last_event)
+      : query.is("last_event", null);
+    const { data, error } = await query.select("phone").maybeSingle();
+    if (error) {
+      inflightEvents.delete(lock);
+      console.error("[whatsapp][claim]", error.message);
+      return false;
+    }
+    if (!data?.phone) {
+      inflightEvents.delete(lock);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    inflightEvents.delete(lock);
+    console.error("[whatsapp][claim]", err);
+    return false;
+  }
+}
+
 export async function saveConversation(row: ConversationRow) {
   const payload = {
     phone: row.phone,

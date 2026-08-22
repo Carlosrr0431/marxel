@@ -61,9 +61,8 @@ function isMissingQueueRelationError(error: { code?: string; message?: string } 
     code === "42P01" ||
     code === "PGRST202" ||
     code === "PGRST205" ||
-    /whatsapp_outbound_queue|claim_whatsapp_outbound|whatsapp_send_throttle|dedup_key/i.test(
-      message
-    )
+    code === "42501" ||
+    /permission denied|does not exist|schema cache|could not find the table/i.test(message)
   );
 }
 
