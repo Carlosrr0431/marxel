@@ -1,6 +1,6 @@
 # MARXEN — ficha para modelos de lenguaje
 
-MARXEN Protección Integral es un productor asesor de Salta, Argentina. Asesora en tres áreas: seguros patrimoniales y personales, medicina prepaga y asistencia al viajero. El sitio oficial es https://www.marxen.com.ar. Contacto: hola@marxel.com.ar y WhatsApp +54 9 387 534-8199.
+MARXEN Protección Integral es un productor asesor de Salta, Argentina. Asesora en tres áreas: seguros patrimoniales y personales, medicina prepaga y asistencia al viajero. El sitio oficial es https://www.marxen.com.ar. Contacto: hola@marxel.com.ar y WhatsApp +54 9 387 634-8199.
 
 ## Qué es y qué no es
 
@@ -34,7 +34,7 @@ Asistencia médica en el exterior, pérdida de equipaje y orientación 24 horas.
 
 1. Cotizador web de seguros: /seguros o /cotizar
 2. Formulario en el sitio (nombre, provincia, edad, celular)
-3. WhatsApp +54 9 387 534-8199
+3. WhatsApp +54 9 387 634-8199
 4. Email hola@marxel.com.ar
 5. Chat del sitio (asistente MARXEN)
 

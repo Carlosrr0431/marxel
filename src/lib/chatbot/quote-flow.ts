@@ -751,7 +751,7 @@ export async function processQuoteFlow(
         return {
           handled: true,
           state,
-          answer: "Necesito el número con código de área, por ejemplo 387 534-8199.",
+          answer: "Necesito el número con código de área, por ejemplo 387 634-8199.",
         };
       }
       state.data.celular = phone;

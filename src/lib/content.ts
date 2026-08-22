@@ -5,9 +5,9 @@ export const site = {
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
     "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá asistencia al viajero.",
-  phone: "+54 9 387 534-8199",
+  phone: "+54 9 387 634-8199",
   email: "hola@marxel.com.ar",
-  whatsapp: "5493875348199",
+  whatsapp: "5493876348199",
   location: "Salta, Salta, Argentina.",
 };
 
@@ -127,7 +127,7 @@ export const faqHome: FaqItem[] = [
   },
   {
     q: "¿Puedo cotizar un seguro de auto en Salta por internet?",
-    a: "Sí. En marxen.com.ar/seguros cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 534-8199 o en el chat del sitio.",
+    a: "Sí. En marxen.com.ar/seguros cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 634-8199 o en el chat del sitio.",
   },
   {
     q: "¿Con qué compañías trabajan?",
@@ -176,7 +176,7 @@ export const faqViajero: FaqItem[] = [
 export const faqContacto: FaqItem[] = [
   {
     q: "¿Cómo contacto a MARXEN en Salta?",
-    a: "WhatsApp +54 9 387 534-8199, email hola@marxel.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+    a: "WhatsApp +54 9 387 634-8199, email hola@marxel.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
   },
   {
     q: "¿Tienen chat o cotizador en el sitio?",
