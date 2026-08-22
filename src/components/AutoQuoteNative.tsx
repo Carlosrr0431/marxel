@@ -37,6 +37,7 @@ type Plan = {
   monthly: number;
   original: number | null;
   discount: number;
+  quoteId: number;
 };
 
 type QuoteResult = {
@@ -72,6 +73,15 @@ function isPhone(value: string) {
   return value.replace(/\D/g, "").length >= 8;
 }
 
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function isDni(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 8;
+}
+
 async function fetchJson(url: string, init?: RequestInit) {
   const res = await fetch(url, init);
   const data = await res.json();
@@ -91,11 +101,23 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
   const [postalCode, setPostalCode] = useState("");
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState("");
+  const [hasGnc, setHasGnc] = useState("no");
+  const [hasTracker, setHasTracker] = useState("no");
+  const [age, setAge] = useState("");
   const [nombre, setNombre] = useState("");
   const [celular, setCelular] = useState("");
+  const [email, setEmail] = useState("");
   const [quote, setQuote] = useState<QuoteResult | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [dni, setDni] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
+  const [vin, setVin] = useState("");
+  const [engineNumber, setEngineNumber] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [done, setDone] = useState(false);
   const [touched, setTouched] = useState(false);
   const [quoting, setQuoting] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
 
   const year = parseYear(yearId);
@@ -104,6 +126,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
   const model = models.find((m) => m.id === modelId) || null;
   const version = versions.find((v) => String(v.id) === versionId) || null;
   const location = locations.find((l) => String(l.locationId) === locationId) || null;
+  const ageNum = Number(age);
 
   useEffect(() => {
     if (!yearId) {
@@ -203,10 +226,37 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
     };
   }, [postalCode]);
 
+  useEffect(() => {
+    const digits = dni.replace(/\D/g, "");
+    if (digits.length < 7 || digits.length > 8) return;
+    let cancelled = false;
+    fetchJson(`/api/sc-auto?${new URLSearchParams({ kind: "dni", dni: digits })}`)
+      .then((data) => {
+        if (cancelled || !data.person) return;
+        const full = `${data.person.firstName || ""} ${data.person.lastName || ""}`.trim();
+        if (full) setNombre(full);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [dni]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (!yearId || !brand || !model || !version || !location || !nombre.trim() || !isPhone(celular)) {
+    if (
+      !yearId ||
+      !brand ||
+      !model ||
+      !version ||
+      !location ||
+      !nombre.trim() ||
+      !isPhone(celular) ||
+      !isEmail(email) ||
+      ageNum < 18 ||
+      ageNum > 99
+    ) {
       setError("Completá los datos para cotizar.");
       return;
     }
@@ -225,26 +275,15 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           location,
           nombre: nombre.trim(),
           celular: celular.trim(),
+          email: email.trim(),
+          age: ageNum,
+          hasGnc: hasGnc === "si",
+          hasTracker: hasTracker === "si",
         }),
       })) as QuoteResult;
       setQuote(data);
-      const notas = [
-        `Cotización auto San Cristóbal #${data.opportunityId}`,
-        `Vehículo: ${data.carDescription}`,
-        `Monto asegurado: ${money(data.statedAmount)}`,
-        ...data.plans.map((p) => `${p.title}: ${money(p.monthly)} / mes`),
-      ].join("\n");
-      fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: nombre.trim(),
-          celular: celular.trim(),
-          interes: "Seguro de auto",
-          notas,
-          page_path: window.location.pathname,
-        }),
-      }).catch(() => {});
+      setPlan(null);
+      setDone(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos cotizar. Probá de nuevo.");
     } finally {
@@ -252,34 +291,209 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
     }
   }
 
-  function openWhatsApp(plan?: Plan) {
-    if (!quote) return;
+  async function onRegister(e: FormEvent) {
+    e.preventDefault();
+    if (!quote || !plan || !location) return;
+    setTouched(true);
+    if (!isDni(dni) || !isEmail(email) || !consent) {
+      setError("Completá DNI, email y la autorización para continuar.");
+      return;
+    }
+    if (!is0km && licensePlate.replace(/[\s-]/g, "").length < 6) {
+      setError("Ingresá la patente del auto.");
+      return;
+    }
+    setRegistering(true);
+    setError("");
+    try {
+      const saved = await fetchJson("/api/sc-auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "register",
+          opportunityId: quote.opportunityId,
+          quoteId: plan.quoteId,
+          dni,
+          nombre: nombre.trim(),
+          email: email.trim(),
+          celular: celular.trim(),
+          age: ageNum,
+          location,
+          is0km,
+          licensePlate,
+          vin,
+          engineNumber,
+        }),
+      });
+      const notas = [
+        `Cotización auto San Cristóbal #${quote.opportunityId}`,
+        `Plan: ${plan.title} ${money(plan.monthly)} / mes`,
+        `Vehículo: ${quote.carDescription}`,
+        `DNI: ${dni.replace(/\D/g, "")}`,
+        `Email: ${email.trim()}`,
+        licensePlate ? `Patente: ${licensePlate.toUpperCase()}` : "0km sin patente",
+        vin ? `Chasis: ${vin}` : "",
+        engineNumber ? `Motor: ${engineNumber}` : "",
+        `GNC: ${hasGnc === "si" ? "Sí" : "No"} · Rastreador: ${hasTracker === "si" ? "Sí" : "No"}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: saved.nombre || nombre.trim(),
+          celular: celular.trim(),
+          email: email.trim(),
+          dni: dni.replace(/\D/g, ""),
+          edad: ageNum,
+          localidad: location.description,
+          interes: "Seguro de auto",
+          notas,
+          page_path: window.location.pathname,
+        }),
+      }).catch(() => {});
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pudimos registrar la cotización.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  function openWhatsApp() {
+    if (!quote || !plan) return;
     const lines = [
       `Hola MARXEN, soy ${nombre.trim()}.`,
-      `Quiero cotizar auto: ${quote.carDescription}`,
+      `Quiero el plan ${plan.title} para ${quote.carDescription}.`,
       `Monto asegurado: ${money(quote.statedAmount)}`,
       `Código: ${quote.opportunityId}`,
-      ...quote.plans.map((p) => `${p.title}: ${money(p.monthly)} / mes`),
-    ];
-    if (plan) lines.push(`Me interesa: ${plan.title}`);
+      `DNI: ${dni.replace(/\D/g, "")}`,
+      `Email: ${email.trim()}`,
+      licensePlate ? `Patente: ${licensePlate.toUpperCase()}` : null,
+      `Precio: ${money(plan.monthly)} / mes`,
+    ].filter(Boolean);
     window.open(
       `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`,
       "_blank"
     );
   }
 
+  function goBack() {
+    setError("");
+    setTouched(false);
+    if (done || plan) {
+      setDone(false);
+      setPlan(null);
+      return;
+    }
+    if (quote) {
+      setQuote(null);
+      return;
+    }
+    onBack();
+  }
+
   return (
     <div>
       <button
         type="button"
-        onClick={quote ? () => setQuote(null) : onBack}
+        onClick={goBack}
         className="mb-6 text-sm font-semibold text-navy underline-offset-4 hover:underline"
       >
-        ← {quote ? "Editar datos" : "Volver"}
+        ← {quote ? (plan ? "Volver a planes" : "Editar datos") : "Volver"}
       </button>
 
-      {quote ? (
-        <PlansView quote={quote} onSelect={openWhatsApp} />
+      {quote && plan && done ? (
+        <SuccessView quote={quote} plan={plan} onWhatsApp={openWhatsApp} />
+      ) : quote && plan ? (
+        <form onSubmit={onRegister} className="mx-auto max-w-lg">
+          <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
+            ¡Falta muy poco para tener tu seguro!
+          </h2>
+          <p className="mt-3 text-base text-muted">
+            Completá DNI y datos del auto para que el productor reciba la cotización en San Cristóbal.
+          </p>
+          <p className="mt-4 text-sm text-navy/80">
+            <span className="font-semibold">{plan.title}</span> · {quote.carDescription}
+          </p>
+
+          <h3 className="mt-8 text-sm font-semibold uppercase tracking-wide text-navy/70">Datos personales</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Field label="Número de DNI" invalid={touched && !isDni(dni)}>
+              <input
+                className="field"
+                inputMode="numeric"
+                maxLength={8}
+                placeholder="40150135"
+                value={dni}
+                onChange={(e) => setDni(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              />
+            </Field>
+            <Field label="Nombre y apellido" invalid={touched && !nombre.trim()}>
+              <input className="field" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </Field>
+            <Field label="Email" invalid={touched && !isEmail(email)}>
+              <input
+                className="field"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </Field>
+            <Field label="WhatsApp" invalid={touched && !isPhone(celular)}>
+              <input className="field" inputMode="tel" value={celular} onChange={(e) => setCelular(e.target.value)} />
+            </Field>
+          </div>
+
+          <h3 className="mt-8 text-sm font-semibold uppercase tracking-wide text-navy/70">Datos del auto</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {is0km ? (
+              <p className="sm:col-span-2 text-sm text-muted">Es 0km: no hace falta patente.</p>
+            ) : (
+              <Field label="Patente" invalid={touched && licensePlate.replace(/[\s-]/g, "").length < 6}>
+                <input
+                  className="field"
+                  placeholder="AB123CD"
+                  value={licensePlate}
+                  onChange={(e) => setLicensePlate(e.target.value.toUpperCase().slice(0, 8))}
+                />
+              </Field>
+            )}
+            <Field label="N° de chasis (opcional)" invalid={false}>
+              <input className="field" value={vin} onChange={(e) => setVin(e.target.value.toUpperCase())} />
+            </Field>
+            <Field label="N° de motor (opcional)" invalid={false}>
+              <input
+                className="field"
+                value={engineNumber}
+                onChange={(e) => setEngineNumber(e.target.value.toUpperCase())}
+              />
+            </Field>
+          </div>
+
+          <label className="mt-6 flex items-start gap-3 text-sm leading-relaxed text-muted">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            <span>
+              Autorizo a ser contactado y que los datos ingresados sean utilizados por San Cristóbal y MARXEN para
+              cotizar y emitir el seguro.
+            </span>
+          </label>
+          {touched && !consent ? <p className="mt-2 text-sm font-medium text-red-600">Requerido</p> : null}
+
+          {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+
+          <button type="submit" disabled={registering} className="btn btn-primary mt-6 w-full disabled:opacity-60">
+            {registering ? "Registrando en San Cristóbal…" : "Enviar cotización al productor"}
+          </button>
+        </form>
+      ) : quote ? (
+        <PlansView quote={quote} onSelect={setPlan} />
       ) : (
         <form onSubmit={onSubmit} className="mx-auto max-w-lg">
           <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
@@ -369,6 +583,20 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
               </select>
             </Field>
 
+            <Field label="GNC" invalid={false}>
+              <select className="field" value={hasGnc} onChange={(e) => setHasGnc(e.target.value)}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            </Field>
+
+            <Field label="Rastreador" invalid={false}>
+              <select className="field" value={hasTracker} onChange={(e) => setHasTracker(e.target.value)}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            </Field>
+
             <Field label="Código postal" invalid={touched && postalCode.length !== 4}>
               <input
                 className="field"
@@ -392,6 +620,17 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
               </Field>
             ) : null}
 
+            <Field label="Edad" invalid={touched && (ageNum < 18 || ageNum > 99)}>
+              <input
+                className="field"
+                inputMode="numeric"
+                maxLength={2}
+                placeholder="34"
+                value={age}
+                onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              />
+            </Field>
+
             <Field label="Nombre" invalid={touched && !nombre.trim()}>
               <input className="field" value={nombre} onChange={(e) => setNombre(e.target.value)} />
             </Field>
@@ -403,6 +642,16 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
                 placeholder="387 15..."
                 value={celular}
                 onChange={(e) => setCelular(e.target.value)}
+              />
+            </Field>
+
+            <Field label="Email" invalid={touched && !isEmail(email)}>
+              <input
+                className="field"
+                type="email"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </Field>
           </div>
@@ -469,35 +718,64 @@ function PlansView({
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {quote.plans.map((plan) => (
+        {quote.plans.map((item) => (
           <article
-            key={plan.key}
+            key={item.key}
             className="relative flex flex-col rounded-2xl border border-black/5 bg-white p-6 shadow-[0_10px_30px_rgba(10,53,92,0.08)]"
           >
-            {plan.mostChosen ? (
+            {item.mostChosen ? (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#2ea44f] px-3 py-1 text-xs font-semibold text-white">
                 Más elegido
               </span>
             ) : null}
-            <h3 className="font-display text-lg font-semibold text-navy">{plan.title}</h3>
-            {plan.original && plan.original > plan.monthly ? (
-              <p className="mt-3 text-sm font-semibold text-sky line-through">{money(plan.original)}*/mes</p>
+            <h3 className="font-display text-lg font-semibold text-navy">{item.title}</h3>
+            {item.original && item.original > item.monthly ? (
+              <p className="mt-3 text-sm font-semibold text-sky line-through">{money(item.original)}*/mes</p>
             ) : null}
             <p className="mt-1 text-3xl font-bold tracking-tight text-sky">
-              {money(plan.monthly)} <span className="text-base font-semibold text-navy/70">/ mes</span>
+              {money(item.monthly)} <span className="text-base font-semibold text-navy/70"> / mes</span>
             </p>
-            {plan.discount > 0 ? (
+            {item.discount > 0 ? (
               <p className="mt-2 text-sm font-semibold text-[#2ea44f]">
-                tarifa con {plan.discount}% OFF aplicado
+                tarifa con {item.discount}% OFF aplicado
               </p>
             ) : null}
-            <p className="mt-4 flex-1 text-sm leading-relaxed text-muted">{plan.description}</p>
-            <button type="button" onClick={() => onSelect(plan)} className="btn btn-primary mt-6 w-full">
+            <p className="mt-4 flex-1 text-sm leading-relaxed text-muted">{item.description}</p>
+            <button type="button" onClick={() => onSelect(item)} className="btn btn-primary mt-6 w-full">
               Quiero este plan
             </button>
           </article>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SuccessView({
+  quote,
+  plan,
+  onWhatsApp,
+}: {
+  quote: QuoteResult;
+  plan: Plan;
+  onWhatsApp: () => void;
+}) {
+  return (
+    <div className="mx-auto max-w-lg rounded-2xl border border-black/5 bg-white p-8 text-center shadow-[0_10px_30px_rgba(10,53,92,0.08)]">
+      <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
+        Cotización enviada al productor
+      </h2>
+      <p className="mt-3 text-base text-muted">
+        Ya quedó registrada en San Cristóbal con tu DNI. Un asesor de MARXEN te contacta para emitir.
+      </p>
+      <p className="mt-4 text-sm text-navy/80">
+        {plan.title} · {quote.carDescription}
+        <br />
+        Código {quote.opportunityId}
+      </p>
+      <button type="button" onClick={onWhatsApp} className="btn btn-primary mt-6 w-full">
+        Seguir por WhatsApp
+      </button>
     </div>
   );
 }

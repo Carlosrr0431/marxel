@@ -72,6 +72,7 @@ export type AutoPlan = {
   monthly: number;
   original: number | null;
   discount: number;
+  quoteId: number;
 };
 
 export type AutoQuoteResult = {
@@ -91,10 +92,38 @@ export type QuoteAutoInput = {
   location: AutoLocation;
   nombre: string;
   celular: string;
+  email?: string;
+  age?: number;
+  hasGnc?: boolean;
+  hasTracker?: boolean;
   source?: "web" | "chat";
 };
 
+export type AutoPerson = {
+  firstName: string;
+  lastName: string;
+  gender?: string;
+  dateOfBirth?: string;
+  taxStatuses?: unknown[];
+};
+
+export type RegisterAutoQuoteInput = {
+  opportunityId: number;
+  quoteId: number;
+  dni: string;
+  nombre: string;
+  email: string;
+  celular: string;
+  age: number;
+  location: AutoLocation;
+  is0km: boolean;
+  licensePlate?: string;
+  vin?: string;
+  engineNumber?: string;
+};
+
 type QuoteRow = {
+  id?: number;
   monthlyCost: number;
   product?: { code?: string; franchiseType?: string | null; franchiseValue?: number | null };
 };
@@ -117,6 +146,64 @@ async function scGet(path: string, revalidate: number | false = 3600) {
   );
   if (!res.ok) throw new AutoQuoteError("No se pudo consultar San Cristóbal", 502);
   return res.json();
+}
+
+async function scPost(path: string, body: unknown) {
+  const res = await fetch(`${SC_API}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
+  }
+  if (!res.ok) {
+    const rec = data as { error?: string[]; title?: string; detail?: string } | null;
+    throw new AutoQuoteError(
+      rec?.error?.[0] || rec?.detail || rec?.title || `San Cristóbal ${res.status}`,
+      res.status >= 400 && res.status < 500 ? 400 : 502
+    );
+  }
+  return data;
+}
+
+function splitName(nombre: string) {
+  const parts = String(nombre || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function birthFromAge(age: number) {
+  const year = new Date().getFullYear() - Math.max(18, Math.min(99, Math.round(age) || 35));
+  return new Date(year, 0, 1).toISOString();
+}
+
+function firstContact(data: unknown): Record<string, unknown> | null {
+  if (Array.isArray(data)) {
+    const row = data[0] as Record<string, unknown> | undefined;
+    if (!row) return null;
+    if (Array.isArray(row.contacts) && row.contacts[0]) {
+      return row.contacts[0] as Record<string, unknown>;
+    }
+    if (row.firstName || row.lastName) return row;
+    return null;
+  }
+  if (data && typeof data === "object") {
+    const rec = data as Record<string, unknown>;
+    if (Array.isArray(rec.contacts) && rec.contacts[0]) {
+      return rec.contacts[0] as Record<string, unknown>;
+    }
+  }
+  return null;
 }
 
 function producerCode(branchOffice: number, number: number) {
@@ -355,7 +442,10 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
 
   const producer = await getProducer();
   const amount = statedAmount(year, Boolean(input.is0km), version);
-  const email = `cotiza.${phone.area}${phone.number}@marxel.com.ar`;
+  const names = splitName(nombre);
+  const email =
+    String(input.email || "").trim() || `cotiza.${phone.area}${phone.number}@marxel.com.ar`;
+  const age = Number(input.age) > 0 ? Number(input.age) : 35;
   const fromChat = input.source === "chat";
 
   const payload = {
@@ -368,8 +458,9 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
     isCampaignEnabled: producer.isCampaignEnabled,
     contactData: {
       email,
-      age: 35,
-      firstName: nombre,
+      age,
+      firstName: names.firstName,
+      lastName: names.lastName,
       phoneAreaCode: phone.area,
       phoneNumber: phone.number,
     },
@@ -394,9 +485,9 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
       carDescription: `${year} ${version.fullCarDescripcion || ""}`,
       category: version.category,
       fuelCode: version.fuelCode,
-      hasGnc: false,
-      gpsProviderCode: null,
-      gpsProviderDescription: null,
+      hasGnc: Boolean(input.hasGnc),
+      gpsProviderCode: input.hasTracker ? "LoJack" : null,
+      gpsProviderDescription: input.hasTracker ? "Lo Jack (Car Security S.A.)" : null,
       infoAutoCode: version.infoAutoCode,
       is0km: Boolean(input.is0km),
       isImported: Boolean(version.isImported),
@@ -442,11 +533,35 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
       monthly,
       original: discount > 0 ? originalPrice(monthly, alt) : null,
       discount,
+      quoteId: Number(quote.id) || 0,
     };
   }).filter(Boolean) as AutoPlan[];
 
   if (plans.length === 0) {
     throw new AutoQuoteError("No hay planes disponibles para este vehículo", 422);
+  }
+
+  if (data.opportunityId && plans.some((plan) => !plan.quoteId)) {
+    try {
+      const details = (await scGet(`/Quote/quote-details/${data.opportunityId}`, false)) as {
+        quotes?: {
+          id?: number;
+          monthlyCost?: number;
+          productKey?: string;
+          franchiseType?: string | null;
+        }[];
+      };
+      for (const plan of plans) {
+        if (plan.quoteId) continue;
+        const match = (details.quotes || []).find((row) => {
+          const codes = PLANS.find((item) => item.key === plan.key)?.codes || [];
+          return (codes as readonly string[]).includes(String(row.productKey || ""));
+        });
+        if (match?.id) plan.quoteId = Number(match.id);
+      }
+    } catch {
+      // Si no hay ids, el registro posterior lo informa.
+    }
   }
 
   return {
@@ -455,5 +570,125 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
     carDescription: `${year} ${version.fullCarDescripcion || ""}`.trim(),
     appliedDiscount: discount,
     plans,
+  };
+}
+
+export async function lookupPersonByDni(dni: string): Promise<AutoPerson | null> {
+  const taxId = String(dni || "").replace(/\D/g, "");
+  if (taxId.length < 7 || taxId.length > 8) {
+    throw new AutoQuoteError("DNI inválido", 400);
+  }
+  const res = await fetch(
+    `${SC_API}/Account/contact-by-taxId?taxId=${encodeURIComponent(taxId)}&documentType=DNI`,
+    { cache: "no-store" }
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new AutoQuoteError("No se pudo consultar el DNI", 502);
+  const contact = firstContact(await res.json());
+  if (!contact) return null;
+  const firstName = String(contact.firstName || "").trim();
+  const lastName = String(contact.lastName || "").trim();
+  if (!firstName && !lastName) return null;
+  return {
+    firstName,
+    lastName,
+    gender: contact.gender != null ? String(contact.gender) : undefined,
+    dateOfBirth: contact.dateOfBirth != null ? String(contact.dateOfBirth) : undefined,
+    taxStatuses: Array.isArray(contact.taxStatuses) ? contact.taxStatuses : undefined,
+  };
+}
+
+export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInput) {
+  const opportunityId = Number(input.opportunityId);
+  const quoteId = Number(input.quoteId);
+  const dni = String(input.dni || "").replace(/\D/g, "");
+  const email = String(input.email || "").trim();
+  const nombre = String(input.nombre || "").trim();
+  const age = Number(input.age);
+  const location = input.location;
+
+  if (!opportunityId || !quoteId) {
+    throw new AutoQuoteError("Falta la cotización seleccionada", 400);
+  }
+  if (dni.length < 7 || dni.length > 8) throw new AutoQuoteError("DNI inválido", 400);
+  if (!email.includes("@")) throw new AutoQuoteError("Email inválido", 400);
+  if (!nombre || !location?.locationId || age < 18) {
+    throw new AutoQuoteError("Faltan datos para registrar la cotización", 400);
+  }
+
+  const phone = parseArPhone(input.celular);
+  if (!phone) throw new AutoQuoteError("WhatsApp inválido", 400);
+
+  const person = await lookupPersonByDni(dni).catch(() => null);
+  const names = person?.firstName
+    ? { firstName: person.firstName, lastName: person.lastName || person.firstName }
+    : splitName(nombre);
+  const producer = await getProducer();
+  const licensePlate = String(input.licensePlate || "")
+    .replace(/[\s-]/g, "")
+    .toUpperCase();
+
+  if (!input.is0km && licensePlate.length < 6) {
+    throw new AutoQuoteError("Ingresá la patente del auto", 400);
+  }
+
+  try {
+    await scPost("/Quote/UpdateIsSelected", { quoteId, isSelected: true });
+  } catch {
+    // La cotización web igual se puede pasar al cotizador unificado.
+  }
+
+  await scPost("/Quote", {
+    opportunityId,
+    quoteId,
+    address: {
+      locationId: location.locationId,
+      cityKey: location.synonymous,
+      cityName: location.description,
+      stateKey: location.stateKey,
+      postalCode: Number(location.zipCode),
+    },
+    insured: {
+      documentNumber: dni,
+      documentType: "DNI",
+      firstName: names.firstName,
+      lastName: names.lastName,
+      gender: person?.gender || undefined,
+      email,
+      phoneAreaCode: phone.area,
+      phoneNumber: phone.number,
+      pep: { isPep: false },
+      dateOfBirth: person?.dateOfBirth || birthFromAge(age),
+      uifObligated: false,
+      taxStatuses: person?.taxStatuses || [],
+    },
+  });
+
+  await scPost("/Quote/quote-data", {
+    opportunityId,
+    producer: { cuit: producer.cuit, code: producer.code },
+  });
+
+  if (licensePlate) {
+    try {
+      await scPost("/Quote/is-valid-license-plate", {
+        country: "AR",
+        licenseId: licensePlate,
+        patentedAtArg: true,
+        patentedAtArgSpecified: true,
+        vehicleCategory: "A",
+        vehicleYear: null,
+      });
+    } catch {
+      throw new AutoQuoteError("La patente no es válida", 400);
+    }
+  }
+
+  return {
+    ok: true,
+    opportunityId,
+    quoteId,
+    dni,
+    nombre: `${names.firstName} ${names.lastName}`.trim(),
   };
 }

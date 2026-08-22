@@ -23,6 +23,7 @@ export async function POST(request: Request) {
         nombre,
         celular,
         email: body.email || null,
+        dni: body.dni || null,
         edad: body.edad ? Number(body.edad) : null,
         provincia: body.provincia || null,
         localidad: body.localidad || null,
