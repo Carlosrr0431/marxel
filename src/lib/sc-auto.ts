@@ -115,6 +115,7 @@ export type RegisterAutoQuoteInput = {
   email: string;
   celular: string;
   age: number;
+  gender?: string;
   location: AutoLocation;
   is0km: boolean;
   licensePlate?: string;
@@ -135,6 +136,7 @@ type ProducerCache = {
   isCampaignEnabled: boolean;
   commercialAlternative: number;
   affinityGroupId: number | null;
+  landingToken: string;
 };
 
 let producerCache: ProducerCache | null = null;
@@ -148,10 +150,16 @@ async function scGet(path: string, revalidate: number | false = 3600) {
   return res.json();
 }
 
-async function scPost(path: string, body: unknown) {
+async function scPost(path: string, body: unknown, token?: string) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers.Authorization = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
   const res = await fetch(`${SC_API}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers,
     cache: "no-store",
     body: JSON.stringify(body),
   });
@@ -163,13 +171,39 @@ async function scPost(path: string, body: unknown) {
     data = { raw: text };
   }
   if (!res.ok) {
-    const rec = data as { error?: string[]; title?: string; detail?: string } | null;
+    const rec = data as { error?: string[]; title?: string; detail?: string; message?: string } | null;
     throw new AutoQuoteError(
-      rec?.error?.[0] || rec?.detail || rec?.title || `San Cristóbal ${res.status}`,
-      res.status >= 400 && res.status < 500 ? 400 : 502
+      rec?.error?.[0] || rec?.detail || rec?.message || rec?.title || `San Cristóbal ${res.status}`,
+      res.status === 401 ? 401 : res.status >= 400 && res.status < 500 ? 400 : 502
     );
   }
   return data;
+}
+
+function extractJwt(data: unknown): string {
+  if (typeof data === "string" && data.length > 20) return data.replace(/^Bearer\s+/i, "");
+  if (!data || typeof data !== "object") return "";
+  const rec = data as Record<string, unknown>;
+  for (const key of ["token", "jwt", "accessToken", "access_token", "idToken"]) {
+    if (typeof rec[key] === "string" && rec[key].length > 20) {
+      return rec[key].replace(/^Bearer\s+/i, "");
+    }
+  }
+  if (rec.data) return extractJwt(rec.data);
+  if (rec.result) return extractJwt(rec.result);
+  return "";
+}
+
+function normalizeGender(value: string) {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (raw.startsWith("f") || raw.includes("femen") || raw.includes("mujer") || raw === "female") {
+    return "Female";
+  }
+  return "Male";
 }
 
 function splitName(nombre: string) {
@@ -252,6 +286,7 @@ async function getProducer() {
     isCampaignEnabled: Boolean(producer.isCampaignEnabled),
     commercialAlternative,
     affinityGroupId: auto?.affinityGroupId != null ? Number(auto.affinityGroupId) : null,
+    landingToken: String(producer.landingUrl?.token || producer.jwt || ""),
   };
   return producerCache;
 }
@@ -623,6 +658,7 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
   const names = person?.firstName
     ? { firstName: person.firstName, lastName: person.lastName || person.firstName }
     : splitName(nombre);
+  const gender = normalizeGender(person?.gender || input.gender || "Male");
   const producer = await getProducer();
   const licensePlate = String(input.licensePlate || "")
     .replace(/[\s-]/g, "")
@@ -632,55 +668,89 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
     throw new AutoQuoteError("Ingresá la patente del auto", 400);
   }
 
+  let token = "";
+  for (const auth of [undefined, producer.landingToken || undefined]) {
+    try {
+      const login = await scPost(
+        "/Account/login-community",
+        { documentNumber: dni, nameUrl: PRODUCER_URL, gender },
+        auth
+      );
+      token = extractJwt(login);
+      if (token) break;
+    } catch {
+      continue;
+    }
+  }
+  if (!token && producer.landingToken) token = producer.landingToken;
+  if (!token) {
+    throw new AutoQuoteError(
+      "San Cristóbal pidió autenticación. Revisá el DNI y el género e intentá de nuevo.",
+      401
+    );
+  }
+
   try {
-    await scPost("/Quote/UpdateIsSelected", { quoteId, isSelected: true });
+    await scPost("/Quote/UpdateIsSelected", { quoteId, isSelected: true }, token);
   } catch {
     // La cotización web igual se puede pasar al cotizador unificado.
   }
 
-  await scPost("/Quote", {
-    opportunityId,
-    quoteId,
-    address: {
-      locationId: location.locationId,
-      cityKey: location.synonymous,
-      cityName: location.description,
-      stateKey: location.stateKey,
-      postalCode: Number(location.zipCode),
+  await scPost(
+    "/Quote",
+    {
+      opportunityId,
+      quoteId,
+      address: {
+        locationId: location.locationId,
+        cityKey: location.synonymous,
+        cityName: location.description,
+        stateKey: location.stateKey,
+        postalCode: Number(location.zipCode),
+      },
+      insured: {
+        documentNumber: dni,
+        documentType: "DNI",
+        firstName: names.firstName,
+        lastName: names.lastName,
+        gender,
+        email,
+        phoneAreaCode: phone.area,
+        phoneNumber: phone.number,
+        pep: { isPep: false },
+        dateOfBirth: person?.dateOfBirth || birthFromAge(age),
+        uifObligated: false,
+        taxStatuses: person?.taxStatuses || [],
+      },
     },
-    insured: {
-      documentNumber: dni,
-      documentType: "DNI",
-      firstName: names.firstName,
-      lastName: names.lastName,
-      gender: person?.gender || undefined,
-      email,
-      phoneAreaCode: phone.area,
-      phoneNumber: phone.number,
-      pep: { isPep: false },
-      dateOfBirth: person?.dateOfBirth || birthFromAge(age),
-      uifObligated: false,
-      taxStatuses: person?.taxStatuses || [],
-    },
-  });
+    token
+  );
 
-  await scPost("/Quote/quote-data", {
-    opportunityId,
-    producer: { cuit: producer.cuit, code: producer.code },
-  });
+  await scPost(
+    "/Quote/quote-data",
+    {
+      opportunityId,
+      producer: { cuit: producer.cuit, code: producer.code },
+    },
+    token
+  );
 
   if (licensePlate) {
     try {
-      await scPost("/Quote/is-valid-license-plate", {
-        country: "AR",
-        licenseId: licensePlate,
-        patentedAtArg: true,
-        patentedAtArgSpecified: true,
-        vehicleCategory: "A",
-        vehicleYear: null,
-      });
+      await scPost(
+        "/Quote/is-valid-license-plate",
+        {
+          country: "AR",
+          licenseId: licensePlate,
+          patentedAtArg: true,
+          patentedAtArgSpecified: true,
+          vehicleCategory: "A",
+          vehicleYear: null,
+        },
+        token
+      );
     } catch {
-      throw new AutoQuoteError("La patente no es válida", 400);
+      // La patente se informa igual; no bloquea el alta en el panel.
     }
   }
 

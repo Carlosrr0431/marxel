@@ -113,6 +113,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
   const [licensePlate, setLicensePlate] = useState("");
   const [vin, setVin] = useState("");
   const [engineNumber, setEngineNumber] = useState("");
+  const [gender, setGender] = useState("");
   const [consent, setConsent] = useState(false);
   const [done, setDone] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -235,6 +236,10 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
         if (cancelled || !data.person) return;
         const full = `${data.person.firstName || ""} ${data.person.lastName || ""}`.trim();
         if (full) setNombre(full);
+        if (data.person.gender) {
+          const g = String(data.person.gender).toLowerCase();
+          setGender(g.startsWith("f") || g.includes("femen") || g.includes("mujer") ? "Female" : "Male");
+        }
       })
       .catch(() => {});
     return () => {
@@ -295,8 +300,8 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     if (!quote || !plan || !location) return;
     setTouched(true);
-    if (!isDni(dni) || !isEmail(email) || !consent) {
-      setError("Completá DNI, email y la autorización para continuar.");
+    if (!isDni(dni) || !isEmail(email) || !consent || !gender) {
+      setError("Completá DNI, género, email y la autorización para continuar.");
       return;
     }
     if (!is0km && licensePlate.replace(/[\s-]/g, "").length < 6) {
@@ -318,6 +323,7 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           email: email.trim(),
           celular: celular.trim(),
           age: ageNum,
+          gender,
           location,
           is0km,
           licensePlate,
@@ -432,6 +438,13 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
             </Field>
             <Field label="Nombre y apellido" invalid={touched && !nombre.trim()}>
               <input className="field" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+            </Field>
+            <Field label="Género" invalid={touched && !gender}>
+              <select className="field" value={gender} onChange={(e) => setGender(e.target.value)}>
+                <option value="">Seleccioná</option>
+                <option value="Male">Masculino</option>
+                <option value="Female">Femenino</option>
+              </select>
             </Field>
             <Field label="Email" invalid={touched && !isEmail(email)}>
               <input

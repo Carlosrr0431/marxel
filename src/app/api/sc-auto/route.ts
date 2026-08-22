@@ -46,6 +46,7 @@ export async function POST(req: Request) {
         email: String(body.email || ""),
         celular: String(body.celular || ""),
         age: Number(body.age),
+        gender: String(body.gender || ""),
         location: body.location,
         is0km: Boolean(body.is0km),
         licensePlate: String(body.licensePlate || ""),
