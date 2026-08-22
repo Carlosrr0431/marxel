@@ -1,5 +1,5 @@
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
-import { fetchClasificVehicle } from "@/lib/clasific";
+import { fetchClasificVehicle, type ClasificVehicle } from "@/lib/clasific";
 
 const SC_API = "https://api.sancristobal.com.ar/marketing-marketing/api";
 const PRODUCER_URL = "marxen-seguros";
@@ -401,7 +401,7 @@ export async function listAutoModels(year: number, brandId: number): Promise<Aut
     modelId: "",
     postalCode: "",
   });
-  return asCatalogItems(data, ["models", "value"]);
+  return sortCatalog(asCatalogItems(data, ["models", "value"]));
 }
 
 export async function listAutoVersions(
@@ -416,9 +416,11 @@ export async function listAutoVersions(
     modelId: String(modelId),
     postalCode: "",
   });
-  return asArray(data, ["versions", "value"])
-    .map((row) => row as AutoVersion)
-    .filter((item) => Number(item?.id) > 0);
+  return sortVersions(
+    asArray(data, ["versions", "value"])
+      .map((row) => row as AutoVersion)
+      .filter((item) => Number(item?.id) > 0)
+  );
 }
 
 export type PlateLookupResult = {
@@ -443,6 +445,57 @@ function foldKey(text: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "");
 }
+
+function catalogTokens(text: string): string[] {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9.]+/)
+    .map((token) => token.replace(/^\.+|\.+$/g, ""))
+    .filter((token) => token.length >= 2)
+    .map((token) => foldKey(token))
+    .filter(Boolean);
+}
+
+function sortCatalog(items: AutoCatalogItem[]): AutoCatalogItem[] {
+  return [...items].sort((a, b) =>
+    a.description.localeCompare(b.description, "es", { numeric: true })
+  );
+}
+
+function sortVersions(items: AutoVersion[]): AutoVersion[] {
+  return [...items].sort((a, b) =>
+    String(a.description || "").localeCompare(String(b.description || ""), "es", { numeric: true })
+  );
+}
+
+function versionHaystack(version: AutoVersion) {
+  return foldKey(`${version.description} ${version.fullCarDescripcion || ""}`);
+}
+
+const EXCLUSIVE_TRIMS = new Set([
+  "country",
+  "gti",
+  "tsi",
+  "gld",
+  "gls",
+  "gli",
+  "gtd",
+  "high",
+  "move",
+  "take",
+  "cross",
+  "power",
+  "trend",
+  "comfortline",
+  "highline",
+  "track",
+  "motion",
+  "imotion",
+  "mpi",
+  "msi",
+]);
 
 function matchScore(candidate: string, query: string) {
   const a = foldKey(candidate);
@@ -469,6 +522,85 @@ function pickBest<T>(items: T[], query: string, label: (item: T) => string): T |
     }
   }
   return bestScore >= 75 ? best : null;
+}
+
+function pickModel(
+  models: AutoCatalogItem[],
+  clasificModel: string,
+  make: string
+): AutoCatalogItem | null {
+  const tokens = catalogTokens(clasificModel);
+  for (const token of tokens) {
+    const hit = models.find((item) => foldKey(item.description) === token);
+    if (hit) return hit;
+  }
+  return (
+    pickBest(models, clasificModel, (item) => item.description) ||
+    pickBest(models, `${make} ${clasificModel}`, (item) => item.description)
+  );
+}
+
+function distinctiveHints(vehicle: ClasificVehicle, brand: AutoCatalogItem, model: AutoCatalogItem) {
+  const ignore = new Set([
+    ...catalogTokens(vehicle.make),
+    ...catalogTokens(brand.description),
+    ...catalogTokens(model.description),
+    foldKey(String(vehicle.year)),
+  ]);
+  return catalogTokens(vehicle.model).filter((token) => {
+    if (ignore.has(token)) return false;
+    if (/^\d{3,}$/.test(token)) return false;
+    return true;
+  });
+}
+
+function filterVersionsForVehicle(
+  versions: AutoVersion[],
+  vehicle: ClasificVehicle,
+  brand: AutoCatalogItem,
+  model: AutoCatalogItem
+): AutoVersion[] {
+  if (!versions.length) return versions;
+
+  const hints = distinctiveHints(vehicle, brand, model);
+  const letterHints = hints.filter((token) => /[a-z]/.test(token));
+  const useful = letterHints.filter((token) =>
+    versions.some((item) => versionHaystack(item).includes(token))
+  );
+
+  let pool = versions;
+  if (useful.length) {
+    pool = versions.filter((item) => useful.every((token) => versionHaystack(item).includes(token)));
+    if (!pool.length) {
+      pool = versions.filter((item) => versionHaystack(item).includes(useful[0]));
+    }
+    if (!pool.length) pool = versions;
+  }
+
+  const queryFold = foldKey(vehicle.model);
+  const tightened = pool.filter((item) => {
+    const extras = catalogTokens(`${item.description} ${item.fullCarDescripcion || ""}`).filter(
+      (token) => EXCLUSIVE_TRIMS.has(token)
+    );
+    return extras.every((token) => queryFold.includes(token));
+  });
+  if (tightened.length) pool = tightened;
+
+  const queryTokens = catalogTokens(vehicle.model);
+  return [...pool].sort((a, b) => {
+    const scoreA = queryTokens.reduce(
+      (sum, token) => sum + (versionHaystack(a).includes(token) ? 1 : 0),
+      0
+    );
+    const scoreB = queryTokens.reduce(
+      (sum, token) => sum + (versionHaystack(b).includes(token) ? 1 : 0),
+      0
+    );
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return String(a.description || "").localeCompare(String(b.description || ""), "es", {
+      numeric: true,
+    });
+  });
 }
 
 export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupResult> {
@@ -545,9 +677,7 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
   }
 
   const models = await listAutoModels(vehicle.year, brand.id);
-  const model =
-    pickBest(models, vehicle.model, (item) => item.description) ||
-    pickBest(models, `${vehicle.make} ${vehicle.model}`, (item) => item.description);
+  const model = pickModel(models, vehicle.model, vehicle.make);
   if (!model) {
     return {
       plate,
@@ -562,7 +692,8 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
     };
   }
 
-  const versions = await listAutoVersions(vehicle.year, brand.id, model.id);
+  const catalogVersions = await listAutoVersions(vehicle.year, brand.id, model.id);
+  const versions = filterVersionsForVehicle(catalogVersions, vehicle, brand, model);
   const version =
     pickBest(
       versions,

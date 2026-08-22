@@ -142,6 +142,19 @@ export function AutoQuoteNative({
   const [lookupKey, setLookupKey] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupHint, setLookupHint] = useState("");
+  const sortedModels = useMemo(
+    () => [...models].sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true })),
+    [models]
+  );
+  const sortedVersions = useMemo(
+    () =>
+      [...versions].sort((a, b) =>
+        String(a.description || "").localeCompare(String(b.description || ""), "es", {
+          numeric: true,
+        })
+      ),
+    [versions]
+  );
 
   const year = parseYear(yearId);
   const is0km = yearId.endsWith("-0km");
@@ -742,7 +755,7 @@ export function AutoQuoteNative({
                 }}
               >
                 <option value="">{brandId && !models.length ? "Cargando…" : "Modelo"}</option>
-                {models.map((m) => (
+                {sortedModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
                   </option>
@@ -758,9 +771,9 @@ export function AutoQuoteNative({
                 onChange={(e) => setVersionId(e.target.value)}
               >
                 <option value="">{modelId && !versions.length ? "Cargando…" : "Versión"}</option>
-                {versions.map((v) => (
+                {sortedVersions.map((v) => (
                   <option key={v.id} value={String(v.id)}>
-                    {v.description}
+                    {v.fullCarDescripcion || v.description}
                   </option>
                 ))}
               </select>
