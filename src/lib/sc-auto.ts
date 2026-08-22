@@ -656,6 +656,12 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
   if (!input.is0km && licensePlate.length < 6) {
     throw new AutoQuoteError("Ingresá la patente del auto", 400);
   }
+  if (String(input.vin || "").replace(/\D/g, "").length !== 10) {
+    throw new AutoQuoteError("El número de chasis tiene que tener 10 dígitos", 400);
+  }
+  if (String(input.engineNumber || "").replace(/\D/g, "").length < 6) {
+    throw new AutoQuoteError("El número de motor tiene que tener al menos 6 dígitos", 400);
+  }
 
   const headers = { "x-id": dni };
 

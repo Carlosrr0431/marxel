@@ -82,6 +82,18 @@ function isDni(value: string) {
   return digits.length >= 7 && digits.length <= 8;
 }
 
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function isVin(value: string) {
+  return digitsOnly(value).length === 10;
+}
+
+function isEngineNumber(value: string) {
+  return digitsOnly(value).length >= 6;
+}
+
 async function fetchJson(url: string, init?: RequestInit) {
   const res = await fetch(url, init);
   const data = await res.json();
@@ -308,6 +320,14 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
       setError("Ingresá la patente del auto.");
       return;
     }
+    if (!isVin(vin)) {
+      setError("El número de chasis tiene que tener 10 dígitos.");
+      return;
+    }
+    if (!isEngineNumber(engineNumber)) {
+      setError("El número de motor tiene que tener al menos 6 dígitos.");
+      return;
+    }
     setRegistering(true);
     setError("");
     try {
@@ -327,8 +347,8 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
           location,
           is0km,
           licensePlate,
-          vin,
-          engineNumber,
+          vin: digitsOnly(vin),
+          engineNumber: digitsOnly(engineNumber),
         }),
       });
       const notas = [
@@ -473,14 +493,23 @@ export function AutoQuoteNative({ onBack }: { onBack: () => void }) {
                 />
               </Field>
             )}
-            <Field label="N° de chasis (opcional)" invalid={false}>
-              <input className="field" value={vin} onChange={(e) => setVin(e.target.value.toUpperCase())} />
-            </Field>
-            <Field label="N° de motor (opcional)" invalid={false}>
+            <Field label="N° de chasis" invalid={touched && !isVin(vin)}>
               <input
                 className="field"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="10 dígitos"
+                value={vin}
+                onChange={(e) => setVin(digitsOnly(e.target.value).slice(0, 10))}
+              />
+            </Field>
+            <Field label="N° de motor" invalid={touched && !isEngineNumber(engineNumber)}>
+              <input
+                className="field"
+                inputMode="numeric"
+                placeholder="Mínimo 6 dígitos"
                 value={engineNumber}
-                onChange={(e) => setEngineNumber(e.target.value.toUpperCase())}
+                onChange={(e) => setEngineNumber(digitsOnly(e.target.value))}
               />
             </Field>
           </div>
