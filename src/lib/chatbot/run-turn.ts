@@ -1,26 +1,27 @@
 import {
-  buildNotas,
   detectsHealthCoverageIntent,
   detectsQuoteIntent,
   emptyQuoteState,
+  isDeterministicQuoteInput,
   isGreeting,
-  isSaludHandoffReady,
   menuForChannel,
   processQuoteFlow,
   processQuoteFlowBatch,
+  resumeQuoteState,
   stripMarkdownNoise,
   type QuoteQuickReply,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
 import {
+  classifyQuoteIntent,
+  intentAdvancesQuote,
+  mergeIntentIntoState,
+} from "@/lib/chatbot/classify-intent";
+import {
   updateLeadOptionalFromQuote,
   upsertHotLeadFromQuote,
 } from "@/lib/chatbot/persist-lead";
-import { CHATBOT_SYSTEM_PROMPT } from "@/lib/chatbot/prompt";
-import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
-import OpenAI from "openai";
-
-const DEEPSEEK_PRO = "deepseek-v4-pro";
+import { getChatAi } from "@/lib/chatbot/ai-client";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -31,33 +32,6 @@ export type ChatTurnResult = {
   mode: "quote" | "rag";
   error?: string;
 };
-
-function getClient() {
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  if (deepseekKey) {
-    return {
-      client: new OpenAI({
-        apiKey: deepseekKey,
-        baseURL: "https://api.deepseek.com",
-      }),
-      model: DEEPSEEK_PRO,
-      provider: "deepseek" as const,
-    };
-  }
-
-  if (process.env.OPENAI_API_KEY) {
-    return {
-      client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-      model:
-        process.env.OPENAI_CHAT_MODEL ||
-        process.env.AI_CHAT_MODEL ||
-        "gpt-4o-mini",
-      provider: "openai" as const,
-    };
-  }
-
-  return null;
-}
 
 async function persistQuoteSideEffects(state: QuoteState): Promise<QuoteState> {
   const next = { ...state, data: { ...state.data } };
@@ -105,6 +79,33 @@ async function skipWhatsappIfKnown(
   };
 }
 
+async function finishQuoteResult(
+  quote: { answer?: string; state: QuoteState; quickReplies?: QuoteQuickReply[] },
+  channel?: QuoteState["channel"],
+  knownPhone?: string
+): Promise<ChatTurnResult> {
+  let state = await persistQuoteSideEffects(withChannel(quote.state, channel));
+  const skipped = await skipWhatsappIfKnown(
+    state,
+    quote.answer || "",
+    quote.quickReplies || [],
+    knownPhone,
+    channel
+  );
+  state = skipped.state;
+  let answer = skipped.answer;
+  if ((state as QuoteState & { persistError?: boolean }).persistError) {
+    answer += " No pude guardar en el CRM; reintentá en un momento.";
+    delete (state as QuoteState & { persistError?: boolean }).persistError;
+  }
+  return {
+    answer: stripMarkdownNoise(answer),
+    quoteState: state,
+    quickReplies: skipped.quickReplies,
+    mode: "quote",
+  };
+}
+
 export async function runChatTurn(input: {
   message: string;
   history?: ChatMessage[];
@@ -127,6 +128,14 @@ export async function runChatTurn(input: {
     input.quoteState || emptyQuoteState(),
     input.channel
   );
+  const history = (input.history || [])
+    .filter(
+      (m) =>
+        (m.role === "user" || m.role === "assistant") &&
+        typeof m.content === "string" &&
+        m.content.trim().length > 0
+    )
+    .slice(-12);
 
   if (input.channel === "whatsapp" && !prevState.active && isGreeting(message)) {
     return {
@@ -165,34 +174,73 @@ export async function runChatTurn(input: {
     }
   }
 
-  const quote = await processQuoteFlow(message, prevState, input.channel);
-  if (quote.handled && quote.answer) {
-    let state = await persistQuoteSideEffects(withChannel(quote.state, input.channel));
-    const skipped = await skipWhatsappIfKnown(
-      state,
-      quote.answer,
-      quote.quickReplies || [],
-      input.knownPhone,
-      input.channel
-    );
-    state = skipped.state;
-    quote.answer = skipped.answer;
-    quote.quickReplies = skipped.quickReplies;
-    let answer = quote.answer;
-    if ((state as QuoteState & { persistError?: boolean }).persistError) {
-      answer += " No pude guardar en el CRM; reintentá en un momento.";
-      delete (state as QuoteState & { persistError?: boolean }).persistError;
+  const deterministic = isDeterministicQuoteInput(message, prevState);
+  if (deterministic || prevState.active) {
+    const quote = await processQuoteFlow(message, prevState, input.channel);
+    if (quote.handled && quote.answer) {
+      return finishQuoteResult(quote, input.channel, input.knownPhone);
     }
-    return {
-      answer: stripMarkdownNoise(answer),
-      quoteState: state,
-      quickReplies: quote.quickReplies || [],
-      mode: "quote",
-    };
   }
 
-  const ai = getClient();
-  if (!ai) {
+  const classified = await classifyQuoteIntent({
+    message,
+    history,
+    state: prevState,
+  });
+
+  if (classified) {
+    if (classified.intent === "cancel") {
+      return {
+        answer:
+          classified.reply ||
+          "Queda pausado. Cuando quieras seguimos con los datos que ya anoté.",
+        quoteState: { ...prevState, active: false, step: prevState.step === "done" ? "done" : "idle" },
+        quickReplies: menuForChannel(input.channel),
+        mode: "quote",
+      };
+    }
+
+    const merged = mergeIntentIntoState(prevState, classified);
+    const questionOnly =
+      (classified.intent === "question" || classified.intent === "other") &&
+      classified.reply &&
+      !intentAdvancesQuote(classified);
+
+    if (questionOnly) {
+      return {
+        answer: stripMarkdownNoise(classified.reply || ""),
+        quoteState: prevState,
+        quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+        mode: "rag",
+      };
+    }
+
+    if (intentAdvancesQuote(classified) || classified.intent === "quote") {
+      const resumed = await resumeQuoteState(withChannel(merged, input.channel));
+      if (resumed?.handled && resumed.answer) {
+        return finishQuoteResult(resumed, input.channel, input.knownPhone);
+      }
+    }
+
+    if (classified.reply) {
+      return {
+        answer: stripMarkdownNoise(classified.reply),
+        quoteState: merged,
+        quickReplies:
+          input.channel === "whatsapp" && !merged.active
+            ? menuForChannel("whatsapp")
+            : [],
+        mode: classified.intent === "quote" ? "quote" : "rag",
+      };
+    }
+  }
+
+  const quote = await processQuoteFlow(message, prevState, input.channel);
+  if (quote.handled && quote.answer) {
+    return finishQuoteResult(quote, input.channel, input.knownPhone);
+  }
+
+  if (!getChatAi()) {
     return {
       answer: "El asistente no está configurado todavía. Escribinos por WhatsApp.",
       quoteState: prevState,
@@ -202,57 +250,16 @@ export async function runChatTurn(input: {
     };
   }
 
-  const history = (input.history || [])
-    .filter(
-      (m) =>
-        (m.role === "user" || m.role === "assistant") &&
-        typeof m.content === "string" &&
-        m.content.trim().length > 0
-    )
-    .slice(-10);
-
-  const qualified = isSaludHandoffReady(prevState);
-  const allowSpecificPlans = qualified || !detectsHealthCoverageIntent(message);
-  const chunks = allowSpecificPlans ? retrieveChunks(message, 6) : [];
-  const context = formatContext(chunks);
-  const leadNotes = buildNotas(prevState.data);
-
-  const completion = await ai.client.chat.completions.create({
-    model: ai.model,
-    temperature: 0.2,
-    max_tokens: qualified ? 420 : 220,
-    messages: [
-      { role: "system", content: CHATBOT_SYSTEM_PROMPT },
-      {
-        role: "system",
-        content: `CALIFICADO=${qualified ? "si" : "no"}\nDATOS DEL LEAD:\n${leadNotes || "sin datos todavía"}\n\nCONTEXTO:\n${context || "sin contexto específico"}`,
-      },
-      ...history.map((m) => ({
-        role: m.role,
-        content: m.content.slice(0, 1500),
-      })),
-      { role: "user", content: message },
-    ],
-    ...(ai.provider === "deepseek"
-      ? ({ thinking: { type: "disabled" } } as Record<string, unknown>)
-      : {}),
-  } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
-
-  const answer = stripMarkdownNoise(
-    completion.choices[0]?.message?.content?.trim() ||
-      "No pude responder. Probá de nuevo o escribinos por WhatsApp."
-  );
-
   const menu = menuForChannel(input.channel);
   return {
-    answer,
+    answer: "No te seguí. ¿Cotizamos un seguro, vemos salud o viajero?",
     quoteState: prevState,
     quickReplies:
       input.channel === "whatsapp" && !prevState.active
         ? menu
-        : detectsQuoteIntent(message)
+        : detectsQuoteIntent(message) || detectsHealthCoverageIntent(message)
           ? [{ label: "Quiero cotizar", value: "Quiero cotizar" }]
-          : [],
+          : menu,
     mode: "rag",
   };
 }

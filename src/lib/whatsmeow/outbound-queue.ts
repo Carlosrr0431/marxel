@@ -124,6 +124,34 @@ async function findPendingByDedup(agentCode: string, dedupKey: string) {
   return data?.id ? String(data.id) : null;
 }
 
+export async function cancelPendingOutboundPolls(to: string) {
+  const dest = String(to || "").trim();
+  if (!dest) return 0;
+  try {
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
+      .from("whatsapp_outbound_queue")
+      .update({
+        status: "failed",
+        last_error: "stale_poll",
+        claimed_at: null,
+        claimed_by: null,
+      })
+      .eq("dest", dest)
+      .eq("kind", "poll")
+      .eq("status", "pending")
+      .select("id");
+    if (error) {
+      console.warn("[whatsapp-queue] cancel polls", error.message);
+      return 0;
+    }
+    return data?.length || 0;
+  } catch (err) {
+    console.warn("[whatsapp-queue] cancel polls", err);
+    return 0;
+  }
+}
+
 export async function enqueueWhatsappOutbound({
   agentCode,
   to,

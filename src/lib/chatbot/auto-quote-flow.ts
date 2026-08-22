@@ -20,6 +20,7 @@ export const AUTO_MORE = "auto:more";
 export const AUTO_RETRY = "auto:retry";
 
 const YEAR_LIMIT = 30;
+const YEAR_TOKEN = /^(auto:year:)?((?:19|20)\d{2})(-0km)?$/i;
 const moneyFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 
 function money(n: number) {
@@ -108,6 +109,31 @@ function parseYearId(id: string) {
   };
 }
 
+export function parseYearFromText(text: string): { year: number; is0km: boolean } | null {
+  const raw = text.trim();
+  const token = raw.match(YEAR_TOKEN);
+  if (token) {
+    const year = Number(token[2]);
+    if (!year) return null;
+    return { year, is0km: Boolean(token[3]) || /\b0\s*km\b/i.test(raw) };
+  }
+  const n = fold(raw);
+  const km = /\b0\s*km\b|\b0km\b/.test(n);
+  const m = n.match(/\b((?:19|20)\d{2})\b/);
+  if (!m) return null;
+  const rest = n
+    .replace(m[0], "")
+    .replace(/\b0\s*km\b|\b0km\b/g, "")
+    .replace(/\b(año|anio|del|de|el|la|auto|es|un|una|modelo)\b/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .trim();
+  if (rest.length > 2) return null;
+  const year = Number(m[1]);
+  const current = new Date().getFullYear();
+  if (year < current - YEAR_LIMIT || year > current + 1) return null;
+  return { year, is0km: km };
+}
+
 function carLine(data: QuoteData) {
   const auto = data.auto;
   if (!auto) return "";
@@ -151,20 +177,19 @@ function failCatalog(data: QuoteData, step: QuoteState["step"], answer: string):
   };
 }
 
-export function startAutoQuote(
+export async function startAutoQuote(
   data: QuoteData = {},
   channel?: QuoteState["channel"]
-): QuoteFlowResult {
-  const result = askYear(
-    {
-      ...data,
-      producto: "seguros",
-      seguroGrupo: "auto",
-      auto: { page: 0 },
-    },
-    0,
-    channel
-  );
+): Promise<QuoteFlowResult> {
+  const next = {
+    ...data,
+    producto: "seguros" as const,
+    seguroGrupo: "auto" as const,
+    auto: { page: 0, ...(data.auto || {}) },
+  };
+  const result = next.auto?.year
+    ? await askBrand(next, 0, channel)
+    : askYear(next, 0, channel);
   if (channel) result.state.channel = channel;
   return result;
 }
@@ -180,7 +205,10 @@ function askYear(data: QuoteData, page = 0, channel?: QuoteState["channel"]): Qu
   return {
     handled: true,
     state: { active: true, step: "auto_anio", data: next },
-    answer: "¿De qué año es el auto?",
+    answer:
+      channel === "whatsapp"
+        ? "¿De qué año es el auto? Escribí el año, por ejemplo 2020 o 2020 0km."
+        : "¿De qué año es el auto?",
     quickReplies: paged.replies,
   };
 }
@@ -211,7 +239,10 @@ async function askBrand(
     return {
       handled: true,
       state: { active: true, step: "auto_marca", data: next },
-      answer: "¿Qué marca es?",
+      answer:
+        channel === "whatsapp"
+          ? "¿Qué marca es? Escribí la marca, por ejemplo Toyota o Volkswagen."
+          : "¿Qué marca es?",
       quickReplies: paged.replies,
     };
   } catch {
@@ -246,7 +277,10 @@ async function askModel(
     return {
       handled: true,
       state: { active: true, step: "auto_modelo", data: next },
-      answer: "¿Qué modelo es?",
+      answer:
+        channel === "whatsapp"
+          ? "¿Qué modelo es? Escribí el modelo, por ejemplo Gol o Corolla."
+          : "¿Qué modelo es?",
       quickReplies: paged.replies,
     };
   } catch {
@@ -282,7 +316,10 @@ async function askVersion(
     return {
       handled: true,
       state: { active: true, step: "auto_version", data: next },
-      answer: "¿Qué versión es?",
+      answer:
+        channel === "whatsapp"
+          ? "¿Qué versión es? Escribí la versión, o parte del nombre."
+          : "¿Qué versión es?",
       quickReplies: paged.replies,
     };
   } catch {
@@ -471,6 +508,32 @@ async function reask(
   return askYear(data, 0, channel);
 }
 
+export async function continueAutoQuote(state: QuoteState): Promise<QuoteFlowResult> {
+  const data = cloneAuto(state.data);
+  const channel = state.channel;
+  if (!data.auto?.year) return askYear(data, data.auto?.page || 0, channel);
+  if (!data.auto.brand) return askBrand(data, 0, channel);
+  if (!data.auto.model) return askModel(data, 0, channel);
+  if (!data.auto.version) return askVersion(data, 0, channel);
+  if (!data.auto.cp) return askCp(data);
+  if (!data.auto.location) return afterCp(data, channel);
+  if (!data.nombre) {
+    const result = askNombre(data);
+    if (channel) result.state.channel = channel;
+    return result;
+  }
+  if (!data.celular) {
+    return {
+      handled: true,
+      state: { ...state, active: true, step: "whatsapp", data, channel },
+      answer: data.nombre
+        ? `Gracias, ${data.nombre.split(/\s+/)[0]}. Dejanos tu WhatsApp, con código de área.`
+        : "Dejanos tu WhatsApp, con código de área, para enviarte las opciones.",
+    };
+  }
+  return submitAutoQuote({ ...state, active: true, data, channel });
+}
+
 export function isAutoQuoteStep(step: QuoteState["step"]): boolean {
   return (
     step === "auto_anio" ||
@@ -496,6 +559,14 @@ export async function handleAutoQuoteStep(
   }
   if (text === AUTO_RETRY) {
     return reask(state.step, data, page, channel);
+  }
+
+  if (state.step === "auto_anio") {
+    const parsed = parseYearFromText(text);
+    if (parsed) {
+      data.auto = { year: parsed.year, is0km: parsed.is0km, page: 0 };
+      return askBrand(data, 0, channel);
+    }
   }
 
   if (state.step === "auto_plan") {
@@ -557,13 +628,7 @@ export async function handleAutoQuoteStep(
 
   const hit = matchReply(text, items);
   if (!hit) {
-    return reask(state.step, data, page, channel).then((result) => ({
-      ...result,
-      answer:
-        result.answer && items.length
-          ? `No encontré esa opción. ${result.answer}`
-          : result.answer,
-    }));
+    return { handled: false, state: { ...state, data } };
   }
 
   if (state.step === "auto_anio") {

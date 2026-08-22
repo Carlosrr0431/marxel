@@ -16,6 +16,7 @@ import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/what
 import {
   detectsQuoteIntent,
   isGreeting,
+  shouldSendWhatsappPoll,
 } from "@/lib/chatbot/quote-flow";
 import { whatsappAgentGate } from "@/lib/whatsmeow/agent-control";
 
@@ -94,9 +95,18 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     { role: "assistant" as const, content: result.answer },
   ].slice(-20);
 
-  const pollOptions = pollOptionsFromReplies(result.quickReplies);
+  const pollOptions = shouldSendWhatsappPoll(result.quoteState.step, result.quickReplies)
+    ? pollOptionsFromReplies(result.quickReplies)
+    : [];
   const agentCode = getWhatsmeowAgentCode();
   const hasPoll = pollOptions.length >= 2;
+
+  try {
+    const { cancelPendingOutboundPolls } = await import("@/lib/whatsmeow/outbound-queue");
+    await cancelPendingOutboundPolls(dest);
+  } catch {
+    // si la cola no está, el poll previo puede llegar tarde; el flujo igual conserva contexto
+  }
 
   if (result.answer) {
     const sent = await sendWhatsmeowText(agentCode, dest, result.answer, {

@@ -8,8 +8,12 @@ import type {
 import {
   handleAutoQuoteStep,
   isAutoQuoteStep,
+  parseYearFromText,
   startAutoQuote,
   submitAutoQuote,
+  continueAutoQuote,
+  AUTO_MORE,
+  AUTO_RETRY,
 } from "@/lib/chatbot/auto-quote-flow";
 
 export type ModalidadQuote =
@@ -364,42 +368,47 @@ function startSeguros(data: QuoteData = {}): QuoteFlowResult {
   };
 }
 
-function startSalud(): QuoteFlowResult {
+function startSalud(data: QuoteData = {}): QuoteFlowResult {
   return {
     handled: true,
-    state: { active: true, step: "laboral", data: { producto: "salud" } },
+    state: { active: true, step: "laboral", data: { ...data, producto: "salud" } },
     answer: SALUD_PITCH,
     quickReplies: LABORAL_REPLIES,
   };
 }
 
-function startViajero(): QuoteFlowResult {
+function startViajero(data: QuoteData = {}): QuoteFlowResult {
   return {
     handled: true,
-    state: { active: true, step: "viajero_destino", data: { producto: "viajero" } },
+    state: { active: true, step: "viajero_destino", data: { ...data, producto: "viajero" } },
     answer: "¿Cuál es tu destino y las fechas aproximadas de viaje?",
   };
 }
 
-function startFromMessage(text: string, channel?: QuoteState["channel"]): QuoteFlowResult {
-  if (text === MENU_SALUD || detectsHealthCoverageIntent(text)) return startSalud();
-  if (text === MENU_SEGUROS) return startSeguros();
-  if (text === MENU_VIAJERO) return startViajero();
+async function startFromMessage(
+  text: string,
+  channel?: QuoteState["channel"],
+  keep: QuoteData = {}
+): Promise<QuoteFlowResult> {
+  const base = contactKeep(keep);
+  if (text === MENU_SALUD || detectsHealthCoverageIntent(text)) return startSalud(base);
+  if (text === MENU_SEGUROS) return startSeguros(base);
+  if (text === MENU_VIAJERO) return startViajero(base);
 
   const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/viajer|viaje/.test(t)) return startViajero();
-  if (/salud|prepaga|obra\s+social/.test(t)) return startSalud();
+  if (/viajer|viaje/.test(t)) return startViajero(base);
+  if (/salud|prepaga|obra\s+social/.test(t)) return startSalud(base);
   if (/seguro|auto|moto|hogar|comercio|praxis|\bart\b/.test(t)) {
     const grupo = normalizeSeguro(text);
-    if (grupo === "auto") return startAutoQuote({ producto: "seguros", seguroGrupo: "auto" }, channel);
+    if (grupo === "auto") return startAutoQuote({ ...base, producto: "seguros", seguroGrupo: "auto" }, channel);
     return grupo
-      ? askSeguroDetalle({ producto: "seguros", seguroGrupo: grupo })
-      : startSeguros();
+      ? askSeguroDetalle({ ...base, producto: "seguros", seguroGrupo: grupo })
+      : startSeguros(base);
   }
 
   return {
     handled: true,
-    state: { active: true, step: "producto", data: {} },
+    state: { active: true, step: "producto", data: base },
     answer: "¿En qué te puedo ayudar hoy?",
     quickReplies: PRODUCT_REPLIES,
   };
@@ -447,7 +456,7 @@ function finishQuote(state: QuoteState, extra?: string): QuoteFlowResult {
 /**
  * Flujo corto: una sola pregunta por mensaje.
  */
-function cloneQuoteState(prev: QuoteState): QuoteState {
+export function cloneQuoteState(prev: QuoteState): QuoteState {
   return {
     ...prev,
     data: {
@@ -455,6 +464,43 @@ function cloneQuoteState(prev: QuoteState): QuoteState {
       auto: prev.data.auto ? { ...prev.data.auto } : undefined,
     },
   };
+}
+
+function contactKeep(data?: QuoteData): QuoteData {
+  return {
+    nombre: data?.nombre,
+    celular: data?.celular,
+    localidad: data?.localidad,
+  };
+}
+
+export function shouldSendWhatsappPoll(step: QuoteStep, replies: QuoteQuickReply[] = []): boolean {
+  if (replies.length < 2 || replies.length > 6) return false;
+  if (
+    step === "auto_anio" ||
+    step === "auto_marca" ||
+    step === "auto_modelo" ||
+    step === "auto_version" ||
+    step === "auto_localidad"
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function isDeterministicQuoteInput(text: string, state?: QuoteState | null): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/^(menu:|auto:)/i.test(t) || t === AUTO_MORE || t === AUTO_RETRY) return true;
+  if (t === MENU_SEGUROS || t === MENU_SALUD || t === MENU_VIAJERO || t === MENU_WHATSAPP) return true;
+  if (SEGURO_REPLIES.some((item) => item.value === t || item.label === t)) return true;
+  if (LABORAL_REPLIES.some((item) => item.value === t || item.label === t)) return true;
+  if (GRUPO_REPLIES.some((item) => item.value === t || item.label === t)) return true;
+  if (QUOTE_RESTART.test(t)) return true;
+  if (state?.step === "auto_anio" && parseYearFromText(t)) return true;
+  if (state?.step === "auto_cp" && t.replace(/\D/g, "").length === 4) return true;
+  if (state?.step === "whatsapp" && extractPhone(t)) return true;
+  return false;
 }
 
 export async function processQuoteFlow(
@@ -486,10 +532,10 @@ export async function processQuoteFlow(
     QUOTE_RESTART.test(text) ||
     (!prev?.active && detectsQuoteIntent(text))
   ) {
-    return startFromMessage(text, channel);
+    return startFromMessage(text, channel, prev?.data || {});
   }
 
-  const state: QuoteState = prev?.active ? cloneQuoteState(prev) : emptyQuoteState();
+  const state: QuoteState = prev ? cloneQuoteState(prev) : emptyQuoteState();
   if (channel) state.channel = channel;
 
   if (!state.active) {
@@ -501,7 +547,7 @@ export async function processQuoteFlow(
       return { handled: false, state: prev || emptyQuoteState() };
     }
     if (detectsQuoteIntent(text) || detectsHealthCoverageIntent(text)) {
-      return startFromMessage(text, channel);
+      return startFromMessage(text, channel, prev?.data || {});
     }
     return { handled: false, state };
   }
@@ -509,18 +555,19 @@ export async function processQuoteFlow(
   if (/^(cancelar|salir|dejar\s+cotiz|menu|men[uú])$/i.test(text)) {
     return {
       handled: true,
-      state: emptyQuoteState(),
-      answer: "Entendido. Cuando quieras, elegí una opción del menú.",
-      quickReplies: PRODUCT_REPLIES,
+      state: { ...state, active: false, step: "idle" },
+      answer: "Queda pausado. Cuando quieras seguimos con los datos que ya anoté.",
+      quickReplies: menuForChannel(channel),
     };
   }
 
   switch (state.step) {
     case "producto":
-      return startFromMessage(text, channel);
+      return startFromMessage(text, channel, state.data);
 
     case "seguro_tipo": {
-      const grupo = normalizeSeguro(text);
+      const year = parseYearFromText(text);
+      const grupo = normalizeSeguro(text) || (year ? "auto" : null);
       if (!grupo) {
         return {
           handled: true,
@@ -530,7 +577,16 @@ export async function processQuoteFlow(
         };
       }
       if (grupo === "auto") {
-        return startAutoQuote({ ...state.data, seguroGrupo: "auto" }, channel);
+        return startAutoQuote(
+          {
+            ...state.data,
+            seguroGrupo: "auto",
+            auto: year
+              ? { ...state.data.auto, year: year.year, is0km: year.is0km, page: 0 }
+              : state.data.auto,
+          },
+          channel
+        );
       }
       return askSeguroDetalle({ ...state.data, seguroGrupo: grupo });
     }
@@ -733,7 +789,7 @@ export async function processQuoteFlow(
       if (isAutoQuoteStep(state.step)) {
         return handleAutoQuoteStep(text, state);
       }
-      return { handled: false, state: emptyQuoteState() };
+      return { handled: false, state };
   }
 }
 
@@ -759,6 +815,67 @@ export async function processQuoteFlowBatch(
   }
 
   return lastResult;
+}
+
+export async function resumeQuoteState(state: QuoteState): Promise<QuoteFlowResult | null> {
+  const data = state.data;
+  const channel = state.channel;
+  if (data.producto === "seguros" && (data.seguroGrupo === "auto" || data.auto?.year)) {
+    return continueAutoQuote({ ...state, active: true, data: { ...data, producto: "seguros", seguroGrupo: "auto" } });
+  }
+  if (data.producto === "seguros" && !data.seguroGrupo) return startSeguros(data);
+  if (data.producto === "seguros" && !data.seguroDetalle) return askSeguroDetalle(data);
+  if (data.producto === "salud") {
+    if (!data.modalidad) return startSalud(data);
+    if (data.modalidad !== "particular" && !data.monotributoCategoria && !data.sueldoBruto) {
+      return {
+        handled: true,
+        state: { ...state, active: true, step: "laboral_detalle", data, channel },
+        answer:
+          data.modalidad === "monotributo"
+            ? "¿Qué categoría de monotributo tenés? (A, B, C...)"
+            : "¿Más o menos cuánto es tu sueldo bruto? Un aproximado alcanza.",
+      };
+    }
+    if (!data.grupoFamiliar) {
+      return {
+        handled: true,
+        state: { ...state, active: true, step: "grupo", data, channel },
+        answer: "¿Para cuántas personas es la cobertura?",
+        quickReplies: GRUPO_REPLIES,
+      };
+    }
+    if (!data.edades) {
+      return {
+        handled: true,
+        state: { ...state, active: true, step: "edades", data, channel },
+        answer:
+          data.grupoFamiliar === "Individual"
+            ? "¿Cuántos años tenés?"
+            : "¿Cuántos años tenés? Si hay más personas en el grupo, incluí sus edades también.",
+      };
+    }
+    if (!data.uso) {
+      return {
+        handled: true,
+        state: { ...state, active: true, step: "uso", data, channel },
+        answer: "¿Qué estás buscando principalmente? Psicología, ortodoncia, kinesiología, internaciones u otra cobertura.",
+      };
+    }
+  }
+  if (data.producto === "viajero" && !data.viajeroDestino) return startViajero(data);
+  if ((data.producto || state.active) && !data.nombre) return askNombre(data);
+  if (data.nombre && !data.celular) {
+    return {
+      handled: true,
+      state: { ...state, active: true, step: "whatsapp", data, channel },
+      answer: `Gracias, ${firstName(data.nombre)}. Dejanos tu WhatsApp, con código de área, para enviarte las opciones.`,
+    };
+  }
+  if (data.celular && !data.localidad) {
+    return afterWhatsapp({ ...state, active: true, data, channel });
+  }
+  return null;
 }
 
 export function parseEdadTitular(edades: string | undefined): number | null {
