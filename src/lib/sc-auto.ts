@@ -1,4 +1,5 @@
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+import { fetchClasificVehicle } from "@/lib/clasific";
 
 const SC_API = "https://api.sancristobal.com.ar/marketing-marketing/api";
 const PRODUCER_URL = "marxen-seguros";
@@ -418,6 +419,185 @@ export async function listAutoVersions(
   return asArray(data, ["versions", "value"])
     .map((row) => row as AutoVersion)
     .filter((item) => Number(item?.id) > 0);
+}
+
+export type PlateLookupResult = {
+  plate: string;
+  kind: "auto" | "moto";
+  found: boolean;
+  description?: string;
+  year?: number;
+  brand?: AutoCatalogItem;
+  model?: AutoCatalogItem;
+  version?: AutoVersion;
+  brands?: AutoCatalogItem[];
+  models?: AutoCatalogItem[];
+  versions?: AutoVersion[];
+  message?: string;
+};
+
+function foldKey(text: string) {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function matchScore(candidate: string, query: string) {
+  const a = foldKey(candidate);
+  const b = foldKey(query);
+  if (!a || !b) return 0;
+  if (a === b) return 100;
+  if (b.startsWith(a) || a.startsWith(b)) return 90;
+  if (b.includes(a) || a.includes(b)) return 75;
+  return 0;
+}
+
+function pickBest<T>(items: T[], query: string, label: (item: T) => string): T | null {
+  let best: T | null = null;
+  let bestScore = 0;
+  let bestLen = 0;
+  for (const item of items) {
+    const name = label(item);
+    const score = matchScore(name, query);
+    const len = foldKey(name).length;
+    if (score > bestScore || (score === bestScore && score > 0 && len > bestLen)) {
+      best = item;
+      bestScore = score;
+      bestLen = len;
+    }
+  }
+  return bestScore >= 75 ? best : null;
+}
+
+export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupResult> {
+  const plate = normalizeArPlate(rawPlate);
+  const kind = classifyArPlate(plate);
+  if (kind !== "auto" && kind !== "moto") {
+    throw new AutoQuoteError("Ingresá una patente válida", 400);
+  }
+
+  let vehicle;
+  try {
+    vehicle = await fetchClasificVehicle(plate);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "No se pudo consultar la patente";
+    if (/CLASIFICAR_API_KEY/.test(message)) {
+      throw new AutoQuoteError("Falta configurar la API de Clasificar", 500);
+    }
+    throw new AutoQuoteError(message, 502);
+  }
+
+  if (!vehicle) {
+    return {
+      plate,
+      kind,
+      found: false,
+      message: "No está en la base de Clasificar. Completá año, marca y modelo.",
+    };
+  }
+
+  const description = `${vehicle.make} ${vehicle.model} ${vehicle.year}`.trim();
+  const type = foldKey(vehicle.vehicleType || "");
+  const category = foldKey(vehicle.vehicleCategory || "");
+  const isMoto =
+    kind === "moto" ||
+    type === "moto" ||
+    type === "motovehiculo" ||
+    category === "moto" ||
+    category === "motovehiculo";
+  if (isMoto) {
+    return {
+      plate,
+      kind: "moto",
+      found: true,
+      description,
+      year: vehicle.year,
+      message: "Esta patente es de moto. Cotizala en el cotizador de motos.",
+    };
+  }
+
+  const minYear = new Date().getFullYear() - 30;
+  if (vehicle.year < minYear) {
+    return {
+      plate,
+      kind: "auto",
+      found: true,
+      description,
+      year: vehicle.year,
+      message: `El auto es ${vehicle.year}. San Cristóbal cotiza hasta ${minYear}.`,
+    };
+  }
+
+  const brands = await listAutoBrands(vehicle.year);
+  const brand = pickBest(brands, vehicle.make, (item) => item.description);
+  if (!brand) {
+    return {
+      plate,
+      kind: "auto",
+      found: true,
+      description,
+      year: vehicle.year,
+      brands,
+      message: `Encontramos ${description}. Elegí marca, modelo y versión.`,
+    };
+  }
+
+  const models = await listAutoModels(vehicle.year, brand.id);
+  const model =
+    pickBest(models, vehicle.model, (item) => item.description) ||
+    pickBest(models, `${vehicle.make} ${vehicle.model}`, (item) => item.description);
+  if (!model) {
+    return {
+      plate,
+      kind: "auto",
+      found: true,
+      description,
+      year: vehicle.year,
+      brand,
+      brands,
+      models,
+      message: `Encontramos ${description}. Elegí modelo y versión.`,
+    };
+  }
+
+  const versions = await listAutoVersions(vehicle.year, brand.id, model.id);
+  const version =
+    pickBest(
+      versions,
+      vehicle.model,
+      (item) => `${item.description} ${item.fullCarDescripcion || ""}`
+    ) || versions[0] || null;
+  if (!version) {
+    return {
+      plate,
+      kind: "auto",
+      found: true,
+      description,
+      year: vehicle.year,
+      brand,
+      model,
+      brands,
+      models,
+      versions,
+      message: `Encontramos ${description}. Elegí la versión.`,
+    };
+  }
+
+  return {
+    plate,
+    kind: "auto",
+    found: true,
+    description,
+    year: vehicle.year,
+    brand,
+    model,
+    version,
+    brands,
+    models,
+    versions,
+  };
 }
 
 export async function listAutoLocations(postalCode: string): Promise<AutoLocation[]> {

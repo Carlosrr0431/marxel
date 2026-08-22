@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   AutoQuoteError,
   fetchAutoCatalog,
+  lookupAutoByPlate,
   lookupPersonByDni,
   quoteAutoVehicle,
   registerAutoQuoteWithProducer,
@@ -20,6 +21,10 @@ export async function GET(req: Request) {
     if (kind === "dni") {
       const person = await lookupPersonByDni(url.searchParams.get("dni") || "");
       return NextResponse.json({ person });
+    }
+    if (kind === "plate") {
+      const data = await lookupAutoByPlate(url.searchParams.get("plate") || "");
+      return NextResponse.json(data);
     }
     const data = await fetchAutoCatalog({
       kind,

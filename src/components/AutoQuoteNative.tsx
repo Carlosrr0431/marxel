@@ -139,6 +139,9 @@ export function AutoQuoteNative({
   const [quoting, setQuoting] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
+  const [lookupKey, setLookupKey] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupHint, setLookupHint] = useState("");
 
   const year = parseYear(yearId);
   const is0km = yearId.endsWith("-0km");
@@ -151,8 +154,8 @@ export function AutoQuoteNative({
   const ageNum = Number(age);
 
   useEffect(() => {
-    if (!yearId) {
-      setBrands([]);
+    if (!yearId || lookupKey) {
+      if (!yearId) setBrands([]);
       return;
     }
     let cancelled = false;
@@ -173,11 +176,11 @@ export function AutoQuoteNative({
     return () => {
       cancelled = true;
     };
-  }, [yearId, year]);
+  }, [yearId, year, lookupKey]);
 
   useEffect(() => {
-    if (!yearId || !brandId) {
-      setModels([]);
+    if (!yearId || !brandId || lookupKey) {
+      if (!yearId || !brandId) setModels([]);
       return;
     }
     let cancelled = false;
@@ -198,11 +201,11 @@ export function AutoQuoteNative({
     return () => {
       cancelled = true;
     };
-  }, [yearId, year, brandId]);
+  }, [yearId, year, brandId, lookupKey]);
 
   useEffect(() => {
-    if (!yearId || !brandId || !modelId) {
-      setVersions([]);
+    if (!yearId || !brandId || !modelId || lookupKey) {
+      if (!yearId || !brandId || !modelId) setVersions([]);
       return;
     }
     let cancelled = false;
@@ -221,7 +224,7 @@ export function AutoQuoteNative({
     return () => {
       cancelled = true;
     };
-  }, [yearId, year, brandId, modelId]);
+  }, [yearId, year, brandId, modelId, lookupKey]);
 
   useEffect(() => {
     if (postalCode.length !== 4) {
@@ -267,6 +270,75 @@ export function AutoQuoteNative({
       cancelled = true;
     };
   }, [dni]);
+
+  useEffect(() => {
+    if (is0km || plateKind !== "auto") {
+      setLookingUp(false);
+      return;
+    }
+    let cancelled = false;
+    setLookingUp(true);
+    setLookupHint("");
+    const timer = window.setTimeout(() => {
+      fetchJson(`/api/sc-auto?${new URLSearchParams({ kind: "plate", plate })}`)
+        .then((data) => {
+          if (cancelled) return;
+          if (data.kind === "moto") {
+            setLookupKey("");
+            setLookupHint(data.message || data.description || "");
+            onSwitchToMoto?.(plate);
+            return;
+          }
+          if (!data.found) {
+            setLookupKey("");
+            setLookupHint(data.message || "");
+            return;
+          }
+          const nextYear = data.year ? String(data.year) : "";
+          const nextBrands = ((data.brands || []) as { id: number | string; description: string }[]).map(
+            (item) => ({ id: String(item.id), label: item.description })
+          );
+          const nextModels = ((data.models || []) as { id: number | string; description: string }[]).map(
+            (item) => ({ id: String(item.id), label: item.description })
+          );
+          const nextVersions = (data.versions || []) as Version[];
+          if (data.brand && data.model && data.version && nextBrands.length && nextModels.length && nextVersions.length) {
+            setLookupKey(plate);
+            setYearId(nextYear);
+            setBrands(nextBrands);
+            setBrandId(String(data.brand.id));
+            setModels(nextModels);
+            setModelId(String(data.model.id));
+            setVersions(nextVersions);
+            setVersionId(String(data.version.id));
+            setLookupHint(data.description || "");
+            setError("");
+            return;
+          }
+          setLookupKey("");
+          if (nextYear) setYearId(nextYear);
+          if (nextBrands.length) setBrands(nextBrands);
+          if (data.brand) setBrandId(String(data.brand.id));
+          if (nextModels.length) setModels(nextModels);
+          if (data.model) setModelId(String(data.model.id));
+          if (nextVersions.length) setVersions(nextVersions);
+          setLookupHint(data.message || data.description || "");
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setLookupKey("");
+            setLookupHint(err instanceof Error ? err.message : "No pudimos buscar esa patente.");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLookingUp(false);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [is0km, plate, plateKind]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -565,7 +637,7 @@ export function AutoQuoteNative({
             ¡Asegurá tu auto con hasta 37% Off!
           </h2>
           <p className="mt-3 text-base text-muted">
-            Ingresá la patente, completá el auto y cotizamos en San Cristóbal. Los planes salen al toque.
+            Ingresá la patente: buscamos el auto y cotizamos en San Cristóbal. Los planes salen al toque.
           </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -578,10 +650,19 @@ export function AutoQuoteNative({
                   placeholder="AB123CD"
                   autoComplete="off"
                   value={licensePlate}
-                  onChange={(e) => setLicensePlate(normalizeArPlate(e.target.value))}
+                  onChange={(e) => {
+                    setLookupKey("");
+                    setLookupHint("");
+                    setLicensePlate(normalizeArPlate(e.target.value));
+                  }}
                 />
               </Field>
             )}
+            {lookingUp ? (
+              <p className="sm:col-span-2 text-sm text-muted">Buscando el auto en Clasificar…</p>
+            ) : lookupHint ? (
+              <p className="sm:col-span-2 text-sm text-navy/80">{lookupHint}</p>
+            ) : null}
 
             {plateKind === "moto" ? (
               <div className="sm:col-span-2 rounded-xl border border-sky/20 bg-sky/5 p-4">
@@ -606,6 +687,7 @@ export function AutoQuoteNative({
                 className="field"
                 value={yearId}
                 onChange={(e) => {
+                  setLookupKey("");
                   setYearId(e.target.value);
                   setBrandId("");
                   setModelId("");
@@ -630,6 +712,7 @@ export function AutoQuoteNative({
                 value={brandId}
                 disabled={!brands.length}
                 onChange={(e) => {
+                  setLookupKey("");
                   setBrandId(e.target.value);
                   setModelId("");
                   setVersionId("");
@@ -652,6 +735,7 @@ export function AutoQuoteNative({
                 value={modelId}
                 disabled={!models.length}
                 onChange={(e) => {
+                  setLookupKey("");
                   setModelId(e.target.value);
                   setVersionId("");
                   setVersions([]);
