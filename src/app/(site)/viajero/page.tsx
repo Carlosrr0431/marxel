@@ -4,6 +4,7 @@ import { PageHero, SectionHeading } from "@/components/SectionHeading";
 import { Icon } from "@/components/Icon";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { JsonLd } from "@/components/JsonLd";
+import { GoAssistanceQuote } from "@/components/GoAssistanceQuote";
 import { faqViajero } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
@@ -56,14 +57,16 @@ export default function ViajeroPage() {
         title="Asistencia al viajero desde Salta"
         description="Asistencia médica global, pérdida de equipaje y orientación 24 hs. Elegí tu plan y viajá sin preocupaciones."
         cta={{
-          href: "/cotizar?interes=Asistencia%20al%20viajero",
-          label: "Ver coberturas",
+          href: "#cotizar-viajero",
+          label: "Cotizar ahora",
         }}
         crumbs={[
           { href: "/", label: "Inicio" },
           { href: "/viajero", label: "Viajero" },
         ]}
       />
+
+      <GoAssistanceQuote />
 
       <section className="bg-cloud">
         <div className="container-mx py-14 sm:py-16 lg:py-20">
@@ -131,10 +134,7 @@ export default function ViajeroPage() {
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
               Cotizá en minutos y recibí el asesoramiento por WhatsApp.
             </p>
-            <Link
-              href="/cotizar?interes=Asistencia%20al%20viajero"
-              className="btn btn-primary mt-6"
-            >
+            <Link href="#cotizar-viajero" className="btn btn-primary mt-6">
               Cotizar ahora
             </Link>
           </div>

@@ -145,7 +145,13 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
           <select
             name="interes"
             value={interes}
-            onChange={(e) => setInteres(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setInteres(value);
+              if (!compact && isViajeroInterest(value)) {
+                window.location.assign(`/cotizar?interes=${encodeURIComponent(value)}`);
+              }
+            }}
             className="field"
           >
             <option value="">Asesoramiento general</option>
