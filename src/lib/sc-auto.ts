@@ -474,6 +474,21 @@ function versionHaystack(version: AutoVersion) {
   return foldKey(`${version.description} ${version.fullCarDescripcion || ""}`);
 }
 
+function versionLabel(version: AutoVersion) {
+  return `${version.description} ${version.fullCarDescripcion || ""}`;
+}
+
+function parseEngineSize(text: string) {
+  const match = String(text || "").match(/\b(\d[.,]\d)\b/);
+  return match ? match[1].replace(",", ".") : null;
+}
+
+function versionHasEngine(version: AutoVersion, engine: string) {
+  const [major, minor] = engine.split(".");
+  if (!major || !minor) return false;
+  return new RegExp(`(?:^|[^0-9])${major}[.,]${minor}(?=[^0-9]|$)`).test(versionLabel(version));
+}
+
 const EXCLUSIVE_TRIMS = new Set([
   "country",
   "gti",
@@ -562,19 +577,24 @@ function filterVersionsForVehicle(
 ): AutoVersion[] {
   if (!versions.length) return versions;
 
+  const engine = parseEngineSize(`${vehicle.make} ${vehicle.model}`);
+  let pool = versions;
+  if (engine) {
+    const byEngine = versions.filter((item) => versionHasEngine(item, engine));
+    if (byEngine.length) pool = byEngine;
+  }
+
   const hints = distinctiveHints(vehicle, brand, model);
   const letterHints = hints.filter((token) => /[a-z]/.test(token));
   const useful = letterHints.filter((token) =>
-    versions.some((item) => versionHaystack(item).includes(token))
+    pool.some((item) => versionHaystack(item).includes(token))
   );
 
-  let pool = versions;
   if (useful.length) {
-    pool = versions.filter((item) => useful.every((token) => versionHaystack(item).includes(token)));
-    if (!pool.length) {
-      pool = versions.filter((item) => versionHaystack(item).includes(useful[0]));
-    }
-    if (!pool.length) pool = versions;
+    const byHints = pool.filter((item) =>
+      useful.every((token) => versionHaystack(item).includes(token))
+    );
+    if (byHints.length) pool = byHints;
   }
 
   const queryFold = foldKey(vehicle.model);
