@@ -142,6 +142,7 @@ export function AutoQuoteNative({
   const [lookupKey, setLookupKey] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupHint, setLookupHint] = useState("");
+  const [lookupAlert, setLookupAlert] = useState<"ok" | "info" | "error" | "">("");
   const sortedModels = useMemo(
     () => [...models].sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true })),
     [models]
@@ -292,6 +293,7 @@ export function AutoQuoteNative({
     let cancelled = false;
     setLookingUp(true);
     setLookupHint("");
+    setLookupAlert("");
     const timer = window.setTimeout(() => {
       fetchJson(`/api/sc-auto?${new URLSearchParams({ kind: "plate", plate })}`)
         .then((data) => {
@@ -299,12 +301,14 @@ export function AutoQuoteNative({
           if (data.kind === "moto") {
             setLookupKey("");
             setLookupHint(data.message || data.description || "");
+            setLookupAlert(data.alert || "info");
             onSwitchToMoto?.(plate);
             return;
           }
-          if (!data.found) {
+          if (!data.found || data.alert === "error") {
             setLookupKey("");
             setLookupHint(data.message || "");
+            setLookupAlert(data.alert || "error");
             return;
           }
           const nextYear = data.year ? String(data.year) : "";
@@ -324,7 +328,8 @@ export function AutoQuoteNative({
             setModelId(String(data.model.id));
             setVersions(nextVersions);
             setVersionId(String(data.version.id));
-            setLookupHint(data.description || "");
+            setLookupHint(data.message || data.description || "");
+            setLookupAlert(data.alert || "ok");
             setError("");
             return;
           }
@@ -336,11 +341,13 @@ export function AutoQuoteNative({
           if (data.model) setModelId(String(data.model.id));
           if (nextVersions.length) setVersions(nextVersions);
           setLookupHint(data.message || data.description || "");
+          setLookupAlert(data.alert || "info");
         })
         .catch((err) => {
           if (!cancelled) {
             setLookupKey("");
             setLookupHint(err instanceof Error ? err.message : "No pudimos buscar esa patente.");
+            setLookupAlert("error");
           }
         })
         .finally(() => {
@@ -645,43 +652,60 @@ export function AutoQuoteNative({
       ) : quote ? (
         <PlansView quote={quote} plate={is0km ? "" : plate} onSelect={setPlan} />
       ) : (
-        <form onSubmit={onSubmit} className="mx-auto max-w-lg">
+        <form onSubmit={onSubmit} className="quote-card mx-auto max-w-lg p-5 sm:p-8">
           <h2 className="font-display text-[1.65rem] font-semibold leading-tight tracking-tight text-navy sm:text-3xl">
-            ¡Asegurá tu auto con hasta 37% Off!
+            Cotizá tu auto en un minuto
           </h2>
-          <p className="mt-3 text-base text-muted">
-            Ingresá la patente: buscamos el auto y cotizamos en San Cristóbal. Los planes salen al toque.
+          <p className="mt-2 text-base text-muted">
+            Ingresá la patente. Completamos el auto y te mostramos los planes al toque.
           </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {is0km ? (
               <p className="sm:col-span-2 text-sm text-muted">Es 0km: no hace falta patente.</p>
             ) : (
-              <Field label="Patente" invalid={touched && plateKind !== "auto" && plateKind !== "moto"}>
+              <Field
+                label="Patente"
+                wide
+                invalid={touched && plateKind !== "auto" && plateKind !== "moto"}
+              >
                 <input
-                  className="field"
+                  className="field quote-plate"
                   placeholder="AB123CD"
                   autoComplete="off"
+                  spellCheck={false}
                   value={licensePlate}
                   onChange={(e) => {
                     setLookupKey("");
                     setLookupHint("");
+                    setLookupAlert("");
                     setLicensePlate(normalizeArPlate(e.target.value));
                   }}
                 />
               </Field>
             )}
             {lookingUp ? (
-              <p className="sm:col-span-2 text-sm text-muted">Buscando el auto en Clasificar…</p>
+              <p className="quote-lookup">Buscando el auto…</p>
             ) : lookupHint ? (
-              <p className="sm:col-span-2 text-sm text-navy/80">{lookupHint}</p>
+              <p
+                role={lookupAlert === "error" ? "alert" : "status"}
+                className={
+                  lookupAlert === "error"
+                    ? "quote-alert"
+                    : lookupAlert === "ok"
+                      ? "quote-found"
+                      : "quote-info"
+                }
+              >
+                {lookupHint}
+              </p>
             ) : null}
 
             {plateKind === "moto" ? (
-              <div className="sm:col-span-2 rounded-xl border border-sky/20 bg-sky/5 p-4">
+              <div className="sm:col-span-2 rounded-2xl border border-sky/20 bg-sky/5 p-4">
                 <p className="text-sm text-navy">
-                  La patente <span className="font-semibold">{plate}</span> es de motovehículo. San Cristóbal
-                  cotiza motos en otro formulario.
+                  La patente <span className="font-semibold">{plate}</span> es de moto. Cotizala en el
+                  formulario de motos.
                 </p>
                 <button
                   type="button"
@@ -697,7 +721,7 @@ export function AutoQuoteNative({
               <>
             <Field label="Año" invalid={touched && !yearId}>
               <select
-                className="field"
+                className="field field-select"
                 value={yearId}
                 onChange={(e) => {
                   setLookupKey("");
@@ -710,7 +734,7 @@ export function AutoQuoteNative({
                   setVersions([]);
                 }}
               >
-                <option value="">Año</option>
+                <option value="">Elegí el año</option>
                 {years.map((y) => (
                   <option key={y.id} value={y.id}>
                     {y.label}
@@ -721,7 +745,7 @@ export function AutoQuoteNative({
 
             <Field label="Marca" invalid={touched && !brandId}>
               <select
-                className="field"
+                className="field field-select"
                 value={brandId}
                 disabled={!brands.length}
                 onChange={(e) => {
@@ -733,7 +757,7 @@ export function AutoQuoteNative({
                   setVersions([]);
                 }}
               >
-                <option value="">{yearId && !brands.length ? "Cargando…" : "Marca"}</option>
+                <option value="">{yearId && !brands.length ? "Cargando…" : "Elegí la marca"}</option>
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.label}
@@ -744,7 +768,7 @@ export function AutoQuoteNative({
 
             <Field label="Modelo" invalid={touched && !modelId}>
               <select
-                className="field"
+                className="field field-select"
                 value={modelId}
                 disabled={!models.length}
                 onChange={(e) => {
@@ -754,7 +778,7 @@ export function AutoQuoteNative({
                   setVersions([]);
                 }}
               >
-                <option value="">{brandId && !models.length ? "Cargando…" : "Modelo"}</option>
+                <option value="">{brandId && !models.length ? "Cargando…" : "Elegí el modelo"}</option>
                 {sortedModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -763,14 +787,14 @@ export function AutoQuoteNative({
               </select>
             </Field>
 
-            <Field label="Versión" invalid={touched && !versionId}>
+            <Field label="Versión" wide invalid={touched && !versionId}>
               <select
-                className="field"
+                className="field field-select"
                 value={versionId}
                 disabled={!versions.length}
                 onChange={(e) => setVersionId(e.target.value)}
               >
-                <option value="">{modelId && !versions.length ? "Cargando…" : "Versión"}</option>
+                <option value="">{modelId && !versions.length ? "Cargando…" : "Elegí la versión"}</option>
                 {sortedVersions.map((v) => (
                   <option key={v.id} value={String(v.id)}>
                     {v.fullCarDescripcion || v.description}
@@ -779,19 +803,8 @@ export function AutoQuoteNative({
               </select>
             </Field>
 
-            <Field label="GNC" invalid={false}>
-              <select className="field" value={hasGnc} onChange={(e) => setHasGnc(e.target.value)}>
-                <option value="no">No</option>
-                <option value="si">Sí</option>
-              </select>
-            </Field>
-
-            <Field label="Rastreador" invalid={false}>
-              <select className="field" value={hasTracker} onChange={(e) => setHasTracker(e.target.value)}>
-                <option value="no">No</option>
-                <option value="si">Sí</option>
-              </select>
-            </Field>
+            <YesNo label="¿Tiene GNC?" value={hasGnc} onChange={setHasGnc} />
+            <YesNo label="¿Tiene rastreador?" value={hasTracker} onChange={setHasTracker} />
 
             <Field label="Código postal" invalid={touched && postalCode.length !== 4}>
               <input
@@ -806,7 +819,7 @@ export function AutoQuoteNative({
 
             {locations.length > 1 ? (
               <Field label="Localidad" invalid={touched && !locationId}>
-                <select className="field" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+                <select className="field field-select" value={locationId} onChange={(e) => setLocationId(e.target.value)}>
                   {locations.map((l) => (
                     <option key={l.locationId} value={String(l.locationId)}>
                       {l.description}
@@ -841,7 +854,7 @@ export function AutoQuoteNative({
               />
             </Field>
 
-            <Field label="Email" invalid={touched && !isEmail(email)}>
+            <Field label="Email" invalid={touched && !isEmail(email)} wide>
               <input
                 className="field"
                 type="email"
@@ -854,7 +867,7 @@ export function AutoQuoteNative({
             )}
           </div>
 
-          {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="quote-alert mt-4">{error}</p> : null}
 
           {plateKind === "moto" ? null : (
             <button type="submit" disabled={quoting} className="btn btn-primary mt-6 w-full disabled:opacity-60">
@@ -862,6 +875,7 @@ export function AutoQuoteNative({
             </button>
           )}
         </form>
+
       )}
     </div>
   );
@@ -870,18 +884,52 @@ export function AutoQuoteNative({
 function Field({
   label,
   invalid,
+  wide,
   children,
 }: {
   label: string;
   invalid: boolean;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <label className={`quote-field block${wide ? " sm:col-span-2" : ""}${invalid ? " is-invalid" : ""}`}>
       <span className="mb-2 block text-sm font-semibold text-navy">{label}</span>
       {children}
       {invalid ? <p className="mt-2 text-sm font-medium text-red-600">Requerido</p> : null}
     </label>
+  );
+}
+
+function YesNo({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="quote-field">
+      <span className="mb-2 block text-sm font-semibold text-navy">{label}</span>
+      <div className="quote-pills">
+        <button
+          type="button"
+          className={`quote-pill${value === "no" ? " is-on" : ""}`}
+          onClick={() => onChange("no")}
+        >
+          No
+        </button>
+        <button
+          type="button"
+          className={`quote-pill${value === "si" ? " is-on" : ""}`}
+          onClick={() => onChange("si")}
+        >
+          Sí
+        </button>
+      </div>
+    </div>
   );
 }
 

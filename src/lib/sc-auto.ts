@@ -436,6 +436,7 @@ export type PlateLookupResult = {
   models?: AutoCatalogItem[];
   versions?: AutoVersion[];
   message?: string;
+  alert?: "ok" | "info" | "error";
 };
 
 function foldKey(text: string) {
@@ -646,7 +647,8 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       plate,
       kind,
       found: false,
-      message: "No está en la base de Clasificar. Completá año, marca y modelo.",
+      message: "No pudimos encontrar este auto. Ingresá los datos a mano: año, marca, modelo y versión.",
+      alert: "error",
     };
   }
 
@@ -667,6 +669,7 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       description,
       year: vehicle.year,
       message: "Esta patente es de moto. Cotizala en el cotizador de motos.",
+      alert: "info",
     };
   }
 
@@ -678,7 +681,8 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       found: true,
       description,
       year: vehicle.year,
-      message: `El auto es ${vehicle.year}. San Cristóbal cotiza hasta ${minYear}.`,
+      message: `Este auto es de ${vehicle.year}. San Cristóbal no cotiza vehículos con más de 30 años: el límite actual es ${minYear}. No se puede cotizar online. Si el año no es ${vehicle.year}, ingresalo a mano más abajo.`,
+      alert: "error",
     };
   }
 
@@ -693,6 +697,7 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       year: vehicle.year,
       brands,
       message: `Encontramos ${description}. Elegí marca, modelo y versión.`,
+      alert: "info",
     };
   }
 
@@ -709,6 +714,7 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       brands,
       models,
       message: `Encontramos ${description}. Elegí modelo y versión.`,
+      alert: "info",
     };
   }
 
@@ -733,6 +739,7 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
       models,
       versions,
       message: `Encontramos ${description}. Elegí la versión.`,
+      alert: "info",
     };
   }
 
@@ -748,6 +755,8 @@ export async function lookupAutoByPlate(rawPlate: string): Promise<PlateLookupRe
     brands,
     models,
     versions,
+    message: description,
+    alert: "ok",
   };
 }
 
