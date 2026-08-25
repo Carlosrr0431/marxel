@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T17:31:37.184Z",
+  "generatedAt": "2026-08-25T18:42:01.257Z",
   "sources": [
     {
       "id": "plan-a2",
@@ -56,6 +56,22 @@
       "pages": 1,
       "chars": 2401,
       "chunks": 2
+    },
+    {
+      "id": "sancristobal",
+      "title": "San Cristóbal Seguros — Productos para personas",
+      "file": "web:sancristobal.com.ar",
+      "pages": 4,
+      "chars": 3200,
+      "chunks": 5
+    },
+    {
+      "id": "goassistance",
+      "title": "Go Assistance — Asistencia al Viajero",
+      "file": "web:goassistance.com/ar",
+      "pages": 2,
+      "chars": 2800,
+      "chunks": 4
     }
   ],
   "chunks": [
@@ -1732,6 +1748,60 @@
       "sourceId": "cartilla-online",
       "sourceTitle": "Prestadores destacados Salta Capital — Planes A2 y A4 Prevención Salud",
       "content": "Principales clínicas y sanatorios en Salta Capital (Provincia de Salta) incluidos en los planes A2 y A4 de Prevención Salud (datos actualizados al 11/7/2026):\n- HOSPITAL PRIVADO SANTA CLARA DE ASÍS: Urquiza 964, Salta. Tel: 0387-4321440. Especialidades: cardiología, diagnóstico por imágenes, kinesiología, oftalmología, pediatría, psicología, urología.\n- HOSPITAL PRIVADO TRES CERRITOS: Av. Juan B. Justo 93, Salta. Tel: 0387-4163500. Especialidades: cirugía general, guardia general y pediátrica, tomografía, unidad coronaria.\n- SANATORIO EL CARMEN: Tel 0387-4311555. Especialidades: cardiología, cirugía general y cardiovascular, oncología, neurología, terapia intensiva.\n- SANATORIO SAN ROQUE S.A.: Av. Reyes Católicos 1518, Salta. Tel: 0387-4394000. Especialidades: guardia general, ginecología, traumatología.\n- CLÍNICA LUIS GÜEMES S.A.: Adolfo Güemes 287, Salta. Tel: 0387-4210033. Especialidades: cirugía, clínica médica, neonatología, neurología, oncología.\n- VITAE MEDICAL SRL: Zabala 432, Salta. Tel: 0387-4237373. Especialidades: cardiología, cirugía plástica, diagnóstico por imágenes, laboratorio.\n- DIAGNÓSTICO SALTA S.A.: Dr. Mariano Boedo 62, Salta. Tel: 0387-4215529. Especialidades: ecografía, mamografía, tomografía, radiodiagnóstico.\n- IMAGEN CLARA SRL: Gral. Urquiza 968, Salta. WhatsApp turnos: 387-4026562. Especialidades: diagnóstico por imágenes, eco doppler, tomografía.\n- IMAC CENTRO (Grupo Esmeralda): Alvarado 858, Salta. Tel: 387-4219212. Especialidades: cirugía general, ginecología, laboratorio, pediatría.\n- MEDICINA AMBULATORIA SALTA: Buenos Aires 196, Salta. Tel: 03878-4311977. Especialidades: clínica médica, diagnóstico por imágenes, laboratorio.\nPara acceder al listado completo: prevencionsalud.com.ar/cartilla-medica. Para afiliarse, contactar a MARXEN.\nNOTA IMPORTANTE: Esta cartilla es válida exclusivamente para la Provincia de Salta. Para otras provincias, consultá directamente con un asesor de MARXEN."
+    },
+    {
+      "id": "sancristobal-0001",
+      "sourceId": "sancristobal",
+      "sourceTitle": "San Cristóbal Seguros — Quiénes somos y productos",
+      "content": "San Cristóbal Seguros es una aseguradora argentina con 86 años de trayectoria, parte del Grupo San Cristóbal. MARXEN Protección Integral comercializa sus productos en Salta como productor asesor.\n\nProductos para personas:\n- Automotor (Terceros Básico, Terceros Completo, Todo Riesgo con Franquicia)\n- Moto\n- Embarcaciones\n- Hogar\n- Incendio\n- Accidentes Personales\n- Vida\n- Sepelio\n- Robo\n- Mala Praxis\n- Alquiler Garantizado\n\nProductos para empresas:\n- Flota Automotor, Vida Colectivo, Riesgos Agropecuarios, Comercio, Todo Riesgo Operativo, Transporte, Responsabilidad Civil.\n\nCentral de asistencia 24h: 0810 222 8887 (de lunes a viernes 9 a 16.30). Exterior: +54 9 341-420-2097.\nAutogestión: App San Cristóbal (iOS y Android) y sitio del asegurado."
+    },
+    {
+      "id": "sancristobal-0002",
+      "sourceId": "sancristobal",
+      "sourceTitle": "San Cristóbal — Seguro Automotor: planes y coberturas",
+      "content": "Seguro Automotor San Cristóbal — planes disponibles para autos:\n\n1. TERCEROS BÁSICO: cobertura obligatoria para circular. Cubre Responsabilidad Civil por daños a terceros. Incluye protección al conductor y monto asegurado actualizado.\n\n2. TERCEROS COMPLETO: ideal para quienes buscan alta protección a precio moderado. Incluye: Responsabilidad Civil, robo total y parcial, destrucción total, cristales y cerraduras sin límite, cubiertas y llantas por robo (1 por vigencia), granizo sin límite, servicio de auxilio y remolque, protección a familiares.\n\n3. TODO RIESGO CON FRANQUICIA: la cobertura más completa del portfolio. Incluye todo lo de Terceros Completo más destrucción parcial por accidente y cubiertas y llantas sin límite.\n\nBeneficios adicionales: CLEAS (convenio entre aseguradoras para trámites de siniestros más rápidos), Solución Express (reparación con mínimos trámites en talleres homologados para Todo Riesgo), Club GSC (descuentos exclusivos).\n\nEs OBLIGATORIO por ley (Art. 68, Ley de Tránsito 24.449). Se pueden asegurar autos, pickups, trailers y batanes.\n\nPara cotizar y contratar: contactá al WhatsApp de MARXEN 387 634-8199."
+    },
+    {
+      "id": "sancristobal-0003",
+      "sourceId": "sancristobal",
+      "sourceTitle": "San Cristóbal — Seguro para el Hogar",
+      "content": "Seguro de Hogar San Cristóbal — coberturas para tu casa:\n\nCoberturas disponibles según plan:\n- Incendio de edificio y contenido\n- Robo de contenido (requiere denuncia policial)\n- Accidentes personales en el hogar\n- Equipos electrónicos (requiere factura e informe técnico)\n- Cristales (requiere factura de reparación)\n- Asistencia ante urgencias domésticas 24hs (plomería, electricidad, cerrajería)\n\nAnte un siniestro en el hogar:\n- Denunciá dentro de los 3 días hábiles\n- Documentación mínima: DNI, constancia de bomberos (incendio), denuncia policial (robo)\n- Podés gestionar el siniestro desde la App San Cristóbal o el Sitio del Asegurado\n\nTeléfono asistencia 24hs: 0810-222-8887 / 0810-444-0100\n\nPara consultar coberturas y cotizar tu seguro de hogar, contactá a MARXEN WhatsApp 387 634-8199."
+    },
+    {
+      "id": "sancristobal-0004",
+      "sourceId": "sancristobal",
+      "sourceTitle": "San Cristóbal — Seguro de Vida y Accidentes Personales",
+      "content": "SEGURO DE VIDA San Cristóbal:\nProtege a tu familia ante imprevistos económicos.\nCoberturas:\n- Muerte por cualquier causa (enfermedad o accidente), las 24hs\n- Incapacidad total y permanente por enfermedad o accidente (hasta 65 años)\n- Adelanto de capital ante enfermedades terminales\n- Trasplantes de órganos (corazón, pulmón, hígado, riñón, médula, córnea)\n- Indemnización adicional por muerte accidental\nBeneficios: cobertura en cualquier parte del mundo, deducible del Impuesto a las Ganancias.\nBeneficiarios: cualquier persona física o jurídica designada previamente por escrito.\n\nSEGURO DE ACCIDENTES PERSONALES San Cristóbal:\nCubre lesiones corporales repentinas sufridas en el ejercicio de tu profesión o rutina.\nCoberturas: muerte accidental, invalidez total y permanente por accidente, asistencia médica o farmacéutica por accidente.\nPlanes disponibles: AP 24 Base y AP 24 Más (cobertura las 24hs en cualquier lugar del mundo, incluso en vida particular y profesional).\nTambién disponible la modalidad AP Prestacional con red de prestadores: llamá al 0810 888 8889.\n\nPara cotizar, contactá a MARXEN WhatsApp 387 634-8199."
+    },
+    {
+      "id": "sancristobal-0005",
+      "sourceId": "sancristobal",
+      "sourceTitle": "San Cristóbal — Cómo gestionar pólizas y siniestros",
+      "content": "Cómo gestionar tu seguro San Cristóbal:\n\nMEDIOS DE AUTOGESTIÓN:\n- App San Cristóbal (iOS y Android): descargá tu póliza, tarjeta para circular, certificado para viajar al exterior, denunciá siniestros, consultá pagos.\n- Sitio del Asegurado: mismo acceso online.\n- WhatsApp Santi (asistente virtual de San Cristóbal): gestiones ágiles por WhatsApp.\n\nSINIESTRO AUTOMOTOR:\n- Denunciá dentro de los plazos indicados en la póliza\n- CLEAS: convenio interaseguradoras para siniestros entre compañías adheridas más rápido\n- Todo Riesgo: Solución Express con peritaje inmediato y talleres homologados\n\nSINIESTRO HOGAR (plazo máximo 3 días hábiles):\n- Incendio: denuncia policial + certificado de bomberos\n- Robo: denuncia policial\n- Asistencia urgencias domésticas 24hs: 0810-222-8887\n\nTELÉFONOS:\n- Central: 0810 222 8887 (Lu a Vi 9 a 16.30)\n- Asistencia urgencias: 0810-444-0100\n- Desde el exterior: +54 9 341-420-2097\n\nPara cualquier gestión o consulta sobre tus pólizas San Cristóbal, contactá a tu productor asesor MARXEN: WhatsApp 387 634-8199."
+    },
+    {
+      "id": "goassistance-0001",
+      "sourceId": "goassistance",
+      "sourceTitle": "Go Assistance — Asistencia al Viajero Internacional: qué es y coberturas",
+      "content": "GO! ASSISTANCE es una empresa argentina con 25 años de trayectoria en asistencia al viajero internacional, presente en 10 países. MARXEN comercializa sus planes para viajeros desde Salta.\n\nQUÉ ES: servicio de cobertura médica, legal y logística durante viajes internacionales. A diferencia de un seguro de viaje tradicional, GO! gestiona y paga los servicios DIRECTAMENTE en destino (no requiere adelantar dinero ni esperar reembolsos). También incluye cobertura indirecta para cancelaciones y pérdida de equipaje.\n\nCOBERTURAS PRINCIPALES:\n- Urgencias médicas: hasta USD 40.000 de cobertura\n- Hospitalización en destino\n- Traslado sanitario y repatriación\n- Asistencia odontológica de urgencia\n- Enfermedades preexistentes (en planes específicos, declarando previamente)\n- Pérdida y demora de equipaje: monto para artículos de primera necesidad durante la demora; indemnización por pérdida total\n- Demora y cancelación de vuelos (gastos incurridos en territorio internacional)\n- Embarazos hasta las 26 semanas\n- Doctor online (telemedicina)\n- Repatriación sanitaria y funeraria\n- Beneficios VIP GO! Experience\n\nCÓMO FUNCIONA EN URGENCIA: llamá a la central 24/7/365 antes de pagar cualquier gasto médico. Un equipo coordina la atención en destino. NO pagar sin autorización previa.\n\nPLANES: para América Latina, Europa, EE.UU., mundo. También planes anuales multitrip para viajeros frecuentes. Plan GO! Adventure para deportes de aventura y esquí.\n\nVALIDEZ: debe contratarse ANTES de salir del país. Una vez iniciado el viaje no puede activarse."
+    },
+    {
+      "id": "goassistance-0002",
+      "sourceId": "goassistance",
+      "sourceTitle": "Go Assistance — Cómo contratar y preguntas frecuentes",
+      "content": "GO! ASSISTANCE — Cómo contratar y FAQ:\n\nCÓMO CONTRATAR (4 pasos):\n1. Ingresá destino, fechas y edades de los viajeros en el cotizador online\n2. Elegí el plan ideal según tu viaje y necesidades\n3. Pagá online con tarjeta de crédito (hasta 6 cuotas sin interés)\n4. Recibís el voucher por email de forma inmediata con las instrucciones\n\nPREGUNTAS FRECUENTES:\n\n¿Es obligatoria? Sí para Europa (zona Schengen) y recomendada para cualquier destino internacional. Muchos países la exigen como requisito de visa. GO! cumple requisitos de visa Schengen.\n\n¿Qué plan conviene? Para Europa/EE.UU.: cobertura médica mínima USD 30.000 y cancelación incluida. Para América Latina: planes más económicos. Para viajeros frecuentes: plan anual multitrip.\n\n¿Cubre preexistencias? Algunos planes incluyen cobertura para preexistencias controladas (hipertensión, diabetes tipo 2, etc.). Declarar al contratar.\n\n¿Y el equipaje? Al perder equipaje, hacer la denuncia en el aeropuerto ante la aerolínea y conservar el PIR. GO! brinda monto para artículos de primera necesidad durante la demora e indemnización por pérdida definitiva.\n\n¿Cuánto cuesta? Varía según destino, duración, edades y nivel de cobertura. Los planes más accesibles son para viajes cortos en América Latina. Para Europa y EE.UU. los valores son más altos.\n\nCONTACTO GO! ASSISTANCE: WhatsApp +54 9 11 5218-7034 · Central 24hs activa los 365 días del año.\n\nPara cotizar y contratar desde Salta, contactá a MARXEN: WhatsApp 387 634-8199."
+    },
+    {
+      "id": "goassistance-0003",
+      "sourceId": "goassistance",
+      "sourceTitle": "Go Assistance — Requisitos de visa Schengen y planes por destino",
+      "content": "GO! ASSISTANCE — Coberturas por destino y requisitos:\n\nVISA SCHENGEN (Europa):\nLa asistencia al viajero es OBLIGATORIA para obtener la visa Schengen. Debe cubrir gastos médicos mínimos de 30.000 EUR, tener validez en todos los países Schengen y cubrir repatriación. GO! ASSISTANCE cumple todos estos requisitos. Documentación que puede solicitarse: soporte migratorio (primera hoja del pasaporte con foto + sello de salida o boarding pass).\n\nDESTINOS Y RECOMENDACIONES:\n- Europa / Schengen: plan con USD 30.000 mínimo + cancelación. GO! cubre todos los países del área.\n- Estados Unidos: cobertura médica alta recomendada (sistema de salud muy costoso).\n- Brasil: planes económicos. El cruce terrestre también requiere asistencia.\n- América Latina: planes accesibles. Recomendado igual para evitar gastos inesperados.\n- Australia y Nueva Zelanda: planes específicos para estadías largas o Working Holiday.\n- Deportes de aventura (esquí, senderismo, etc.): contratar el plan GO! Adventure con cobertura específica.\n\nWORKING HOLIDAY: GO! tiene planes especiales para programas de Working Holiday en Australia, Nueva Zelanda, Japón, Islandia, México, Polonia y Europa.\n\nIMPORTANTE: la asistencia debe contratarse ANTES de salir de Argentina. No puede activarse una vez iniciado el viaje.\n\nPara cotizar asistencia al viajero GO! desde Salta: MARXEN WhatsApp 387 634-8199."
+    },
+    {
+      "id": "goassistance-0004",
+      "sourceId": "goassistance",
+      "sourceTitle": "Go Assistance — Diferencia asistencia/seguro y qué hacer en emergencia",
+      "content": "GO! ASSISTANCE — Asistencia vs seguro de viaje:\n\nDIFERENCIA CLAVE:\n- Seguro de viaje clásico: el viajero paga los gastos en destino y luego pide reembolso. Proceso lento y burocrático.\n- Asistencia al viajero GO!: gestiona y paga los servicios DIRECTAMENTE en destino. El viajero no desembolsa dinero (excepto para coberturas de reembolso como cancelación de vuelo). Además incluye GO! Pay, una visa virtual para asistirse de forma directa.\n\nQUÉ HACER EN EMERGENCIA MÉDICA:\n1. Llamar o WhatsApp a la central de GO! ASSISTANCE las 24hs (antes de pagar cualquier servicio médico)\n2. Un operador atiende en tiempo real y coordina la atención\n3. NO pagar servicios médicos sin autorización previa de GO! (puede afectar el reembolso)\n4. La primera urgencia se autoriza en los primeros minutos de contacto\n\nCENTRAL DE EMERGENCIAS: disponible 24hs, 365 días, desde cualquier parte del mundo.\nWhatsApp: +54 9 11 5218-7034\n\nCALIDAD Y CONFIANZA:\n- 25 años de trayectoria\n- Presencia en 10 países\n- Puntuación 4.6 en Trustpilot y 4.6 en Google Reviews\n- Sponsor oficial de Club Atlético Vélez Sarsfield\n- Red médica en más de 100 países\n\nPara contratar GO! ASSISTANCE desde Salta: MARXEN WhatsApp 387 634-8199."
     }
   ]
 }
