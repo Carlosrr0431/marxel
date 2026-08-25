@@ -336,7 +336,10 @@ export async function persistCrmInbound(inbound: InboundMessage) {
     fileName: inbound.filename || null,
     waMessageId: inbound.id || null,
     fromMe: inbound.fromMe,
-    pushName: inbound.pushName || null,
+    // Solo pasar pushName para mensajes entrantes: los salientes (fromMe=true)
+    // traen el nombre de nuestra propia cuenta ("Yo") y no deben usarse como
+    // nombre del contacto.
+    pushName: inbound.fromMe ? null : (inbound.pushName || null),
     source: "webhook",
   });
 }
