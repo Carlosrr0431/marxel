@@ -63,7 +63,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Juan B. Justo 93, Salta Capital",
     telefono: "0387-4163500",
     planes: ["A2","A4"],
-    lat: -24.7705, lng: -65.4213,
+    lat: -24.7657, lng: -65.4030,
   },
   {
     id: "sanatorio-el-carmen",
