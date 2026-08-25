@@ -1704,6 +1704,8 @@ button.seguro-card .seguro-card__arrow {
   border: 1.5px solid transparent;
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s, box-shadow 0.14s;
+  min-width: 0;
+  overflow: hidden;
 }
 .cartilla-card:hover {
   background: white;
@@ -1729,9 +1731,7 @@ button.seguro-card .seguro-card__arrow {
   font-weight: 700;
   color: var(--ink);
   line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 .cartilla-tipo-badge {
   display: inline-block;
@@ -1761,17 +1761,20 @@ button.seguro-card .seguro-card__arrow {
 .cartilla-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: 0.2rem 0.6rem;
   margin-bottom: 0.35rem;
+  min-width: 0;
 }
 .cartilla-meta-item {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.3rem;
   font-size: 0.72rem;
   color: var(--muted);
-  white-space: nowrap;
+  word-break: break-word;
+  min-width: 0;
 }
+.cartilla-meta-item svg { flex-shrink: 0; margin-top: 0.1rem; }
 .cartilla-meta-wa {
   color: #16a34a;
   font-weight: 600;
