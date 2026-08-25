@@ -46,7 +46,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 964, Salta Capital",
     telefono: "0387-4321440",
     planes: ["A2","A4"],
-    lat: -24.7870, lng: -65.4080,
+    lat: -24.7919, lng: -65.4161,
   },
   {
     id: "hospital-tres-cerritos",
@@ -63,7 +63,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Juan B. Justo 93, Salta Capital",
     telefono: "0387-4163500",
     planes: ["A2","A4"],
-    lat: -24.7712, lng: -65.4195,
+    lat: -24.7705, lng: -65.4213,
   },
   {
     id: "sanatorio-el-carmen",
@@ -97,7 +97,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Reyes Católicos 1518, Salta Capital",
     telefono: "0387-4394000 / 4392357 / 4390202",
     planes: ["A2","A4"],
-    lat: -24.7901, lng: -65.4305,
+    lat: -24.7731, lng: -65.3982,
   },
   {
     id: "clinica-berg",
@@ -120,7 +120,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "WhatsApp 387-4453008",
     whatsapp: "3874453008",
     planes: ["A2","A4"],
-    lat: -24.7857, lng: -65.4183,
+    lat: -24.7942, lng: -65.4113,
   },
   {
     id: "vitae-medical",
@@ -136,7 +136,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Zabala 432, Salta Capital",
     telefono: "0387-4237373 / 4260300",
     planes: ["A2","A4"],
-    lat: -24.7833, lng: -65.4178,
+    lat: -24.8026, lng: -65.4098,
   },
   {
     id: "clinica-luis-guemes",
@@ -152,7 +152,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Adolfo Güemes 287, Salta Capital",
     telefono: "0387-4210033",
     planes: ["A2","A4"],
-    lat: -24.7845, lng: -65.4158,
+    lat: -24.7857, lng: -65.4176,
   },
   {
     id: "imac-centro",
@@ -179,7 +179,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "WhatsApp 387-4026562",
     whatsapp: "3874026562",
     planes: ["A2","A4"],
-    lat: -24.7870, lng: -65.4078,
+    lat: -24.7919, lng: -65.4163,
   },
   {
     id: "diagnostico-salta",
@@ -192,7 +192,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Dr. Mariano Boedo 62, Salta Capital",
     telefono: "0387-4215529",
     planes: ["A2","A4"],
-    lat: -24.7888, lng: -65.4222,
+    lat: -24.7926, lng: -65.3997,
   },
   {
     id: "imagenes-medicas",
@@ -203,7 +203,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "0387-4215529",
     whatsapp: "3873080555",
     planes: ["A2","A4"],
-    lat: -24.7888, lng: -65.4224,
+    lat: -24.7928, lng: -65.3999,
   },
   {
     id: "imagenes-jaraba",
@@ -214,7 +214,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "0387-4314907",
     whatsapp: "3872275027",
     planes: ["A2","A4"],
-    lat: -24.7839, lng: -65.4215,
+    lat: -24.7839, lng: -65.4103,
   },
   {
     id: "cordis-sa",
@@ -224,7 +224,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "España 1067, Salta Capital",
     telefono: "",
     planes: ["A2","A4"],
-    lat: -24.7870, lng: -65.4265,
+    lat: -24.7881, lng: -65.4172,
   },
   {
     id: "tomografia-estado",
@@ -234,7 +234,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Mariano Boedo 151, Salta Capital",
     telefono: "0387-4215342 / 4216552 / 156834275",
     planes: ["A2","A4"],
-    lat: -24.7892, lng: -65.4220,
+    lat: -24.7924, lng: -65.4002,
   },
   {
     id: "laboratorios-katz",
@@ -244,7 +244,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Adolfo Güemes 82, Salta Capital",
     telefono: "0387-6144845",
     planes: ["A2","A4"],
-    lat: -24.7852, lng: -65.4152,
+    lat: -24.7883, lng: -65.4177,
   },
   {
     id: "maternidad-privada",
@@ -256,7 +256,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 150, Salta Capital",
     telefono: "0387-4220654 / 4220053 / 4320385",
     planes: ["A2","A4"],
-    lat: -24.7874, lng: -65.4093,
+    lat: -24.7925, lng: -65.4052,
   },
   {
     id: "servicio-nino-jesus",
@@ -266,7 +266,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 964 Piso 2°, Salta Capital",
     telefono: "0387-4317000 / 4311226",
     planes: ["A2","A4"],
-    lat: -24.7871, lng: -65.4081,
+    lat: -24.7920, lng: -65.4164,
   },
   {
     id: "medicina-ambulatoria",
@@ -276,7 +276,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Buenos Aires 196, Salta Capital",
     telefono: "03878-4311977",
     planes: ["A2","A4"],
-    lat: -24.7892, lng: -65.4200,
+    lat: -24.7923, lng: -65.4099,
   },
   {
     id: "cigno",
@@ -286,7 +286,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "20 de Febrero 659, Salta Capital",
     telefono: "0387-4212202",
     planes: ["A2","A4"],
-    lat: -24.7958, lng: -65.4128,
+    lat: -24.7815, lng: -65.4130,
   },
   {
     id: "arcadia-salud",
@@ -299,7 +299,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 181, Salta Capital",
     telefono: "",
     planes: ["A2","A4"],
-    lat: -24.7875, lng: -65.4095,
+    lat: -24.7927, lng: -65.4055,
   },
   {
     id: "cedit-srl",
@@ -309,7 +309,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Santiago del Estero 1415, Salta Capital",
     telefono: "",
     planes: ["A2","A4"],
-    lat: -24.7888, lng: -65.4368,
+    lat: -24.7842, lng: -65.4219,
   },
   {
     id: "centro-solar",
@@ -319,7 +319,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Caseros 1418, Salta Capital",
     telefono: "0387-4319355",
     planes: ["A2","A4"],
-    lat: -24.7884, lng: -65.4340,
+    lat: -24.7889, lng: -65.4222,
   },
   {
     id: "clinica-virgen-huachana",
@@ -339,7 +339,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 150, Salta Capital",
     telefono: "0387-4316640",
     planes: ["A2","A4"],
-    lat: -24.7876, lng: -65.4092,
+    lat: -24.7927, lng: -65.4054,
   },
   {
     id: "fundacion-urkupina",
@@ -349,7 +349,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Ameghino 1064, Salta Capital",
     telefono: "0387-421270 / 4321893",
     planes: ["A2","A4"],
-    lat: -24.7862, lng: -65.4052,
+    lat: -24.7756, lng: -65.4248,
   },
   {
     id: "hospital-materno",
@@ -359,7 +359,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Sarmiento 1301, Salta Capital",
     telefono: "0387-4325000",
     planes: ["A2","A4"],
-    lat: -24.7758, lng: -65.4205,
+    lat: -24.7721, lng: -65.4156,
   },
   {
     id: "senyp-srl",
@@ -369,7 +369,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 150, Salta Capital",
     telefono: "0387-4215222",
     planes: ["A2","A4"],
-    lat: -24.7877, lng: -65.4094,
+    lat: -24.7926, lng: -65.4053,
   },
   {
     id: "profilaxis-srl",
@@ -379,7 +379,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Sarmiento 371, Salta Capital",
     telefono: "",
     planes: ["A2","A4"],
-    lat: -24.7922, lng: -65.4175,
+    lat: -24.7849, lng: -65.4162,
   },
   {
     id: "instituto-saravia",
@@ -389,7 +389,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Gral. Manuel Belgrano 544, Salta Capital",
     telefono: "03875-15523444",
     planes: ["A2","A4"],
-    lat: -24.7862, lng: -65.4107,
+    lat: -24.7874, lng: -65.4177,
   },
   {
     id: "lic-olcese",
@@ -399,7 +399,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Dr. Facundo de Zuvirría 920, Salta Capital",
     telefono: "0387-4214982",
     planes: ["A2","A4"],
-    lat: -24.7812, lng: -65.4108,
+    lat: -24.7659, lng: -65.4072,
   },
 ];
 

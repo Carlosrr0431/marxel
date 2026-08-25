@@ -94,43 +94,54 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
 
         map.on("load", () => {
           if (cancelled) return;
-          prestadores
-            .filter((p) => p.lat != null && p.lng != null)
-            .forEach((p) => {
-              const color = TIPO_COLOR[p.tipo] ?? "#0ea5e9";
-              const shortName = shortLabel(p.nombre);
 
-              // Wrapper: pin + label — el MapLibre ancla al centro del wrapper
-              const wrap = document.createElement("div");
-              wrap.className = "cartilla-marker-wrap";
-              wrap.style.setProperty("--mc", color);
+          const withCoords = prestadores.filter((p) => p.lat != null && p.lng != null);
 
-              const pin = document.createElement("div");
-              pin.className = "cartilla-marker";
+          withCoords.forEach((p) => {
+            const color = TIPO_COLOR[p.tipo] ?? "#0ea5e9";
+            const shortName = shortLabel(p.nombre);
 
-              const label = document.createElement("div");
-              label.className = "cartilla-marker-label";
-              label.textContent = shortName;
-              label.style.borderColor = color;
+            const wrap = document.createElement("div");
+            wrap.className = "cartilla-marker-wrap";
+            wrap.style.setProperty("--mc", color);
 
-              wrap.appendChild(pin);
-              wrap.appendChild(label);
+            const pin = document.createElement("div");
+            pin.className = "cartilla-marker";
 
-              const popup = new ml.Popup({ offset: 14, closeButton: false, maxWidth: "240px" })
-                .setHTML(`<div class="cartilla-popup">
-                  <strong>${p.nombre}</strong>
-                  <span>${p.direccion}</span>
-                  ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
-                </div>`);
+            const label = document.createElement("div");
+            label.className = "cartilla-marker-label";
+            label.textContent = shortName;
+            label.style.borderColor = color;
 
-              new ml.Marker({ element: wrap })
-                .setLngLat([p.lng!, p.lat!])
-                .setPopup(popup)
-                .addTo(map);
+            wrap.appendChild(pin);
+            wrap.appendChild(label);
 
-              wrap.addEventListener("click", () => onSelect(p.id));
-              markersRef.current.set(p.id, { el: wrap, getLngLat: () => [p.lng!, p.lat!] });
-            });
+            const popup = new ml.Popup({ offset: 14, closeButton: false, maxWidth: "240px" })
+              .setHTML(`<div class="cartilla-popup">
+                <strong>${p.nombre}</strong>
+                <span>${p.direccion}</span>
+                ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
+              </div>`);
+
+            new ml.Marker({ element: wrap })
+              .setLngLat([p.lng!, p.lat!])
+              .setPopup(popup)
+              .addTo(map);
+
+            wrap.addEventListener("click", () => onSelect(p.id));
+            markersRef.current.set(p.id, { el: wrap, getLngLat: () => [p.lng!, p.lat!] });
+          });
+
+          // Ajustar bounds para mostrar todos los marcadores
+          if (withCoords.length > 0) {
+            const lngs = withCoords.map((p) => p.lng!);
+            const lats = withCoords.map((p) => p.lat!);
+            const bounds: [[number, number], [number, number]] = [
+              [Math.min(...lngs), Math.min(...lats)],
+              [Math.max(...lngs), Math.max(...lats)],
+            ];
+            map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 0 });
+          }
         });
       })
       .catch((e) => console.error("[CartillaMap] failed to load maplibre", e));
