@@ -69,6 +69,10 @@ function sourceBoost(query: string, sourceId: string): number {
     return 1.6;
   if (/odont|protesis|pr[oó]tesis|dentista|implante|ortodoncia/.test(q) && (sourceId.startsWith("plan-") || sourceId.includes("odont") || sourceId.includes("manual")))
     return 2.3;
+  if (/sancristobal|san cristobal|crist[oó]bal|terceros|todo riesgo|franquicia|automotor|cleas|granizo/.test(q) && sourceId.includes("sancristobal"))
+    return 2.5;
+  if (/(hogar|motos?|mala\s+praxis|accidentes\s+personales|\bap\b|alquiler|comercio|incendio|embarcacion|sepelio|cauci[oó]n)/.test(q) && sourceId.includes("sancristobal"))
+    return 2.3;
   if (/plan|cobertura|reintegro|odont|kine|fono|optica|viajero/.test(q) && sourceId.startsWith("plan-"))
     return 1.8;
   return 1;

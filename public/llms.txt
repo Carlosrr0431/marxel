@@ -13,7 +13,7 @@ MARXEN (también escrito Marxel) es **MARXEN Protección Integral**. No es una c
 ## Páginas
 
 - [Inicio](https://www.marxen.com.ar/): qué hace MARXEN y cómo cotizar
-- [Seguros](https://www.marxen.com.ar/seguros): auto, moto, hogar, comercio, ART, AP y mala praxis; cotizador online San Cristóbal
+- [Seguros](https://www.marxen.com.ar/seguros): auto, moto, hogar, comercio, ART, AP y mala praxis con San Cristóbal Seguros (Terceros Básico / Completo / Todo Riesgo); cotizador online
 - [Salud](https://www.marxen.com.ar/salud): prepagas Prevención Salud, planes A2 y A4, derivación de aportes
 - [Viajero](https://www.marxen.com.ar/viajero): asistencia al viajero (GoAssistance, New Travel)
 - [Cotizar](https://www.marxen.com.ar/cotizar): cotización online o por formulario
