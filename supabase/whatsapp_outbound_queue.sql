@@ -145,36 +145,19 @@ $$;
 alter table public.whatsapp_outbound_queue enable row level security;
 alter table public.whatsapp_send_throttle enable row level security;
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'whatsapp_outbound_queue'
-      and policyname = 'whatsapp_outbound_queue_anon_all'
-  ) then
-    create policy "whatsapp_outbound_queue_anon_all"
-      on public.whatsapp_outbound_queue
-      for all
-      to anon, authenticated
-      using (true)
-      with check (true);
-  end if;
+drop policy if exists "whatsapp_outbound_queue_anon_all" on public.whatsapp_outbound_queue;
+create policy "whatsapp_outbound_queue_anon_all"
+  on public.whatsapp_outbound_queue
+  for all
+  using (true)
+  with check (true);
 
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'whatsapp_send_throttle'
-      and policyname = 'whatsapp_send_throttle_anon_all'
-  ) then
-    create policy "whatsapp_send_throttle_anon_all"
-      on public.whatsapp_send_throttle
-      for all
-      to anon, authenticated
-      using (true)
-      with check (true);
-  end if;
-end $$;
+drop policy if exists "whatsapp_send_throttle_anon_all" on public.whatsapp_send_throttle;
+create policy "whatsapp_send_throttle_anon_all"
+  on public.whatsapp_send_throttle
+  for all
+  using (true)
+  with check (true);
 
 grant execute on function public.claim_whatsapp_outbound_message(text) to anon, authenticated, service_role;
 grant execute on function public.release_stale_whatsapp_outbound(integer) to anon, authenticated, service_role;

@@ -182,3 +182,21 @@ grant select, insert, update, delete on table public.whatsapp_outbound_queue to 
 grant select, insert, update, delete on table public.whatsapp_send_throttle to anon, authenticated, service_role;
 grant execute on function public.claim_whatsapp_outbound_message(text) to anon, authenticated, service_role;
 grant execute on function public.release_stale_whatsapp_outbound(integer) to anon, authenticated, service_role;
+
+-- RLS: el CRM encola con la clave anon. Sin política, GRANT no alcanza.
+alter table public.whatsapp_outbound_queue enable row level security;
+alter table public.whatsapp_send_throttle enable row level security;
+
+drop policy if exists "whatsapp_outbound_queue_anon_all" on public.whatsapp_outbound_queue;
+create policy "whatsapp_outbound_queue_anon_all"
+  on public.whatsapp_outbound_queue
+  for all
+  using (true)
+  with check (true);
+
+drop policy if exists "whatsapp_send_throttle_anon_all" on public.whatsapp_send_throttle;
+create policy "whatsapp_send_throttle_anon_all"
+  on public.whatsapp_send_throttle
+  for all
+  using (true)
+  with check (true);

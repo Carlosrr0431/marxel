@@ -56,16 +56,20 @@ export type EnqueueResult =
       messageId: null;
       duplicate?: boolean;
     }
-  | { success: false; error: string; missingTable?: boolean };
+  | { success: false; error: string; missingTable?: boolean; rlsBlocked?: boolean };
+
+function isRlsDenied(error: { code?: string; message?: string } | null) {
+  return /row-level security policy/i.test(String(error?.message || ""));
+}
 
 function isMissingQueueRelationError(error: { code?: string; message?: string } | null) {
+  if (isRlsDenied(error)) return false;
   const code = String(error?.code || "");
   const message = String(error?.message || "");
   return (
     code === "42P01" ||
     code === "PGRST202" ||
     code === "PGRST205" ||
-    code === "42501" ||
     /permission denied|does not exist|schema cache|could not find the table/i.test(message)
   );
 }
@@ -223,6 +227,13 @@ export async function enqueueWhatsappOutbound({
       .single();
 
     if (error) {
+      if (isRlsDenied(error)) {
+        return {
+          success: false,
+          error: error.message,
+          rlsBlocked: true,
+        };
+      }
       if (isMissingQueueRelationError(error)) {
         return { success: false, error: error.message, missingTable: true };
       }
