@@ -69,8 +69,8 @@ export function CartillaMedicaSection() {
             </h2>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
               Planes <strong>A2</strong> y <strong>A4</strong> de Prevención Salud con cobertura en
-              la <strong>provincia de Salta</strong>. Más de 30 prestadores en Salta Capital entre clínicas, sanatorios,
-              laboratorios y especialistas.
+              la <strong>provincia de Salta</strong>. Más de 30 prestadores entre clínicas, sanatorios,
+              laboratorios y especialistas en toda la provincia.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
@@ -103,8 +103,8 @@ export function CartillaMedicaSection() {
           {/* Mapa */}
           <div className="cartilla-map-wrap">
             <iframe
-              title="Prestadores de salud en Salta Capital"
-              src="https://maps.google.com/maps?q=hospitales+cl%C3%ADnicas+Salta+Capital+Salta+Argentina&t=&z=13&ie=UTF8&iwloc=&output=embed"
+              title="Prestadores de salud en Salta"
+              src="https://maps.google.com/maps?q=hospitales+cl%C3%ADnicas+Salta+Provincia+Argentina&t=&z=8&ie=UTF8&iwloc=&output=embed"
               width="100%"
               height="100%"
               style={{ border: 0 }}
