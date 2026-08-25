@@ -451,6 +451,32 @@ async function afterQueueAttempt(
       }
       return;
     }
+    // Para polls del bot: actualizar el mensaje CRM previamente guardado con estado pending
+    if (row.kind === "poll") {
+      if (status === "sent") {
+        const marked = await markCrmMessageFromQueue({
+          queueId: row.id,
+          waMessageId: messageId,
+          status: "sent",
+        });
+        if (!marked.updated) {
+          // Fallback: guardar si no existe
+          await saveCrmWhatsappMessage({
+            phone: row.dest,
+            direction: "outbound",
+            body: String(row.payload?.name || "Elegí una opción"),
+            messageType: "poll",
+            fromMe: true,
+            waMessageId: messageId || `queue:${row.id}`,
+            source: "bot",
+            pollOptions: Array.isArray(row.payload?.options) ? row.payload.options as string[] : null,
+            deliveryStatus: "sent",
+            queueId: row.id,
+          });
+        }
+      }
+      return;
+    }
     if (status === "sent" && (row.kind === "text" || row.kind === "media")) {
       await saveCrmWhatsappMessage({
         phone: row.dest,

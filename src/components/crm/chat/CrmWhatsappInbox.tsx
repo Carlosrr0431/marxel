@@ -194,29 +194,59 @@ function Ticks({ status }: { status: CrmDeliveryStatus }) {
 }
 
 function PollBubble({ message, mine }: { message: CrmChatMessage; mine: boolean }) {
-  const isPollVote = message.direction === "inbound" && !mine;
   const options = message.poll_options ?? [];
   const status = deliveryOf(message);
+  // Voto del usuario: entrante con type=poll
+  const isVote = !mine && message.direction === "inbound";
+  const voteText = isVote ? (message.body || "").trim() : "";
+
   return (
     <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>
       <div className={`crm-wa-bubble crm-wa-bubble--poll${mine ? " is-mine" : ""}`}>
-        {!isPollVote ? (
-          <div className="crm-wa-poll">
-            <span className="crm-wa-poll__icon" aria-hidden="true">📊</span>
-            <span className="crm-wa-poll__title">{message.body || "Encuesta"}</span>
-            {options.length > 0 && (
-              <ul className="crm-wa-poll__opts">
-                {options.map((opt, i) => (
-                  <li key={i}>{opt}</li>
-                ))}
-              </ul>
-            )}
-            <em className="crm-wa-poll__label">Encuesta</em>
+        {isVote ? (
+          // Respuesta del usuario a la encuesta
+          <div className="crm-wa-poll crm-wa-poll--vote">
+            <div className="crm-wa-poll-head">
+              <svg className="crm-wa-poll-icon" viewBox="0 0 20 20" fill="none" width="15" height="15" aria-hidden>
+                <rect x="2" y="3.5" width="16" height="2.2" rx="1.1" fill="currentColor"/>
+                <rect x="2" y="8.1" width="12" height="2.2" rx="1.1" fill="currentColor"/>
+                <rect x="2" y="12.7" width="7" height="2.2" rx="1.1" fill="currentColor"/>
+              </svg>
+              <span className="crm-wa-poll__title">Encuesta respondida</span>
+            </div>
+            <div className="crm-wa-poll-vote-answer">
+              <span className="crm-wa-poll-vote-check" aria-hidden="true">
+                <svg viewBox="0 0 14 14" width="11" height="11" fill="none">
+                  <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+              <span className="crm-wa-poll-vote-text">{voteText || "Respuesta de encuesta"}</span>
+            </div>
           </div>
         ) : (
-          <div className="crm-wa-poll crm-wa-poll--vote">
-            <span className="crm-wa-poll__icon" aria-hidden="true">✓</span>
-            <span className="crm-wa-poll__title">{message.body || "Votó"}</span>
+          // Poll enviado por el bot
+          <div className="crm-wa-poll">
+            <div className="crm-wa-poll-head">
+              <svg className="crm-wa-poll-icon" viewBox="0 0 20 20" fill="none" width="15" height="15" aria-hidden>
+                <rect x="2" y="3.5" width="16" height="2.2" rx="1.1" fill="currentColor"/>
+                <rect x="2" y="8.1" width="12" height="2.2" rx="1.1" fill="currentColor"/>
+                <rect x="2" y="12.7" width="7" height="2.2" rx="1.1" fill="currentColor"/>
+              </svg>
+              <span className="crm-wa-poll__title">{message.body || "Elegí una opción"}</span>
+            </div>
+            {options.length > 0 ? (
+              <ul className="crm-wa-poll__opts">
+                {options.map((opt, i) => (
+                  <li key={i} className="crm-wa-poll-opt">
+                    <span className="crm-wa-poll-opt__circle" aria-hidden="true" />
+                    <span>{opt}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <em className="crm-wa-poll__label">
+              ENCUESTA{options.length > 0 ? ` · ${options.length} opciones` : ""}
+            </em>
           </div>
         )}
         <span className="crm-wa-meta">
@@ -486,7 +516,7 @@ function AudioBubble({ src, mine }: { src: string; mine: boolean }) {
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
 
-  if ((message.message_type || "").toLowerCase() === "poll") {
+  if ((message.message_type || "").toLowerCase() === "poll" || (message.message_type || "").toLowerCase() === "poll_vote") {
     return <PollBubble message={message} mine={mine} />;
   }
 
