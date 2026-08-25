@@ -221,6 +221,72 @@ export async function logoutWhatsmeowSession(agentCode = getWhatsmeowAgentCode()
   });
 }
 
+function inferMediaSendType(mimetype: string, fallback = "document") {
+  const mime = String(mimetype || "").toLowerCase();
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  return fallback;
+}
+
+export async function sendWhatsmeowMediaDirect(
+  agentCode: string,
+  to: string,
+  {
+    mediaBase64,
+    caption = "",
+    type,
+    mimetype = "",
+    filename = "",
+  }: {
+    mediaBase64: string;
+    caption?: string;
+    type?: string;
+    mimetype?: string;
+    filename?: string;
+  }
+) {
+  if (!agentCode || !to || !mediaBase64) {
+    return { success: false as const, error: "agentCode, to y media son requeridos" };
+  }
+  if (isWhatsappLinePaused()) {
+    return { success: false as const, error: "linea en pausa anti-bloqueo" };
+  }
+  const phone = sendTarget(to);
+  if (!phone) return { success: false as const, error: "destinatario inválido" };
+  const raw = String(mediaBase64).replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+  if (!raw) return { success: false as const, error: "archivo vacío" };
+  const mediaType = String(type || inferMediaSendType(mimetype)).toLowerCase();
+  const payload = {
+    agent_code: agentCode,
+    phone,
+    media: raw,
+    caption: String(caption || "").trim(),
+    type: mediaType,
+    mimetype: mimetype || "",
+    filename: filename || "",
+  };
+  let result = await whatsmeowFetch("/api/messages/send-media", {
+    method: "POST",
+    body: payload,
+  });
+  if ((!result.ok || result.data?.success === false) && mediaType === "image") {
+    result = await whatsmeowFetch("/api/messages/send-image", {
+      method: "POST",
+      body: {
+        agent_code: agentCode,
+        phone,
+        image: raw,
+        caption: payload.caption,
+      },
+    });
+  }
+  if (!result.ok || result.data?.success === false) {
+    return failSend(extractSendError(result));
+  }
+  return { success: true as const, messageId: extractMessageId(result.data) };
+}
+
 export async function sendWhatsmeowTextDirect(agentCode: string, to: string, text: string) {
   const message = String(text || "").trim();
   if (!agentCode || !to || !message) {

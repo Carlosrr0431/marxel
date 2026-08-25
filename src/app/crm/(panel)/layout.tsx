@@ -16,6 +16,7 @@ export default async function CrmPanelLayout({
     { count: overdue },
     { count: pending },
     { count: chatbot },
+    { data: unreadChats },
     { data: leads },
     { data: afiliados },
   ] = await Promise.all([
@@ -35,6 +36,7 @@ export default async function CrmPanelLayout({
       .eq("origen_detalle", "chatbot")
       .gte("created_at", since)
       .not("estado", "in", "(ganado,perdido)"),
+    supabase.from("whatsapp_chats").select("unread_count").gt("unread_count", 0),
     supabase
       .from("leads")
       .select("id,nombre,celular")
@@ -80,6 +82,10 @@ export default async function CrmPanelLayout({
           inbox: overdue || 0,
           seguimientos: pending || 0,
           chatbot: chatbot || 0,
+          chats: (unreadChats || []).reduce(
+            (sum, row) => sum + Number(row.unread_count || 0),
+            0
+          ),
         }}
         searchItems={searchItems}
       >

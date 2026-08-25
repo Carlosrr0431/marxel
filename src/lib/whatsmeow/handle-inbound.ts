@@ -12,6 +12,7 @@ import {
   saveConversation,
   type ConversationRow,
 } from "@/lib/whatsmeow/conversations";
+import { persistCrmInbound } from "@/lib/whatsmeow/crm-chat";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
 import {
   detectsQuoteIntent,
@@ -114,6 +115,16 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     });
     if (!sent.success) {
       console.error("[whatsapp][send]", sent.error);
+    } else if ("messageId" in sent && sent.messageId) {
+      const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
+      await saveCrmWhatsappMessage({
+        phone: conv.phone,
+        direction: "outbound",
+        body: result.answer,
+        fromMe: true,
+        waMessageId: sent.messageId,
+        source: "bot",
+      });
     }
   }
 
@@ -217,9 +228,6 @@ export async function handleWhatsappInbound(body: unknown) {
   if (["reaction", "protocol", "revoked"].includes(inbound.type) && !inbound.isPoll) {
     return { status: 200, body: { success: true, ignored: true, reason: "type_ignored" } };
   }
-  if (inbound.fromMe && !inbound.isPoll) {
-    return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
-  }
   if (inbound.isGroup) {
     return { status: 200, body: { success: true, ignored: true, reason: "group" } };
   }
@@ -228,6 +236,16 @@ export async function handleWhatsappInbound(body: unknown) {
       console.error("[whatsapp][poll-skip]", "invalid_phone", inbound.event, inbound.text);
     }
     return { status: 200, body: { success: true, ignored: true, reason: "invalid_phone" } };
+  }
+
+  try {
+    await persistCrmInbound(inbound);
+  } catch (err) {
+    console.error("[whatsapp-crm] persist", err instanceof Error ? err.message : err);
+  }
+
+  if (inbound.fromMe && !inbound.isPoll) {
+    return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
   }
 
   const gate = await whatsappAgentGate(inbound.phone);

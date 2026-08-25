@@ -393,6 +393,21 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   if (result.success) {
     await restoreLineInterval();
     await markSent(row.id, result.messageId);
+    if (row.kind === "text") {
+      try {
+        const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
+        await saveCrmWhatsappMessage({
+          phone: row.dest,
+          direction: "outbound",
+          body: String(row.payload?.text || ""),
+          fromMe: true,
+          waMessageId: result.messageId || `queue:${row.id}`,
+          source: "bot",
+        });
+      } catch {
+        // el inbox CRM es opcional hasta aplicar el SQL
+      }
+    }
     return { claimed: true as const, sent: true as const, queueId: row.id, messageId: result.messageId };
   }
 

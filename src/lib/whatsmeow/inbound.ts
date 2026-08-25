@@ -13,6 +13,9 @@ export type InboundMessage = {
   chatJid: string;
   isPoll: boolean;
   type: string;
+  mimetype: string;
+  filename: string;
+  caption: string;
 };
 
 type RawRecord = Record<string, unknown>;
@@ -62,6 +65,30 @@ function looksLikePollVote(event: string, data: RawRecord) {
     Boolean(String(data.poll_option || "").trim()) ||
     /^opt_\d+$/i.test(String(data.button_id || ""))
   );
+}
+
+function nestedMessage(data: RawRecord) {
+  return asRecord(data.message);
+}
+
+function mediaMeta(data: RawRecord) {
+  const message = nestedMessage(data);
+  const image = asRecord(message?.imageMessage);
+  const video = asRecord(message?.videoMessage);
+  const audio = asRecord(message?.audioMessage);
+  const document = asRecord(message?.documentMessage);
+  const sticker = asRecord(message?.stickerMessage);
+  const nested = image || video || audio || document || sticker || {};
+  const typeRaw = String(data.type || "").toLowerCase();
+  const type =
+    typeRaw ||
+    (image ? "image" : video ? "video" : audio ? (audio.ptt ? "ptt" : "audio") : document ? "document" : sticker ? "sticker" : "");
+  const caption = String(data.caption || nested.caption || "").trim();
+  const mimetype = String(data.mimetype || nested.mimetype || "").trim();
+  const filename = String(
+    data.filename || data.fileName || nested.fileName || nested.filename || ""
+  ).trim();
+  return { type, caption, mimetype, filename };
 }
 
 function pollChoiceFrom(data: RawRecord) {
@@ -117,22 +144,26 @@ export function parseInbound(body: unknown): InboundMessage | null {
       chatJid: String(data.chat_jid || ""),
       isPoll: true,
       type: "poll_vote",
+      mimetype: "",
+      filename: "",
+      caption: "",
     };
   }
 
   const phone = pickPhone(data);
   const isPoll = looksLikePollVote(event, data);
+  const media = mediaMeta(data);
   const text = isPoll
     ? pollChoiceFrom(data) || String(data.body || "").trim()
     : String(
         data.body ||
           data.messageBody ||
+          media.caption ||
           asRecord(data.message)?.conversation ||
           asRecord(asRecord(data.message)?.extendedTextMessage)?.text ||
           ""
       ).trim();
 
-  const type = String(data.type || "").toLowerCase();
   return {
     event,
     id: String(data.id || asRecord(data.key)?.id || ""),
@@ -143,7 +174,10 @@ export function parseInbound(body: unknown): InboundMessage | null {
     pushName: String(data.push_name || data.pushName || ""),
     chatJid: String(data.chat_jid || data.from || asRecord(data.key)?.remoteJid || ""),
     isPoll,
-    type,
+    type: media.type,
+    mimetype: media.mimetype,
+    filename: media.filename,
+    caption: media.caption,
   };
 }
 

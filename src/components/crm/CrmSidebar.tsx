@@ -10,6 +10,7 @@ const links = [
   { href: "/crm/inbox", label: "Inbox", icon: "inbox" as const },
   { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true, icon: "spark" as const },
   { href: "/crm/whatsapp", label: "WhatsApp", icon: "phone" as const },
+  { href: "/crm/chats", label: "Chats", icon: "bubbles" as const },
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
@@ -97,6 +98,14 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       </svg>
     );
   }
+  if (name === "bubbles") {
+    return (
+      <svg {...props}>
+        <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h7A2.5 2.5 0 0 1 17 6.5v4a2.5 2.5 0 0 1-2.5 2.5H11l-3 2.2V13H7.5A2.5 2.5 0 0 1 5 10.5v-4z" />
+        <path d="M8 16.2c.4 1.4 1.8 2.3 3.4 2.3h2.1L16.8 21v-2.2h.7A2.5 2.5 0 0 0 20 16.3v-3.2" />
+      </svg>
+    );
+  }
   return (
     <svg {...props}>
       <path d="M5 6.5h10M5 12h14M5 17.5h8" />
@@ -110,7 +119,7 @@ export function CrmSidebar({
   collapsed,
   onCollapsedChange,
 }: {
-  badges?: { inbox?: number; seguimientos?: number; chatbot?: number };
+  badges?: { inbox?: number; seguimientos?: number; chatbot?: number; chats?: number };
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
@@ -170,7 +179,9 @@ export function CrmSidebar({
                 ? badges?.inbox
                 : link.href === "/crm/seguimientos"
                   ? badges?.seguimientos
-                  : undefined;
+                  : link.href === "/crm/chats"
+                    ? badges?.chats
+                    : undefined;
 
             return (
               <Link
