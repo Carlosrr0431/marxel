@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { mapInteresToProducto } from "@/lib/crm/types";
+import { notifyProducerQuoteReady } from "@/lib/whatsmeow/producer-notify";
 
 export async function POST(request: Request) {
   try {
@@ -42,6 +43,20 @@ export async function POST(request: Request) {
       console.error("lead insert error", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await notifyProducerQuoteReady({
+      leadId: data.id,
+      canal: "Cotizador web",
+      nombre,
+      celular,
+      email: body.email || null,
+      dni: body.dni || null,
+      edad: body.edad || null,
+      provincia: body.provincia || null,
+      localidad: body.localidad || null,
+      interes: interes || null,
+      notas: body.notas || `Cotización web: ${interes || "general"}`,
+    });
 
     return NextResponse.json({ ok: true, id: data.id });
   } catch (e) {

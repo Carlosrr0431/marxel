@@ -78,10 +78,17 @@ function formatBytes(size: number) {
 function mediaKind(message: CrmChatMessage) {
   const type = (message.message_type || "").toLowerCase();
   const mime = (message.media_mime || "").toLowerCase();
-  if (type === "image" || type === "sticker" || mime.startsWith("image/")) return "image";
-  if (type === "video" || mime.startsWith("video/")) return "video";
-  if (type === "audio" || type === "ptt" || mime.startsWith("audio/")) return "audio";
-  if (type === "document" || message.media_url || message.file_name) return "file";
+
+  if (type === "image" || type === "sticker") return "image";
+  if (type === "video") return "video";
+  if (type === "audio" || type === "ptt") return "audio";
+  if (type === "document") return "file";
+
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+
+  if (message.media_url || message.file_name) return "file";
   return "text";
 }
 
@@ -186,21 +193,64 @@ function Ticks({ status }: { status: CrmDeliveryStatus }) {
   );
 }
 
+function fileIconLabel(mime: string | null, name: string | null) {
+  const m = (mime || "").toLowerCase();
+  const ext = (name || "").split(".").pop()?.toUpperCase() || "FILE";
+  if (m.startsWith("image/")) return "IMG";
+  if (m === "application/pdf" || ext === "PDF") return "PDF";
+  if (m.startsWith("video/")) return "VID";
+  if (m.startsWith("audio/")) return "AUD";
+  if (m.includes("word") || ext === "DOC" || ext === "DOCX") return "DOC";
+  if (m.includes("excel") || m.includes("spreadsheet") || ext === "XLS" || ext === "XLSX") return "XLS";
+  if (m.includes("zip") || m.includes("compressed") || ext === "ZIP") return "ZIP";
+  return ext.slice(0, 4);
+}
+
+function MediaFallback({ src, name, mine }: { src: string; name: string | null; mine: boolean }) {
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noreferrer"
+      className={`crm-wa-file${mine ? " is-mine" : ""}`}
+    >
+      <span className="crm-wa-file__icon" aria-hidden="true">IMG</span>
+      <span>
+        <strong>{name || "Imagen"}</strong>
+        <em>Tocar para abrir</em>
+      </span>
+    </a>
+  );
+}
+
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
   const kind = mediaKind(message);
   const src = kind === "text" ? "" : mediaSrc(message);
   const status = deliveryOf(message);
+  const [imgError, setImgError] = useState(false);
+
+  const bodyText =
+    message.body && message.body !== message.file_name ? message.body : null;
+
   return (
     <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>
       <div
         className={`crm-wa-bubble${mine ? " is-mine" : ""}${kind !== "text" ? " has-media" : ""}${status === "failed" ? " is-failed" : ""}`}
       >
-        {kind === "image" && src ? (
+        {kind === "image" && src && !imgError ? (
           <a href={src} target="_blank" rel="noreferrer" className="crm-wa-media-link">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={message.file_name || "Imagen"} className="crm-wa-media-img" />
+            <img
+              src={src}
+              alt={message.file_name || "Imagen"}
+              className="crm-wa-media-img"
+              onError={() => setImgError(true)}
+            />
           </a>
+        ) : null}
+        {kind === "image" && src && imgError ? (
+          <MediaFallback src={src} name={message.file_name || null} mine={mine} />
         ) : null}
         {kind === "video" && src ? (
           <video src={src} controls className="crm-wa-media-video" preload="metadata" />
@@ -211,7 +261,7 @@ function Bubble({ message }: { message: CrmChatMessage }) {
         {kind === "file" && src ? (
           <a href={src} target="_blank" rel="noreferrer" className="crm-wa-file">
             <span className="crm-wa-file__icon" aria-hidden="true">
-              PDF
+              {fileIconLabel(message.media_mime || null, message.file_name || null)}
             </span>
             <span>
               <strong>{message.file_name || "Archivo"}</strong>
@@ -219,7 +269,7 @@ function Bubble({ message }: { message: CrmChatMessage }) {
             </span>
           </a>
         ) : null}
-        {message.body ? <p className="crm-wa-text">{message.body}</p> : null}
+        {bodyText ? <p className="crm-wa-text">{bodyText}</p> : null}
         <span className="crm-wa-meta">
           {status === "pending" || status === "sending" ? <em className="crm-wa-queued">En cola</em> : null}
           {status === "failed" ? <em className="crm-wa-queued is-failed">No enviado</em> : null}

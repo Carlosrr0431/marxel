@@ -7,6 +7,7 @@ import {
   type QuoteData,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
+import { notifyProducerFromQuoteState } from "@/lib/whatsmeow/producer-notify";
 
 function toModalidad(data: QuoteData): ModalidadIngreso {
   if (data.modalidad === "monotributo") return "monotributo";
@@ -123,6 +124,7 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
       meta: { source: "chatbot", stage: "hot" },
     });
 
+    await notifyProducerFromQuoteState({ ...state, leadId: updated.id }, "nuevo");
     return updated.id as string;
   }
 
@@ -146,6 +148,7 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
     creado_por: "chatbot",
   });
 
+  await notifyProducerFromQuoteState({ ...state, leadId: inserted.id }, "nuevo");
   return inserted.id as string;
 }
 
@@ -195,4 +198,9 @@ export async function updateLeadOptionalFromQuote(state: QuoteState) {
     autor: "chatbot",
     meta: { source: "chatbot", stage: "optional" },
   });
+
+  await notifyProducerFromQuoteState(
+    state,
+    state.data.auto?.planElegido ? "actualizacion" : "nuevo"
+  );
 }
