@@ -23,10 +23,10 @@ import {
 } from "@/lib/chatbot/persist-lead";
 import { getChatAi } from "@/lib/chatbot/ai-client";
 import {
-  findPrestadores,
-  formatPrestadorAnswer,
-  looksLikePrestadorQuery,
-} from "@/lib/chatbot/lookup-prestadores";
+  classifyWhatsappMessage,
+  isConversationalIntent,
+} from "@/lib/chatbot/message-classifier";
+import { findPrestadores } from "@/lib/chatbot/lookup-prestadores";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -155,7 +155,54 @@ export async function runChatTurn(input: {
     ? message.split("\n").map((s) => s.trim()).filter(Boolean)
     : [message];
 
-  if (lines.length > 1) {
+  const routed = await classifyWhatsappMessage({
+    message,
+    history,
+    state: prevState,
+  });
+
+  if (routed?.intent === "cancel") {
+    return {
+      answer:
+        routed.reply ||
+        "Queda pausado. Cuando quieras seguimos con los datos que ya anoté.",
+      quoteState: {
+        ...prevState,
+        active: false,
+        step: prevState.step === "done" ? "done" : "idle",
+      },
+      quickReplies: menuForChannel(input.channel),
+      mode: "quote",
+    };
+  }
+
+  if (routed?.intent === "greeting" && !prevState.active) {
+    return {
+      answer:
+        routed.reply ||
+        "¡Hola! Bienvenido a MARXEN Protección Integral. ¿En qué te puedo ayudar hoy?",
+      quoteState: prevState,
+      quickReplies: menuForChannel(input.channel),
+      mode: "quote",
+    };
+  }
+
+  if (
+    routed?.reply &&
+    (isConversationalIntent(routed.intent) || routed.intent === "greeting")
+  ) {
+    return {
+      answer: stripMarkdownNoise(routed.reply),
+      quoteState: prevState,
+      quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+      mode: "rag",
+    };
+  }
+
+  const pauseQuote = Boolean(routed?.pauseQuote || (routed && isConversationalIntent(routed.intent)));
+  const deterministic = isDeterministicQuoteInput(message, prevState);
+
+  if (lines.length > 1 && !pauseQuote && !findPrestadores(message).length) {
     const batch = await processQuoteFlowBatch(
       lines,
       prevState,
@@ -179,39 +226,7 @@ export async function runChatTurn(input: {
     }
   }
 
-  // Si el mensaje es una pregunta informativa (contiene "?" o empieza con
-  // palabras de pregunta / menciona prestadores/cartilla), lo dejamos pasar
-  // directamente a classifyQuoteIntent para que el RAG responda, incluso
-  // cuando hay un flujo de cotización activo.
-
-  // Detectar afirmativo corto como respuesta a un mensaje RAG de salud/cartilla
-  // Ej: el bot dijo "está en la cartilla..." y el usuario responde "dale"/"sí"/"ok"
-  const lastBotMsg = history.filter((m) => m.role === "assistant").slice(-1)[0]?.content ?? "";
-  const isAffirmativeFollowupHealth =
-    /^\s*(dale|s[ií]|ok|bueno|listo|claro|perfecto|anda(ndo)?|va(le)?|genial|quiero|manda(me)?|pas[aá](me)?)\s*[!.,]*\s*$/i.test(message) &&
-    /\b(cartilla|prestador|cl[ií]nica|sanatorio|hospital|farmacia|plan\s+[aA][24]|prevenci[oó]n\s+salud|cobertura|m[eé]dico)\b/i.test(lastBotMsg);
-
-  const prestadorHits = findPrestadores(message);
-  const isInfoQuestion =
-    isAffirmativeFollowupHealth ||
-    looksLikePrestadorQuery(message) ||
-    message.includes("?") ||
-    /^\s*(qu[eé]|cu[aá]l(es)?|c[oó]mo|d[oó]nde|cu[aá]nto|hay\s|existe[n]?\s|tienen|me\s+pod[eé]s|pod[eé]s\s+decir|quiero\s+saber|dame\s|decime\s|lista\s|quiero\s+ver)/i.test(message) ||
-    /\b(prestador(es)?|cartilla|cl[ií]nica[s]?|sanatorio[s]?|hospital(es)?|farmacia[s]?|m[eé]dico[s]?|especialidad(es)?|coberturas?\s+del?\s+plan|qu[eé]\s+cubre|lista\s+de\s+prestadores?|qu[eé]\s+incluye)\b/i.test(message);
-
-  // Respuesta directa de cartilla (Jaraba, Tres Cerritos, etc.) aunque el flujo
-  // de cotización esté activo: no pedir plan ni enviar poll.
-  if (prestadorHits.length > 0) {
-    return {
-      answer: formatPrestadorAnswer(prestadorHits),
-      quoteState: prevState,
-      quickReplies: [],
-      mode: "rag",
-    };
-  }
-
-  const deterministic = isDeterministicQuoteInput(message, prevState);
-  if (!isInfoQuestion && (deterministic || prevState.active)) {
+  if (!pauseQuote && (deterministic || (prevState.active && (!routed || routed.intent === "quote")))) {
     const quote = await processQuoteFlow(message, prevState, input.channel);
     if (quote.handled && quote.answer) {
       return finishQuoteResult(quote, input.channel, input.knownPhone);
@@ -237,19 +252,11 @@ export async function runChatTurn(input: {
     }
 
     const merged = mergeIntentIntoState(prevState, classified);
-
-    // FIX: si el usuario hizo una pregunta informativa durante un flujo activo
-    // (ej: "trabajan con el hospital tres cerritos?" mientras se cotiza un auto),
-    // responder directamente sin avanzar el estado de la cotización.
-    // Esto evita que intentAdvancesQuote() dispare resumeQuoteState() y
-    // envíe el poll del paso siguiente.
-    const forcedInfo = isInfoQuestion && prevState.active;
-
     const questionOnly =
-      forcedInfo ||
+      pauseQuote ||
       ((classified.intent === "question" || classified.intent === "other") &&
-      classified.reply &&
-      !intentAdvancesQuote(classified));
+        classified.reply &&
+        !intentAdvancesQuote(classified));
 
     if (questionOnly) {
       if (classified.reply) {
@@ -260,11 +267,9 @@ export async function runChatTurn(input: {
           mode: "rag",
         };
       }
-      // classified.reply es null pero es forcedInfo: continúa para obtener respuesta de IA
-      // sin avanzar el flujo (el guard al final lo evita)
     }
 
-    if (!forcedInfo && (intentAdvancesQuote(classified) || classified.intent === "quote")) {
+    if (!pauseQuote && (intentAdvancesQuote(classified) || classified.intent === "quote")) {
       const resumed = await resumeQuoteState(withChannel(merged, input.channel));
       if (resumed?.handled && resumed.answer) {
         return finishQuoteResult(resumed, input.channel, input.knownPhone);
@@ -274,19 +279,17 @@ export async function runChatTurn(input: {
     if (classified.reply) {
       return {
         answer: stripMarkdownNoise(classified.reply),
-        quoteState: forcedInfo ? prevState : merged,
+        quoteState: pauseQuote ? prevState : merged,
         quickReplies:
-          input.channel === "whatsapp" && !(forcedInfo ? prevState : merged).active
+          input.channel === "whatsapp" && !(pauseQuote ? prevState : merged).active
             ? menuForChannel("whatsapp")
             : [],
-        mode: classified.intent === "quote" ? "quote" : "rag",
+        mode: classified.intent === "quote" && !pauseQuote ? "quote" : "rag",
       };
     }
   }
 
-  // No llamar a processQuoteFlow si es pregunta informativa con flujo activo:
-  // evita que el paso actual del flujo se regenere y dispare un poll no solicitado.
-  if (!(isInfoQuestion && prevState.active)) {
+  if (!pauseQuote) {
     const quote = await processQuoteFlow(message, prevState, input.channel);
     if (quote.handled && quote.answer) {
       return finishQuoteResult(quote, input.channel, input.knownPhone);
