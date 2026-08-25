@@ -72,7 +72,7 @@ export function formatProducerQuoteMessage(input: {
     input.localidad ? `📍 ${input.localidad}` : null,
     input.interes ? `📌 ${input.interes}` : null,
     detailLines.length > 0 ? detailLines.join("\n") : null,
-    input.leadId ? `\n🔗 /crm/leads/${input.leadId}` : null,
+    input.leadId ? `\n🔗 https://www.marxen.com.ar/crm/leads/${input.leadId}` : null,
   ];
   return lines.filter((l) => l != null && String(l).trim() !== "").join("\n");
 }

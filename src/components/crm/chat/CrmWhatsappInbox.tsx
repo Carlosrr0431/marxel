@@ -496,7 +496,9 @@ function Bubble({ message }: { message: CrmChatMessage }) {
   const [imgError, setImgError] = useState(false);
 
   const bodyText =
-    message.body && message.body !== message.file_name ? message.body : null;
+    kind !== "audio" && message.body && message.body !== message.file_name
+      ? message.body
+      : null;
 
   return (
     <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>

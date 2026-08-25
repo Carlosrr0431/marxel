@@ -542,7 +542,8 @@ export function isAutoQuoteStep(step: QuoteState["step"]): boolean {
     step === "auto_version" ||
     step === "auto_cp" ||
     step === "auto_localidad" ||
-    step === "auto_plan"
+    step === "auto_plan" ||
+    step === "auto_patente"
   );
 }
 
@@ -593,6 +594,20 @@ export async function handleAutoQuoteStep(
       .filter(Boolean)
       .join(" · ");
     const nombre = data.nombre?.split(/\s+/)[0] || "";
+    // Para vehículos usados pedimos la patente antes de finalizar
+    if (!data.auto.is0km) {
+      return {
+        handled: true,
+        state: {
+          ...state,
+          active: true,
+          step: "auto_patente",
+          data,
+          pendingSave: "optional",
+        },
+        answer: `Listo${nombre ? `, ${nombre}` : ""}. Elegiste ${plan.title} (${money(plan.monthly)}/mes). ¿Cuál es la patente del vehículo? (ej: AB 123 CD)`,
+      };
+    }
     return {
       handled: true,
       state: {
@@ -603,6 +618,34 @@ export async function handleAutoQuoteStep(
         pendingSave: "optional",
       },
       answer: `Listo${nombre ? `, ${nombre}` : ""}. Anoté ${plan.title} (${money(plan.monthly)}/mes). Un asesor de MARXEN te escribe por WhatsApp para cerrarlo.`,
+    };
+  }
+
+  if (state.step === "auto_patente") {
+    const { normalizeArPlate, classifyArPlate } = await import("@/lib/ar-plate");
+    const SKIP = /^(no|nop|sin\s+patente|no\s+tengo|0km|cero\s*km|nuevo|sin|omitir|saltar|-)$/i;
+    const nombre = data.nombre?.split(/\s+/)[0] || "";
+    if (SKIP.test(text.trim())) {
+      return {
+        handled: true,
+        state: { ...state, active: false, step: "done", data, pendingSave: "optional" },
+        answer: `Perfecto${nombre ? `, ${nombre}` : ""}. Un asesor de MARXEN te escribe por WhatsApp para cerrarlo.`,
+      };
+    }
+    const plate = normalizeArPlate(text);
+    const kind = classifyArPlate(plate);
+    if (kind === "invalid" || kind === "empty") {
+      return {
+        handled: true,
+        state: { ...state, active: true, step: "auto_patente", data },
+        answer: "No reconocí la patente. Ingresala en formato ABC123 o AB 123 CD, o respondé «no tengo» si es 0km.",
+      };
+    }
+    data.auto = { ...data.auto, patente: plate };
+    return {
+      handled: true,
+      state: { ...state, active: false, step: "done", data, pendingSave: "optional" },
+      answer: `Perfecto${nombre ? `, ${nombre}` : ""}. Patente ${plate} registrada. Un asesor de MARXEN te escribe por WhatsApp para cerrarlo.`,
     };
   }
 

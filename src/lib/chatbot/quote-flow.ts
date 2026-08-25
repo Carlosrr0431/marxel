@@ -45,6 +45,7 @@ export type QuoteStep =
   | "auto_cp"
   | "auto_localidad"
   | "auto_plan"
+  | "auto_patente"
   | "done";
 
 export type AutoQuoteDraft = {
@@ -59,6 +60,7 @@ export type AutoQuoteDraft = {
   plans?: AutoPlan[];
   quoteId?: number;
   planElegido?: string;
+  patente?: string;
 };
 
 export type QuoteData = {
@@ -332,6 +334,7 @@ export function buildNotas(data: QuoteData, extra?: string): string {
           .join(" ")}`.trim()
       : null,
     data.auto?.cp ? `CP auto: ${data.auto.cp}` : null,
+    data.auto?.patente ? `Patente: ${data.auto.patente}` : null,
     data.auto?.planElegido ? `Plan auto: ${data.auto.planElegido}` : null,
     data.viajeroDestino ? `Viaje: ${data.viajeroDestino}` : null,
     data.nombre ? `Nombre: ${data.nombre}` : null,
