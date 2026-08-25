@@ -178,7 +178,16 @@ export async function runChatTurn(input: {
   // palabras de pregunta / menciona prestadores/cartilla), lo dejamos pasar
   // directamente a classifyQuoteIntent para que el RAG responda, incluso
   // cuando hay un flujo de cotización activo.
+
+  // Detectar afirmativo corto como respuesta a un mensaje RAG de salud/cartilla
+  // Ej: el bot dijo "está en la cartilla..." y el usuario responde "dale"/"sí"/"ok"
+  const lastBotMsg = history.filter((m) => m.role === "assistant").slice(-1)[0]?.content ?? "";
+  const isAffirmativeFollowupHealth =
+    /^\s*(dale|s[ií]|ok|bueno|listo|claro|perfecto|anda(ndo)?|va(le)?|genial|quiero|manda(me)?|pas[aá](me)?)\s*[!.,]*\s*$/i.test(message) &&
+    /\b(cartilla|prestador|cl[ií]nica|sanatorio|hospital|farmacia|plan\s+[aA][24]|prevenci[oó]n\s+salud|cobertura|m[eé]dico)\b/i.test(lastBotMsg);
+
   const isInfoQuestion =
+    isAffirmativeFollowupHealth ||
     message.includes("?") ||
     /^\s*(qu[eé]|cu[aá]l(es)?|c[oó]mo|d[oó]nde|cu[aá]nto|hay\s|existe[n]?\s|tienen|me\s+pod[eé]s|pod[eé]s\s+decir|quiero\s+saber|dame\s|decime\s|lista\s|quiero\s+ver)/i.test(message) ||
     /\b(prestador(es)?|cartilla|cl[ií]nica[s]?|sanatorio[s]?|hospital(es)?|farmacia[s]?|m[eé]dico[s]?|especialidad(es)?|coberturas?\s+del?\s+plan|qu[eé]\s+cubre|lista\s+de\s+prestadores?|qu[eé]\s+incluye)\b/i.test(message);
