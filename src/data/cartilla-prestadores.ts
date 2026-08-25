@@ -1,0 +1,467 @@
+export type TipoPrestador =
+  | "clinica"
+  | "sanatorio"
+  | "policonsultorio"
+  | "diagnostico"
+  | "laboratorio"
+  | "rehabilitacion"
+  | "farmacia"
+  | "vacunacion"
+  | "maternidad";
+
+export interface Prestador {
+  id: string;
+  nombre: string;
+  tipo: TipoPrestador;
+  especialidades: string[];
+  direccion: string;
+  telefono: string;
+  whatsapp?: string;
+  planes: ("A2" | "A4")[];
+}
+
+export interface Farmacia {
+  id: string;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  planes: ("A2" | "A4")[];
+}
+
+// ─── CLÍNICAS, SANATORIOS Y POLICONSULTORIOS ───────────────────────────────
+
+export const PRESTADORES: Prestador[] = [
+  {
+    id: "hospital-santa-clara",
+    nombre: "Hospital Privado Santa Clara de Asís",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Clínica Médica","Diagnóstico por Imágenes","Kinesiología",
+      "Nutrición","Oftalmología","Pediatría","Psicología","Urología",
+    ],
+    direccion: "Urquiza 964, Salta Capital",
+    telefono: "0387-4321440",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "hospital-tres-cerritos",
+    nombre: "Hospital Privado Tres Cerritos",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Cirugía Cardiovascular","Cirugía General","Cirugía General Infantil",
+      "Clínica Médica","Ecografía General","Ginecología","Guardia General",
+      "Guardia Pediátrica","Hemodinamia","Hemoterapia","Laboratorio","Neonatología",
+      "Obstetricia","Pediatría","Proctología","Terapia Intensiva",
+      "Terapia Intensiva Pediátrica","Tomografía Axial Computada",
+      "Traumatología y Ortopedia","Unidad Coronaria",
+    ],
+    direccion: "Av. Juan B. Justo 93, Salta Capital",
+    telefono: "0387-4163500",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "sanatorio-el-carmen",
+    nombre: "Sanatorio El Carmen",
+    tipo: "sanatorio",
+    especialidades: [
+      "Anatomía Patológica","Cardiología","Cirugía Cardiovascular",
+      "Cirugía de Cabeza, Cara y Cuello","Cirugía General","Cirugía Maxilofacial",
+      "Cirugía Torácica","Dermatología","Diagnóstico por Imágenes","Ecografía General",
+      "Endocrinología y Metabolismo","Estimulación Temprana","Fisiatría",
+      "Flebología","Fonoaudiología","Gastroenterología","Ginecología",
+      "Hematología","Hemoterapia","Infectología","Kinesiología","Laboratorio",
+      "Nefrología","Neumonología","Neurocirugía","Neurología","Nutrición",
+      "Oftalmología","Oncología","Otorrinolaringología","Proctología",
+      "Psicología","Reumatología","Terapia Intensiva","Tomografía Axial Computada",
+    ],
+    direccion: "Salta Capital",
+    telefono: "0387-4311555",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "sanatorio-san-roque",
+    nombre: "Sanatorio San Roque S.A.",
+    tipo: "sanatorio",
+    especialidades: [
+      "Cardiología","Cirugía General","Clínica Médica","Fisiatría","Ginecología",
+      "Guardia General","Kinesiología","Obstetricia","Pediatría",
+      "Traumatología y Ortopedia",
+    ],
+    direccion: "Av. Reyes Católicos 1518, Salta Capital",
+    telefono: "0387-4394000 / 4392357 / 4390202",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "clinica-berg",
+    nombre: "Clínica Berg",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Cirugía Cardiovascular","Cirugía de Cabeza, Cara y Cuello",
+      "Cirugía General","Cirugía Maxilofacial","Cirugía Plástica","Cirugía Torácica",
+      "Clínica Médica","Densitometría Ósea","Dermatología","Diagnóstico por Imágenes",
+      "Ecografía General","Fisiatría","Gastroenterología","Hematología",
+      "Hemodinamia","Hemoterapia","Infectología","Kinesiología","Laboratorio",
+      "Medicina de Trabajo","Medicina General y Familiar","Medicina Nuclear",
+      "Medicina Transfusional","Nefrología","Neumonología","Neurocirugía",
+      "Neurología","Nutrición","Oftalmología","Oncología","Otorrinolaringología",
+      "Psicología","Resonancia Nuclear Magnética","Reumatología",
+      "Terapia Intensiva","Terapia Ocupacional","Tomografía Axial Computada",
+      "Toxicología","Traumatología y Ortopedia","Urología",
+    ],
+    direccion: "Alberdi 359, Salta Capital",
+    telefono: "WhatsApp 387-4453008",
+    whatsapp: "3874453008",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "vitae-medical",
+    nombre: "Vitae Medical SRL",
+    tipo: "policonsultorio",
+    especialidades: [
+      "Cardiología","Cardiología Infantil","Cirugía General","Cirugía General Infantil",
+      "Cirugía Plástica","Clínica Médica","Diagnóstico por Imágenes",
+      "Endocrinología y Metabolismo","Fisiatría","Ginecología","Internación General",
+      "Laboratorio","Medicina General y Familiar","Neonatología","Nutrición",
+      "Obstetricia","Oftalmología","Oncología",
+    ],
+    direccion: "Zabala 432, Salta Capital",
+    telefono: "0387-4237373 / 4260300",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "clinica-luis-guemes",
+    nombre: "Clínica Luis Güemes S.A.",
+    tipo: "clinica",
+    especialidades: [
+      "Anatomía Patológica","Cardiología","Cirugía General","Cirugía General Infantil",
+      "Clínica Médica","Dermatología","Diabetología","Laboratorio",
+      "Medicina General y Familiar","Nefrología","Neonatología","Neurocirugía",
+      "Neurología","Nutrición","Obstetricia","Oncología","Otorrinolaringología",
+      "Pediatría","Terapia Intensiva","Traumatología y Ortopedia",
+    ],
+    direccion: "Adolfo Güemes 287, Salta Capital",
+    telefono: "0387-4210033",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "imac-centro",
+    nombre: "IMAC Centro — Grupo Esmeralda SRL",
+    tipo: "policonsultorio",
+    especialidades: [
+      "Cirugía General","Clínica Médica","Ginecología","Laboratorio",
+      "Obstetricia","Pediatría","Radiodiagnóstico",
+    ],
+    direccion: "Alvarado 858, Salta Capital",
+    telefono: "387-4219212",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "imagen-clara",
+    nombre: "Imagen Clara SRL",
+    tipo: "diagnostico",
+    especialidades: [
+      "Diagnóstico por Imágenes","Eco Doppler","Ecografía General",
+      "Ecografía Oftalmológica","Tomografía Axial Computada",
+    ],
+    direccion: "General Urquiza 968, Salta Capital",
+    telefono: "WhatsApp 387-4026562",
+    whatsapp: "3874026562",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "diagnostico-salta",
+    nombre: "Diagnóstico Salta SA",
+    tipo: "diagnostico",
+    especialidades: [
+      "Eco Doppler","Ecografía General","Ecografía Ginecológica",
+      "Mamografía","Radiodiagnóstico","Tomografía Axial Computada",
+    ],
+    direccion: "Dr. Mariano Boedo 62, Salta Capital",
+    telefono: "0387-4215529",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "imagenes-medicas",
+    nombre: "Imágenes Médicas S.A.",
+    tipo: "diagnostico",
+    especialidades: ["Resonancia Nuclear Magnética"],
+    direccion: "Mariano Boedo 62, Salta Capital",
+    telefono: "0387-4215529",
+    whatsapp: "3873080555",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "imagenes-jaraba",
+    nombre: "Imágenes Jaraba",
+    tipo: "diagnostico",
+    especialidades: ["Clínica Médica","Diagnóstico por Imágenes"],
+    direccion: "Mitre 486, Salta Capital",
+    telefono: "0387-4314907",
+    whatsapp: "3872275027",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "cordis-sa",
+    nombre: "Cordis SA",
+    tipo: "diagnostico",
+    especialidades: ["Diagnóstico por Imágenes"],
+    direccion: "España 1067, Salta Capital",
+    telefono: "",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "tomografia-estado",
+    nombre: "Tomografía Computada — Sociedad del Estado",
+    tipo: "diagnostico",
+    especialidades: ["Diagnóstico por Imágenes"],
+    direccion: "Mariano Boedo 151, Salta Capital",
+    telefono: "0387-4215342 / 4216552 / 156834275",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "laboratorios-katz",
+    nombre: "Laboratorios Katz y Asociados SRL",
+    tipo: "laboratorio",
+    especialidades: ["Laboratorio"],
+    direccion: "Adolfo Güemes 82, Salta Capital",
+    telefono: "0387-6144845",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "maternidad-privada",
+    nombre: "Maternidad Privada S.A.",
+    tipo: "maternidad",
+    especialidades: [
+      "Ginecología","Guardia General","Guardia Pediátrica","Neonatología","Obstetricia",
+    ],
+    direccion: "Urquiza 150, Salta Capital",
+    telefono: "0387-4220654 / 4220053 / 4320385",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "servicio-nino-jesus",
+    nombre: "Servicio de Atención Pediátrica del Niño Jesús",
+    tipo: "policonsultorio",
+    especialidades: ["Guardia Pediátrica","Pediatría"],
+    direccion: "Urquiza 964 Piso 2°, Salta Capital",
+    telefono: "0387-4317000 / 4311226",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "medicina-ambulatoria",
+    nombre: "Medicina Ambulatoria Salta",
+    tipo: "policonsultorio",
+    especialidades: ["Clínica Médica","Diagnóstico por Imágenes","Laboratorio"],
+    direccion: "Buenos Aires 196, Salta Capital",
+    telefono: "03878-4311977",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "cigno",
+    nombre: "CIGNO",
+    tipo: "policonsultorio",
+    especialidades: ["Fonoaudiología","Otorrinolaringología"],
+    direccion: "20 de Febrero 659, Salta Capital",
+    telefono: "0387-4212202",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "arcadia-salud",
+    nombre: "Arcadia Salud SRL",
+    tipo: "policonsultorio",
+    especialidades: [
+      "Cirugía General","Clínica Médica","Endocrinología y Metabolismo",
+      "Neurología","Oftalmología",
+    ],
+    direccion: "Urquiza 181, Salta Capital",
+    telefono: "",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "cedit-srl",
+    nombre: "CEDIT SRL",
+    tipo: "policonsultorio",
+    especialidades: ["Oncología"],
+    direccion: "Santiago del Estero 1415, Salta Capital",
+    telefono: "",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "centro-solar",
+    nombre: "Centro de Rehabilitación El Solar",
+    tipo: "rehabilitacion",
+    especialidades: ["Rehabilitación"],
+    direccion: "Caseros 1418, Salta Capital",
+    telefono: "0387-4319355",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "clinica-virgen-huachana",
+    nombre: "Clínica Virgen de Huachana S.R.L.",
+    tipo: "clinica",
+    especialidades: ["Clínica Médica"],
+    direccion: "Av. General Güemes 218, Salta Capital",
+    telefono: "03877-421203 / 15456052",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "corema-srl",
+    nombre: "Corema S.R.L.",
+    tipo: "policonsultorio",
+    especialidades: ["Clínica Médica"],
+    direccion: "Urquiza 150, Salta Capital",
+    telefono: "0387-4316640",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "fundacion-urkupina",
+    nombre: "Fundación María de Urkupiña",
+    tipo: "policonsultorio",
+    especialidades: ["Clínica Médica"],
+    direccion: "Ameghino 1064, Salta Capital",
+    telefono: "0387-421270 / 4321893",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "hospital-materno",
+    nombre: "Hospital Público Materno Infantil — Sociedad del Estado",
+    tipo: "clinica",
+    especialidades: ["Clínica Médica"],
+    direccion: "Av. Sarmiento 1301, Salta Capital",
+    telefono: "0387-4325000",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "senyp-srl",
+    nombre: "Senyp S.R.L.",
+    tipo: "policonsultorio",
+    especialidades: ["Clínica Médica","Neonatología","Pediatría"],
+    direccion: "Urquiza 150, Salta Capital",
+    telefono: "0387-4215222",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "profilaxis-srl",
+    nombre: "Profilaxis SRL",
+    tipo: "vacunacion",
+    especialidades: ["Centros de Vacunación"],
+    direccion: "Sarmiento 371, Salta Capital",
+    telefono: "",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "instituto-saravia",
+    nombre: "Instituto Oftalmológico Saravia Olmos Hugo",
+    tipo: "policonsultorio",
+    especialidades: ["Oftalmología","Oftalmología Infantil"],
+    direccion: "Av. Gral. Manuel Belgrano 544, Salta Capital",
+    telefono: "03875-15523444",
+    planes: ["A2","A4"],
+  },
+  {
+    id: "lic-olcese",
+    nombre: "Lic. Olcese, María Victoria",
+    tipo: "policonsultorio",
+    especialidades: ["Kinesiología"],
+    direccion: "Dr. Facundo de Zuvirría 920, Salta Capital",
+    telefono: "0387-4214982",
+    planes: ["A2","A4"],
+  },
+];
+
+// ─── FARMACIAS ─────────────────────────────────────────────────────────────
+
+export const FARMACIAS: Farmacia[] = [
+  { id: "far-12octubre", nombre: "12 de Octubre S.C.S.", direccion: "Gral. Mitre 1202", telefono: "(0387)-4212505", planes: ["A2","A4"] },
+  { id: "far-acuario", nombre: "Acuario", direccion: "Av. Independencia 599", telefono: "(0387)-4230655", planes: ["A2","A4"] },
+  { id: "far-adp", nombre: "ADP", direccion: "Juramento 99", telefono: "(0387)-4211931", planes: ["A2","A4"] },
+  { id: "far-alpha-neo", nombre: "Alpha Neo", direccion: "Buenos Aires 401", telefono: "(0387)-4311677", planes: ["A2","A4"] },
+  { id: "far-alvarado", nombre: "Alvarado", direccion: "Gral. R. Alvarado 1901", telefono: "(0387)-4211116", planes: ["A2","A4"] },
+  { id: "far-amaicha", nombre: "Amaicha", direccion: "Etapa 10 Mzna 1 Casa 1", telefono: "(0387)-4248301", planes: ["A2","A4"] },
+  { id: "far-america", nombre: "América", direccion: "Buenos Aires 498", telefono: "(0387)-4219519", planes: ["A2","A4"] },
+  { id: "far-artigas", nombre: "Artigas", direccion: "Av. Gral. José G. Artigas 965", telefono: "(0387)-4281395", planes: ["A2","A4"] },
+  { id: "far-avenida", nombre: "Avenida", direccion: "Av. Entre Ríos 1788", telefono: "(0387)-4314049", planes: ["A2","A4"] },
+  { id: "far-avenida-ii", nombre: "Avenida II", direccion: "Av. Gral. San Martín 2068", telefono: "(0387)-4227664", planes: ["A2","A4"] },
+  { id: "far-belgrano", nombre: "Belgrano - SAL (Farmacity)", direccion: "Av. Belgrano esq. Rep. de Siria", telefono: "(0387)-4231891", planes: ["A2","A4"] },
+  { id: "far-botica", nombre: "Botica", direccion: "Dr. Alfredo Palacios 2500", telefono: "(0388)-154659560", planes: ["A2","A4"] },
+  { id: "far-calchaqui", nombre: "Calchaquí", direccion: "J. Leguizamón 1202", telefono: "(0387)-4215353", planes: ["A2","A4"] },
+  { id: "far-central", nombre: "Central", direccion: "Córdoba 43 / Pueyrredón 450", telefono: "(0387)-4211176", planes: ["A2","A4"] },
+  { id: "far-chango-mas", nombre: "Chango Más", direccion: "Av. Fuerza Aérea 1075", telefono: "(0387)-4963423", planes: ["A2","A4"] },
+  { id: "far-chilecito", nombre: "Chilecito", direccion: "Caseros 1099", telefono: "(0387)-4225396", planes: ["A2","A4"] },
+  { id: "far-del-buen-pastor", nombre: "Del Buen Pastor", direccion: "Cnel. Suárez 515", telefono: "(0387)-155791921", planes: ["A2","A4"] },
+  { id: "far-del-perpetuo", nombre: "Del Perpetuo Socorro", direccion: "Dr. F. de Zuvirría 401", telefono: "(0387)-4314470", planes: ["A2","A4"] },
+  { id: "far-del-rosario", nombre: "Del Rosario", direccion: "San Martín 1039", telefono: "(0387)-4314757", planes: ["A2","A4"] },
+  { id: "far-del-valle-i", nombre: "Del Valle I", direccion: "España 424", telefono: "(0387)-4317578", planes: ["A2","A4"] },
+  { id: "far-del-valle-iv", nombre: "Del Valle IV", direccion: "Av. Independencia 1391", telefono: "(0387)-4230552", planes: ["A2","A4"] },
+  { id: "far-del-valle-v", nombre: "Del Valle V", direccion: "Av. Gral. Manuel Belgrano 396", telefono: "(0387)-4213962", planes: ["A2","A4"] },
+  { id: "far-del-valle-vi", nombre: "Del Valle VI", direccion: "Av. Gral. Arenales 1601", telefono: "(0387)-4215583", planes: ["A2","A4"] },
+  { id: "far-del-valle-vii", nombre: "Del Valle VII", direccion: "Av. Pte. H. Yrigoyen 339", telefono: "(0387)-4321971", planes: ["A2","A4"] },
+  { id: "far-del-valle-xiv", nombre: "Del Valle XIV", direccion: "Av. Independencia 824", telefono: "(0387)-154827403", planes: ["A2","A4"] },
+  { id: "far-del-valle-xv", nombre: "Del Valle XV", direccion: "Dr. F. de Zuvirría 1490", telefono: "(0387)-4392002", planes: ["A2","A4"] },
+  { id: "far-del-valle-xx", nombre: "Del Valle XX", direccion: "Av. Reyes Católicos 2370", telefono: "(0387)-5706843", planes: ["A2","A4"] },
+  { id: "far-del-valle-xxiii", nombre: "Del Valle XXIII", direccion: "Av. Gral. José de San Martín 1493", telefono: "(0387)-4073777", planes: ["A2","A4"] },
+  { id: "far-el-cabildo", nombre: "El Cabildo", direccion: "Av. Gral. Manuel Belgrano 905", telefono: "(0387)-4215073", planes: ["A2","A4"] },
+  { id: "far-el-indio", nombre: "El Indio I", direccion: "Santiago del Estero 597", telefono: "(0387)-4212260", planes: ["A2","A4"] },
+  { id: "far-el-mundo", nombre: "El Mundo", direccion: "R. El Mundo esq. R. El Chaco", telefono: "(0387)-4248352", planes: ["A2","A4"] },
+  { id: "far-el-porvenir", nombre: "El Porvenir", direccion: "La Rioja 1472", telefono: "(0387)-4314627", planes: ["A2","A4"] },
+  { id: "far-esmeralda", nombre: "Esmeralda", direccion: "Caseros 1063", telefono: "(0387)-4953075", planes: ["A2","A4"] },
+  { id: "far-farmar", nombre: "Farmar I", direccion: "Caseros 745", telefono: "(0387)-4316209", planes: ["A2","A4"] },
+  { id: "far-farmacity-111", nombre: "Farmacity 111", direccion: "Alberdi 84", telefono: "(0387)-4313188", planes: ["A2","A4"] },
+  { id: "far-farmacity-129", nombre: "Farmacity 129", direccion: "Av. Virrey Toledo 702", telefono: "(0387)-4212556", planes: ["A2","A4"] },
+  { id: "far-farmacity-134", nombre: "Farmacity 134", direccion: "Av. Gral. Manuel Belgrano 1789", telefono: "(0387)-4221219", planes: ["A2","A4"] },
+  { id: "far-farmacity-251", nombre: "Farmacity 251", direccion: "Dr. Mariano Boedo 62", telefono: "(0387)-4215529", planes: ["A2","A4"] },
+  { id: "far-farmacity-392", nombre: "Farmacity 392", direccion: "Av. Reyes Católicos 1503", telefono: "1177000183", planes: ["A2","A4"] },
+  { id: "far-farmavitae", nombre: "Farmavitae", direccion: "Florida 888", telefono: "(0387)-4213036", planes: ["A2","A4"] },
+  { id: "far-fenix", nombre: "Fénix", direccion: "Gral. José María Paz 426", telefono: "(0387)-4318245", planes: ["A2","A4"] },
+  { id: "far-fleming", nombre: "Fleming", direccion: "Av. Dr. B. Houssay", telefono: "(0387)-4242183", planes: ["A2","A4"] },
+  { id: "far-galenica", nombre: "Galénica", direccion: "Vicente López 180", telefono: "(0387)-4223674", planes: ["A2","A4"] },
+  { id: "far-ibazeta", nombre: "Ibazeta", direccion: "Ibazeta 104", telefono: "(0387)-6701260", planes: ["A2","A4"] },
+  { id: "far-independencia", nombre: "Independencia", direccion: "Av. Independencia 1073", telefono: "(0387)-4233919", planes: ["A2","A4"] },
+  { id: "far-inti", nombre: "Inti", direccion: "Huachi — Manzana 108 Parcela 2", telefono: "(0387)-47272716", planes: ["A2","A4"] },
+  { id: "far-ituzaingo", nombre: "Ituzaingó", direccion: "Ituzaingó 340", telefono: "(0387)-4317626", planes: ["A2","A4"] },
+  { id: "far-jujuy", nombre: "Jujuy", direccion: "Jujuy 400", telefono: "(0387)-4213380", planes: ["A2","A4"] },
+  { id: "far-la-lidera", nombre: "La Líder", direccion: "A. Alvarez Jonte 911", telefono: "(0387)-4210027", planes: ["A2","A4"] },
+  { id: "far-la-mercantil", nombre: "La Mercantil", direccion: "España 1090", telefono: "(0387)-4227342", planes: ["A2","A4"] },
+  { id: "far-la-paz", nombre: "La Paz", direccion: "J. Leguizamón 1795", telefono: "(0387)-4216655", planes: ["A2","A4"] },
+  { id: "far-la-quimica", nombre: "La Química", direccion: "Gral. José de San Martín 1098", telefono: "(0387)-4312974", planes: ["A2","A4"] },
+  { id: "far-los-incas", nombre: "Los Incas", direccion: "Incas 6 — Loc. 6 y 7", telefono: "(0387)-2443869", planes: ["A2","A4"] },
+  { id: "far-mifar", nombre: "Mifar", direccion: "Dr. F. de Zuvirría 333", telefono: "(0387)-4312816", planes: ["A2","A4"] },
+  { id: "far-milagros", nombre: "Milagros", direccion: "España 601", telefono: "(0387)-4316694", planes: ["A2","A4"] },
+  { id: "far-miralles", nombre: "Miralles", direccion: "Olavarría 784", telefono: "(0387)-4315247", planes: ["A2","A4"] },
+  { id: "far-mitre", nombre: "Mitre", direccion: "Av. de las Américas 1092", telefono: "(0387)-4233586", planes: ["A2","A4"] },
+  { id: "far-monserrat-milagro", nombre: "Monserrat Ntra. Sra. del Milagro", direccion: "San Luis 1085", telefono: "(0387)-2457790", planes: ["A2","A4"] },
+  { id: "far-monserrat-vi", nombre: "Monserrat VI", direccion: "España 492", telefono: "(0387)-4216710", planes: ["A2","A4"] },
+  { id: "far-nivel", nombre: "Nivel", direccion: "Av. Pte. H. Yrigoyen 339", telefono: "(0387)-4012309", planes: ["A2","A4"] },
+  { id: "far-lujan", nombre: "Luján", direccion: "Pueyrredón 1494", telefono: "(0387)-2433469", planes: ["A2","A4"] },
+  { id: "far-pieve", nombre: "Pieve", direccion: "Caseros 802", telefono: "(0387)-4221500", planes: ["A2","A4"] },
+];
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+
+export const TIPO_LABEL: Record<TipoPrestador, string> = {
+  clinica: "Clínica",
+  sanatorio: "Sanatorio",
+  policonsultorio: "Policonsultorio",
+  diagnostico: "Diagnóstico por Imágenes",
+  laboratorio: "Laboratorio",
+  rehabilitacion: "Rehabilitación",
+  farmacia: "Farmacia",
+  vacunacion: "Centro de Vacunación",
+  maternidad: "Maternidad",
+};
+
+export const TIPO_COLOR: Record<TipoPrestador, string> = {
+  clinica: "bg-blue-50 text-blue-700",
+  sanatorio: "bg-purple-50 text-purple-700",
+  policonsultorio: "bg-teal-50 text-teal-700",
+  diagnostico: "bg-amber-50 text-amber-700",
+  laboratorio: "bg-orange-50 text-orange-700",
+  rehabilitacion: "bg-green-50 text-green-700",
+  farmacia: "bg-pink-50 text-pink-700",
+  vacunacion: "bg-sky-50 text-sky-700",
+  maternidad: "bg-rose-50 text-rose-700",
+};
+
+export const ALL_ESPECIALIDADES = Array.from(
+  new Set(PRESTADORES.flatMap((p) => p.especialidades))
+).sort();

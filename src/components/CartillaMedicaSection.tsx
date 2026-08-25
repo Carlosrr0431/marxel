@@ -74,9 +74,7 @@ export function CartillaMedicaSection() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="https://www.prevencionsalud.com.ar/cartilla-medica"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/salud/cartilla-medica"
                 className="btn btn-outline gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -164,12 +162,10 @@ export function CartillaMedicaSection() {
         <p className="mt-8 text-center text-xs leading-relaxed text-muted">
           Cartilla actualizada al 11/07/2026 · Prestadores habilitados en <strong>Provincia de Salta</strong> · Datos provistos por Prevención Salud (Grupo Sancor Seguros).{" "}
           <Link
-            href="https://www.prevencionsalud.com.ar/cartilla-medica"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/salud/cartilla-medica"
             className="font-medium underline underline-offset-2 hover:text-teal"
           >
-            Ver listado completo en prevencionsalud.com.ar
+            Ver listado completo
           </Link>{" "}
           · Afiliaciones y consultas:{" "}
           <Link href={waUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2 hover:text-teal">
