@@ -1,14 +1,18 @@
 import {
+  detectQuoteProductSwitch,
   detectsHealthCoverageIntent,
   detectsQuoteIntent,
   emptyQuoteState,
   isDeterministicQuoteInput,
   isGreeting,
+  looksLikeCoverageQuestion,
+  looksLikeExplicitQuote,
   menuForChannel,
   processQuoteFlow,
   processQuoteFlowBatch,
   resumeQuoteState,
   stripMarkdownNoise,
+  switchQuoteProduct,
   type QuoteQuickReply,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
@@ -199,13 +203,39 @@ export async function runChatTurn(input: {
     };
   }
 
-  const pauseQuote = Boolean(routed?.pauseQuote || (routed && isConversationalIntent(routed.intent)));
-  const deterministic = isDeterministicQuoteInput(message, prevState);
+  const coverageOnly =
+    looksLikeCoverageQuestion(message, prevState) && !looksLikeExplicitQuote(message);
+  const pauseQuote = Boolean(
+    coverageOnly ||
+      routed?.pauseQuote ||
+      (routed && isConversationalIntent(routed.intent))
+  );
+  const productSwitch = detectQuoteProductSwitch(prevState, message);
+  const switchedState =
+    productSwitch && !coverageOnly
+      ? switchQuoteProduct(prevState, productSwitch.producto, productSwitch)
+      : routed?.intent === "quote" &&
+          routed.producto &&
+          prevState.data.producto &&
+          routed.producto !== prevState.data.producto &&
+          looksLikeExplicitQuote(message)
+        ? switchQuoteProduct(prevState, routed.producto)
+        : prevState;
+  const quoteBase = switchedState;
+  const didSwitch = quoteBase !== prevState;
+  const deterministic = isDeterministicQuoteInput(message, quoteBase);
+
+  if (didSwitch && !coverageOnly) {
+    const resumed = await resumeQuoteState(withChannel(quoteBase, input.channel));
+    if (resumed?.handled && resumed.answer) {
+      return finishQuoteResult(resumed, input.channel, input.knownPhone);
+    }
+  }
 
   if (lines.length > 1 && !pauseQuote && !findPrestadores(message).length) {
     const batch = await processQuoteFlowBatch(
       lines,
-      prevState,
+      quoteBase,
       persistQuoteSideEffects,
       input.channel
     );
@@ -226,8 +256,8 @@ export async function runChatTurn(input: {
     }
   }
 
-  if (!pauseQuote && (deterministic || (prevState.active && (!routed || routed.intent === "quote")))) {
-    const quote = await processQuoteFlow(message, prevState, input.channel);
+  if (!pauseQuote && (deterministic || (quoteBase.active && (!routed || routed.intent === "quote")))) {
+    const quote = await processQuoteFlow(message, quoteBase, input.channel);
     if (quote.handled && quote.answer) {
       return finishQuoteResult(quote, input.channel, input.knownPhone);
     }
@@ -236,7 +266,7 @@ export async function runChatTurn(input: {
   const classified = await classifyQuoteIntent({
     message,
     history,
-    state: prevState,
+    state: pauseQuote ? prevState : quoteBase,
   });
 
   if (classified) {
@@ -251,7 +281,7 @@ export async function runChatTurn(input: {
       };
     }
 
-    const merged = mergeIntentIntoState(prevState, classified);
+    const merged = mergeIntentIntoState(pauseQuote ? prevState : quoteBase, classified);
     const questionOnly =
       pauseQuote ||
       ((classified.intent === "question" || classified.intent === "other") &&
@@ -290,7 +320,7 @@ export async function runChatTurn(input: {
   }
 
   if (!pauseQuote) {
-    const quote = await processQuoteFlow(message, prevState, input.channel);
+    const quote = await processQuoteFlow(message, quoteBase, input.channel);
     if (quote.handled && quote.answer) {
       return finishQuoteResult(quote, input.channel, input.knownPhone);
     }
@@ -303,6 +333,16 @@ export async function runChatTurn(input: {
       quickReplies: [],
       mode: "rag",
       error: "missing_ai",
+    };
+  }
+
+  if (coverageOnly) {
+    return {
+      answer:
+        "Odontología y prótesis entran en los planes de salud, con diferencias entre A2 y A4 y según auditoría odontológica. Un asesor de MARXEN te confirma el detalle de tu caso (387 634-8199).",
+      quoteState: prevState,
+      quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+      mode: "rag",
     };
   }
 

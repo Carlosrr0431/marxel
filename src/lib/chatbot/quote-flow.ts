@@ -193,7 +193,7 @@ const QUOTE_RESTART =
   /^(quiero\s+)?cotizar\.?$|^(necesito\s+)?(una\s+)?cotizaci[oó]n\.?$|^pasame\s+(un\s+)?precio\.?$|^cu[aá]nto\s+(sale|cuesta)\??$|^(quiero\s+)?asesorarme\.?$/i;
 
 const HEALTH_COVERAGE =
-  /\b(plan(es)?(\s+de\s+salud)?|cobertura|cartilla|prepaga|obra\s+social|aportes|ortodoncia|kinesiolog|psicolog|afiliar|comparativ)\b/i;
+  /\b(plan(es)?(\s+de\s+salud)?|cobertura|cartilla|prepaga|obra\s+social|aportes|ortodoncia|kinesiolog|psicolog|odontolog|dentista|pr[oó]tesis|afiliar|comparativ)\b/i;
 
 const SKIP =
   /^(no|nop|ahora\s+no|despu[eé]s|saltar|omitir|pasar|na|nada|prefiero\s+no)\b/i;
@@ -362,29 +362,72 @@ function askNombre(data: QuoteData): QuoteFlowResult {
   };
 }
 
+/** Pide solo contacto que falte; no repite nombre, WhatsApp ni localidad. */
+async function continueWithContact(
+  data: QuoteData,
+  channel?: QuoteState["channel"]
+): Promise<QuoteFlowResult> {
+  if (!data.nombre) return askNombre(data);
+  if (!data.celular) {
+    return {
+      handled: true,
+      state: { active: true, step: "whatsapp", data, channel },
+      answer: `Gracias, ${firstName(data.nombre)}. Dejanos tu WhatsApp, con código de área, para enviarte las opciones.`,
+    };
+  }
+  if (!data.localidad) {
+    return afterWhatsapp({ active: true, step: "whatsapp", data, channel });
+  }
+  if (data.producto === "salud") {
+    return {
+      handled: true,
+      state: {
+        active: true,
+        step: "prepaga",
+        data,
+        channel,
+        pendingSave: "optional",
+      },
+      answer: "¿Tenés alguna prepaga o cobertura ahora? (opcional)",
+      quickReplies: SKIP_REPLIES,
+    };
+  }
+  return finishQuote({ active: true, step: "localidad", data, channel });
+}
+
 function startSeguros(data: QuoteData = {}): QuoteFlowResult {
+  const nombre = data.nombre ? firstName(data.nombre) : "";
   return {
     handled: true,
     state: { active: true, step: "seguro_tipo", data: { ...data, producto: "seguros" } },
-    answer: "¿Qué querés proteger?",
+    answer: nombre ? `${nombre}, ¿qué querés proteger?` : "¿Qué querés proteger?",
     quickReplies: SEGURO_REPLIES,
   };
 }
 
 function startSalud(data: QuoteData = {}): QuoteFlowResult {
+  const nombre = data.nombre ? firstName(data.nombre) : "";
+  const known = nombre
+    ? `${nombre}${data.localidad ? `, te tengo en ${data.localidad}` : ""}. `
+    : "";
   return {
     handled: true,
     state: { active: true, step: "laboral", data: { ...data, producto: "salud" } },
-    answer: SALUD_PITCH,
+    answer: known
+      ? `${known}Para armarte la prepaga, ¿cuál es tu situación laboral?`
+      : SALUD_PITCH,
     quickReplies: LABORAL_REPLIES,
   };
 }
 
 function startViajero(data: QuoteData = {}): QuoteFlowResult {
+  const nombre = data.nombre ? firstName(data.nombre) : "";
   return {
     handled: true,
     state: { active: true, step: "viajero_destino", data: { ...data, producto: "viajero" } },
-    answer: "¿Cuál es tu destino y las fechas aproximadas de viaje?",
+    answer: nombre
+      ? `${nombre}, ¿cuál es el destino y las fechas aproximadas del viaje?`
+      : "¿Cuál es tu destino y las fechas aproximadas de viaje?",
   };
 }
 
@@ -394,14 +437,17 @@ async function startFromMessage(
   keep: QuoteData = {}
 ): Promise<QuoteFlowResult> {
   const base = contactKeep(keep);
-  if (text === MENU_SALUD || detectsHealthCoverageIntent(text)) return startSalud(base);
+  if (text === MENU_SALUD) return startSalud(base);
   if (text === MENU_SEGUROS) return startSeguros(base);
   if (text === MENU_VIAJERO) return startViajero(base);
 
   const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (/viajer|viaje/.test(t)) return startViajero(base);
-  if (/salud|prepaga|obra\s+social/.test(t)) return startSalud(base);
-  if (/seguro|auto|moto|hogar|comercio|praxis|\bart\b/.test(t)) {
+  const wantsQuote = looksLikeExplicitQuote(text);
+  if (wantsQuote && /viajer|viaje/.test(t)) return startViajero(base);
+  if (wantsQuote && /salud|prepaga|obra\s+social|medicina\s+prepaga/.test(t)) {
+    return startSalud(base);
+  }
+  if (wantsQuote && /seguro|auto|moto|hogar|comercio|praxis|\bart\b/.test(t)) {
     const grupo = normalizeSeguro(text);
     if (grupo === "auto") return startAutoQuote({ ...base, producto: "seguros", seguroGrupo: "auto" }, channel);
     return grupo
@@ -477,6 +523,131 @@ function contactKeep(data?: QuoteData): QuoteData {
   };
 }
 
+/** Conserva nombre, WhatsApp y localidad al cambiar de producto (auto → salud, viajero, etc.). */
+export function switchQuoteProduct(
+  state: QuoteState,
+  producto: ProductoInteres,
+  extra?: { seguroGrupo?: SeguroGrupo }
+): QuoteState {
+  return {
+    ...state,
+    active: true,
+    step: "idle",
+    pendingSave: null,
+    data: {
+      ...contactKeep(state.data),
+      producto,
+      ...(extra?.seguroGrupo ? { seguroGrupo: extra.seguroGrupo } : {}),
+    },
+  };
+}
+
+/** Producto comercial (cotización). No usa odontólogo/prótesis: eso es pregunta de cobertura. */
+export function inferQuoteProducto(text: string): ProductoInteres | null {
+  const t = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/\b(viajer|asistencia al viaj|seguro de viaje|go assistance)\b/.test(t)) {
+    return "viajero";
+  }
+  if (/\b(salud|prepaga|obra social|medicina prepaga|afiliar(me)?)\b/.test(t)) {
+    return "salud";
+  }
+  if (/\b(seguro|auto|moto|hogar|comercio|praxis|\bart\b|sancor|cristobal)\b/.test(t)) {
+    return "seguros";
+  }
+  return null;
+}
+
+export function inferProductoFromMessage(text: string): ProductoInteres | null {
+  const quoted = inferQuoteProducto(text);
+  if (quoted) return quoted;
+  const t = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (
+    /\b(odontolog|dentista|protesis|ortodoncia|cartilla|kinesiolog|psicolog)\b/.test(t)
+  ) {
+    return "salud";
+  }
+  return null;
+}
+
+export function looksLikeExplicitQuote(text: string): boolean {
+  const t = text.trim();
+  return (
+    QUOTE_RESTART.test(t) ||
+    QUOTE_INTENT.test(t) ||
+    t === MENU_SEGUROS ||
+    t === MENU_SALUD ||
+    t === MENU_VIAJERO
+  );
+}
+
+const HEALTH_QUESTION =
+  /\b(odontolog|dentista|protesis|pr[oó]tesis|implante|ortodoncia|kinesiolog|psicolog|prepaga|obra\s+social|cartilla|afiliad|plan\s+(de\s+)?salud|cobertura\s+(de\s+)?salud|medicina\s+prepaga)\b/i;
+
+const VIAJERO_QUESTION =
+  /\b(viajer|asistencia al viaj|seguro de viaje|cubre\s+(en|el)\s+viaje)\b/i;
+
+export function looksLikeCoverageQuestion(
+  text: string,
+  state?: QuoteState | null
+): boolean {
+  const t = text.trim();
+  if (looksLikeExplicitQuote(t)) return false;
+  const health = HEALTH_QUESTION.test(t);
+  const travel = VIAJERO_QUESTION.test(t);
+  if (!health && !travel) return false;
+  const step = state?.step;
+  const producto = state?.data.producto;
+  if (state?.active && producto === "salud" && step === "uso" && health) return false;
+  if (state?.active && producto === "viajero" && step === "viajero_destino" && travel) {
+    return false;
+  }
+  return true;
+}
+
+export function looksLikeProductSwitchRequest(text: string): boolean {
+  if (looksLikeExplicitQuote(text)) return true;
+  const t = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!inferQuoteProducto(t)) return false;
+  return /\b(quiero|necesito|pasame|armame|cotiz|cambi(o|ar)|en\s+vez|mejor)\b/.test(t);
+}
+
+export function detectQuoteProductSwitch(
+  state: QuoteState,
+  text: string
+): { producto: ProductoInteres; seguroGrupo?: SeguroGrupo } | null {
+  const hasContext =
+    state.active ||
+    Boolean(state.data.producto || state.data.nombre || state.data.celular || state.data.localidad);
+  if (!hasContext) return null;
+  const t = text.trim();
+  const menuProducto: ProductoInteres | null =
+    t === MENU_SALUD ? "salud" : t === MENU_VIAJERO ? "viajero" : t === MENU_SEGUROS ? "seguros" : null;
+  if (!menuProducto && !looksLikeProductSwitchRequest(t)) return null;
+
+  const producto = menuProducto || inferQuoteProducto(t);
+  if (!producto) return null;
+
+  const current = state.data.producto;
+  if (producto !== current) return { producto };
+
+  if (producto === "seguros") {
+    const grupo = normalizeSeguro(t);
+    if (grupo && grupo !== state.data.seguroGrupo) {
+      return { producto: "seguros", seguroGrupo: grupo };
+    }
+  }
+  return null;
+}
+
 export function shouldSendWhatsappPoll(step: QuoteStep, replies: QuoteQuickReply[] = []): boolean {
   if (replies.length < 2 || replies.length > 6) return false;
   if (
@@ -528,6 +699,18 @@ export async function processQuoteFlow(
     };
   }
 
+  if (prev && looksLikeCoverageQuestion(text, prev)) {
+    return { handled: false, state: prev };
+  }
+
+  if (prev) {
+    const sw = detectQuoteProductSwitch(prev, text);
+    if (sw) {
+      const resumed = await resumeQuoteState(switchQuoteProduct(prev, sw.producto, sw));
+      if (resumed) return resumed;
+    }
+  }
+
   if (
     text === MENU_SEGUROS ||
     text === MENU_SALUD ||
@@ -542,14 +725,10 @@ export async function processQuoteFlow(
   if (channel) state.channel = channel;
 
   if (!state.active) {
-    if (
-      isSaludHandoffReady(prev) &&
-      detectsHealthCoverageIntent(text) &&
-      !detectsQuoteIntent(text)
-    ) {
+    if (detectsHealthCoverageIntent(text) && !detectsQuoteIntent(text)) {
       return { handled: false, state: prev || emptyQuoteState() };
     }
-    if (detectsQuoteIntent(text) || detectsHealthCoverageIntent(text)) {
+    if (detectsQuoteIntent(text)) {
       return startFromMessage(text, channel, prev?.data || {});
     }
     return { handled: false, state };
@@ -603,7 +782,7 @@ export async function processQuoteFlow(
         };
       }
       state.data.seguroDetalle = text;
-      return askNombre(state.data);
+      return continueWithContact(state.data, channel);
     }
 
     case "laboral": {
@@ -716,7 +895,7 @@ export async function processQuoteFlow(
         };
       }
       state.data.uso = text;
-      return askNombre(state.data);
+      return continueWithContact(state.data, channel);
     }
 
     case "viajero_destino": {
@@ -728,7 +907,7 @@ export async function processQuoteFlow(
         };
       }
       state.data.viajeroDestino = text;
-      return askNombre(state.data);
+      return continueWithContact(state.data, channel);
     }
 
     case "nombre": {

@@ -67,6 +67,8 @@ function sourceBoost(query: string, sourceId: string): number {
     return 2;
   if (/manual|afili|aporte|monotribut|obra social|pmo|ley/.test(q) && sourceId.includes("manual"))
     return 1.6;
+  if (/odont|protesis|pr[oó]tesis|dentista|implante|ortodoncia/.test(q) && (sourceId.startsWith("plan-") || sourceId.includes("odont") || sourceId.includes("manual")))
+    return 2.3;
   if (/plan|cobertura|reintegro|odont|kine|fono|optica|viajero/.test(q) && sourceId.startsWith("plan-"))
     return 1.8;
   return 1;

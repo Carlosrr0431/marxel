@@ -10,9 +10,13 @@ import {
   formatPrestadorAnswer,
 } from "@/lib/chatbot/lookup-prestadores";
 import {
+  inferProductoFromMessage,
   isDeterministicQuoteInput,
+  looksLikeCoverageQuestion,
+  looksLikeExplicitQuote,
   type QuoteState,
 } from "@/lib/chatbot/quote-flow";
+import type { ProductoInteres } from "@/lib/crm/types";
 
 export type MessageIntent =
   | "quote"
@@ -28,6 +32,7 @@ export type ClassifiedMessage = {
   reply: string | null;
   confidence: number;
   source: "rule" | "deepseek";
+  producto: ProductoInteres | null;
 };
 
 const CONVERSATIONAL: ReadonlySet<MessageIntent> = new Set([
@@ -45,7 +50,7 @@ const CLASSIFIER_SCHEMA = {
   schema: {
     type: "object",
     additionalProperties: false,
-    required: ["intent", "pause_quote", "reply", "confidence"],
+    required: ["intent", "pause_quote", "reply", "confidence", "producto"],
     properties: {
       intent: {
         type: "string",
@@ -54,37 +59,53 @@ const CLASSIFIER_SCHEMA = {
       pause_quote: { type: "boolean" },
       reply: { type: ["string", "null"] },
       confidence: { type: "number" },
+      producto: {
+        type: ["string", "null"],
+        enum: ["seguros", "salud", "viajero", null],
+      },
     },
   },
 };
 
 const CLASSIFIER_PROMPT = `Sos el clasificador y voz de WhatsApp de MARXEN Protección Integral (productores en Salta, Argentina).
-Hablás como una persona: español rioplatense, natural, corto. Sin markdown, sin listas robóticas, sin "como asistente de IA".
+Hablás como una persona: español rioplatense, natural, corto. Sin markdown, sin "como asistente de IA".
 
 ## QUÉ HACER
-1) Clasificá el mensaje.
-2) Si es pregunta, prestador o charla, RESPONDÉ en "reply" (2 a 5 oraciones).
-3) Si es cotización (dato del flujo o pedido de cotizar), intent=quote, reply=null, pause_quote=false.
+1) Clasificá el mensaje con RIGOR. Cotizar es raro: solo si lo pide o está contestando el dato del flujo ACTUAL.
+2) Si es pregunta, prestador o charla, RESPONDÉ en "reply" (2 a 5 oraciones) usando tools.
+3) producto: seguros | salud | viajero | null. Llenalo si el tema se entiende, aunque sea pregunta.
 
-## INTENTS
-- quote: cotizar o responder el flujo (año, marca, modelo, versión, CP, plan, nombre, teléfono, A2/A4 como elección de producto, destino viajero).
-- question: duda de cobertura, precios orientativos, planes A2/A4, seguros, viajero. Usá search_knowledge.
-- provider: si atienden / cubren / trabajan con un instituto, clínica, sanatorio, hospital, farmacia. Usá lookup_prestadores SIEMPRE. Typos: atentes=atienden, jaraba=Imágenes Jaraba.
-- greeting: solo hola / buen día, sin pregunta.
-- cancel: pausar, después, no ahora.
-- chitchat: gracias, ok, jajaja, buenisimo, sin dato nuevo de cotización.
+## INTENT=quote SOLO SI
+- Dice cotizar / presupuesto / pasame precio / quiero un plan / quiero afiliarme / quiero un seguro.
+- O responde el paso ACTUAL con un dato de ESE producto: "Terceros Básico", "2020", "volkswagen", "4400", "me llamo Juan", "monotributo".
+Si hay duda, NO es quote. Es question.
 
-## REGLAS DE ORO
-- Hay un flujo de cotización ABIERTO no significa que el mensaje sea quote. Si pregunta algo, es question/provider y pause_quote=true. No pidas el plan ni sigas el flujo.
-- "capo atentes en el jaraba" = provider. No es un plan de auto.
-- "dale" / "sí" después de un mensaje tuyo de cartilla o salud = question (seguí el tema), no quote.
-- "Terceros Básico", "2020", "volkswagen", "4400", "me llamo Juan" con flujo abierto = quote.
-- No inventes prestadores, precios ni coberturas. Si la tool no trae dato, decí que un asesor de MARXEN lo confirma (WhatsApp 387 634-8199).
-- Cartilla: https://www.marxen.com.ar/salud/cartilla-medica — si hablás de prestadores, pasá el link.
-- Conservá el tono humano: "Sí, en Jaraba atienden con A2 y A4" está bien. "Elegí un plan de la lista" NO, si no pidió cotizar.
+## NO ES QUOTE (ejemplos reales)
+- "che capo y odontologo con protesis" → question, producto=salud. Habla de cobertura dental. NO pidas plan de auto.
+- "atentes en el jaraba" → provider.
+- "tienen ortodoncia?" → question, salud.
+- "cuánto cubre el A2 en odontología" → question, salud.
+- "y para viajar a Brasil?" como duda de cobertura viajero, sin "cotizar" → question, viajero.
+- "quiero cotizar prepaga" / "armame salud" → quote, producto=salud (cambia de producto).
+- "cotizame viajero" / "asistencia al viajero" + cotizar → quote, producto=viajero.
+- "mejor el seguro del auto no, quiero salud" → quote, producto=salud.
+
+## CAMBIO DE PRODUCTO
+Si cotiza OTRO producto distinto al flujo abierto: intent=quote, pause_quote=false, producto=el nuevo.
+El sistema limpia auto/salud/viaje y conserva nombre, WhatsApp y localidad. reply=null.
+
+## TOOLS
+- lookup_prestadores: clínicas, institutos, hospitales.
+- search_knowledge: coberturas (odontología, prótesis, A2/A4, viajero, autos). USALO en preguntas.
+- get_contact_info: teléfono MARXEN.
+
+## REGLAS
+- Flujo abierto de auto NO convierte una pregunta de salud en quote.
+- No inventes coberturas. Si falta dato, un asesor de MARXEN lo confirma (387 634-8199).
+- Cartilla: https://www.marxen.com.ar/salud/cartilla-medica
 
 ## JSON
-{"intent":"provider","pause_quote":true,"reply":"Sí, Imágenes Jaraba está en la cartilla A2 y A4. Queda en Mitre 486.","confidence":0.92}`;
+{"intent":"question","pause_quote":true,"producto":"salud","reply":"En A2 y A4 hay cobertura odontológica y prótesis según plan. Un asesor te confirma el detalle.","confidence":0.93}`;
 
 export function isConversationalIntent(intent: MessageIntent): boolean {
   return CONVERSATIONAL.has(intent);
@@ -104,6 +125,7 @@ function ruleClassify(
       reply: null,
       confidence: 1,
       source: "rule",
+      producto: state.data.producto || inferProductoFromMessage(t),
     };
   }
 
@@ -118,6 +140,7 @@ function ruleClassify(
       reply: "Queda pausado. Cuando quieras seguimos con los datos que ya anoté.",
       confidence: 0.95,
       source: "rule",
+      producto: state.data.producto || null,
     };
   }
 
@@ -129,10 +152,42 @@ function ruleClassify(
       reply: formatPrestadorAnswer(prestadores),
       confidence: 0.98,
       source: "rule",
+      producto: "salud",
     };
   }
 
   return null;
+}
+
+function applyQuoteRigor(
+  classified: ClassifiedMessage,
+  message: string,
+  state: QuoteState
+): ClassifiedMessage {
+  const hinted = classified.producto || inferProductoFromMessage(message);
+  const explicit = looksLikeExplicitQuote(message);
+  const coverage = looksLikeCoverageQuestion(message, state);
+  const current = state.data.producto;
+
+  if (coverage && !explicit) {
+    return {
+      ...classified,
+      intent: classified.intent === "provider" ? "provider" : "question",
+      pauseQuote: true,
+      producto: hinted || "salud",
+    };
+  }
+
+  if (classified.intent === "quote" && hinted && current && hinted !== current && !explicit) {
+    return {
+      ...classified,
+      intent: "question",
+      pauseQuote: true,
+      producto: hinted,
+    };
+  }
+
+  return { ...classified, producto: hinted || classified.producto };
 }
 
 export async function classifyWhatsappMessage(input: {
@@ -141,8 +196,22 @@ export async function classifyWhatsappMessage(input: {
   state: QuoteState;
 }): Promise<ClassifiedMessage | null> {
   const ruled = ruleClassify(input.message, input.state);
-  if (ruled) return ruled;
-  if (!getChatAi()) return null;
+  if (ruled?.reply || (ruled?.intent === "quote" && ruled.source === "rule")) {
+    return applyQuoteRigor(ruled, input.message, input.state);
+  }
+  if (!getChatAi()) {
+    if (looksLikeCoverageQuestion(input.message, input.state)) {
+      return {
+        intent: "question",
+        pauseQuote: true,
+        reply: null,
+        confidence: 0.7,
+        source: "rule",
+        producto: inferProductoFromMessage(input.message),
+      };
+    }
+    return ruled;
+  }
 
   const lastBot =
     [...(input.history || [])].reverse().find((m) => m.role === "assistant")
@@ -150,10 +219,16 @@ export async function classifyWhatsappMessage(input: {
 
   const userContent = [
     `Paso del flujo: ${input.state.step || "idle"}`,
+    `Producto en curso: ${input.state.data.producto || "ninguno"}`,
     `Cotización activa: ${input.state.active ? "sí" : "no"}`,
     `Último mensaje del bot: ${lastBot ? `"${lastBot.slice(0, 220)}"` : "ninguno"}`,
     `Mensaje del cliente: ${input.message}`,
-  ].join("\n");
+    looksLikeCoverageQuestion(input.message, input.state)
+      ? "HINT: parece pregunta de cobertura, no cotización, salvo que pida cotizar explícito."
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const historyMessages = (input.history || [])
     .filter((m) => m.content?.trim())
@@ -186,17 +261,37 @@ export async function classifyWhatsappMessage(input: {
       ? (intent as MessageIntent)
       : "question";
     const reply = String(raw.reply ?? "").trim();
+    const productoRaw = String(raw.producto || "");
+    const producto: ProductoInteres | null =
+      productoRaw === "salud" || productoRaw === "seguros" || productoRaw === "viajero"
+        ? productoRaw
+        : inferProductoFromMessage(input.message);
     const pauseQuote =
       raw.pause_quote === true || isConversationalIntent(resolved) || resolved === "cancel";
-    return {
-      intent: resolved,
-      pauseQuote,
-      reply: reply && reply !== "null" ? reply : null,
-      confidence: Number(raw.confidence) || 0.5,
-      source: "deepseek",
-    };
+    return applyQuoteRigor(
+      {
+        intent: resolved,
+        pauseQuote,
+        reply: reply && reply !== "null" ? reply : null,
+        confidence: Number(raw.confidence) || 0.5,
+        source: "deepseek",
+        producto,
+      },
+      input.message,
+      input.state
+    );
   } catch (err) {
     console.error("[chat][message-classifier]", err);
+    if (looksLikeCoverageQuestion(input.message, input.state)) {
+      return {
+        intent: "question",
+        pauseQuote: true,
+        reply: null,
+        confidence: 0.6,
+        source: "rule",
+        producto: inferProductoFromMessage(input.message),
+      };
+    }
     return null;
   }
 }

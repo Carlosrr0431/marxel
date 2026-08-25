@@ -16,6 +16,7 @@ import {
   buildNotas,
   cloneQuoteState,
   isSaludHandoffReady,
+  switchQuoteProduct,
   type ModalidadQuote,
   type QuoteState,
   type SeguroGrupo,
@@ -113,6 +114,9 @@ function normalizeIntent(raw: Record<string, unknown>): QuoteIntent {
 }
 
 export function intentAdvancesQuote(intent: QuoteIntent): boolean {
+  if (intent.intent === "question" || intent.intent === "cancel" || intent.intent === "greeting") {
+    return false;
+  }
   return Boolean(
     intent.producto ||
       intent.seguro_grupo ||
@@ -132,24 +136,36 @@ export function intentAdvancesQuote(intent: QuoteIntent): boolean {
 }
 
 export function mergeIntentIntoState(state: QuoteState, intent: QuoteIntent): QuoteState {
-  const next = cloneQuoteState(state);
+  let next = cloneQuoteState(state);
+  if (
+    intent.intent === "quote" &&
+    intent.producto &&
+    state.data.producto &&
+    intent.producto !== state.data.producto
+  ) {
+    next = switchQuoteProduct(state, intent.producto, {
+      seguroGrupo: intent.seguro_grupo || undefined,
+    });
+  }
   if (intent.new_quote) {
     next.data = {
       nombre: next.data.nombre,
       celular: next.data.celular,
       localidad: next.data.localidad,
+      producto: intent.producto || next.data.producto,
     };
     next.active = true;
-    next.step = "producto";
+    next.step = "idle";
     next.pendingSave = null;
   }
 
   if (intent.producto) next.data.producto = intent.producto;
-  if (intent.seguro_grupo) {
+  const keepAuto = (intent.producto || next.data.producto) === "seguros";
+  if (intent.seguro_grupo && keepAuto) {
     next.data.seguroGrupo = intent.seguro_grupo;
     next.data.producto = next.data.producto || "seguros";
   }
-  if (intent.year) {
+  if (intent.year && keepAuto) {
     next.data.producto = next.data.producto || "seguros";
     next.data.seguroGrupo = next.data.seguroGrupo || "auto";
     next.data.auto = {
@@ -160,7 +176,7 @@ export function mergeIntentIntoState(state: QuoteState, intent: QuoteIntent): Qu
     };
     next.active = true;
   }
-  if (intent.brand_id && intent.brand_name) {
+  if (keepAuto && intent.brand_id && intent.brand_name) {
     const brand: AutoCatalogItem = { id: intent.brand_id, description: intent.brand_name };
     next.data.auto = {
       ...(next.data.auto || {}),
@@ -171,7 +187,7 @@ export function mergeIntentIntoState(state: QuoteState, intent: QuoteIntent): Qu
     };
     next.active = true;
   }
-  if (intent.model_id && intent.model_name) {
+  if (keepAuto && intent.model_id && intent.model_name) {
     const model: AutoCatalogItem = { id: intent.model_id, description: intent.model_name };
     next.data.auto = {
       ...(next.data.auto || {}),
@@ -180,14 +196,14 @@ export function mergeIntentIntoState(state: QuoteState, intent: QuoteIntent): Qu
       page: 0,
     };
   }
-  if (intent.version_id && intent.version_name) {
+  if (keepAuto && intent.version_id && intent.version_name) {
     const version: AutoVersion = {
       id: intent.version_id,
       description: intent.version_name,
     };
     next.data.auto = { ...(next.data.auto || {}), version, page: 0 };
   }
-  if (intent.cp) next.data.auto = { ...(next.data.auto || {}), cp: intent.cp, page: 0 };
+  if (keepAuto && intent.cp) next.data.auto = { ...(next.data.auto || {}), cp: intent.cp, page: 0 };
   if (intent.localidad) next.data.localidad = intent.localidad;
   if (intent.nombre) next.data.nombre = intent.nombre;
   if (intent.celular) next.data.celular = intent.celular.replace(/\D/g, "");

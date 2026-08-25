@@ -18,8 +18,19 @@ Saludo simple no requiere tools.
 - "tengo un gol 2020", "un corolla 2018" = cotización de auto: extraé año, marca y modelo con tools.
 - "auto", "seguro del auto", "cotizar" con contexto de auto = quote + seguro_grupo=auto.
 - Typos y alias: vw/volkswagen, chevy/chevrolet, fiat cronos, gol trend.
-- Si el estado espera un dato (año, marca, modelo, versión, CP, nombre), interpretá la respuesta en ese campo.
+- Si el estado espera un dato (año, marca, modelo, versión, CP, nombre), interpretá la respuesta en ese campo SOLO si es de ESE producto.
 - Varios datos en un mensaje: capturá TODOS. reply=null si ya entendiste el dato y el sistema debe seguir el flujo.
+
+## COTIZAR vs PREGUNTA (rigor)
+- intent=quote SOLO si pide cotizar/presupuesto/precio/afiliarse/un plan, o responde el paso ACTUAL del mismo producto.
+- "che capo y odontologo con protesis", "tienen ortodoncia?", "cubre prótesis el A2" = question, producto=salud. Usá search_knowledge. NO avances el auto. new_quote=false.
+- "y para viajar a Brasil?" sin "cotizar" = question, producto=viajero.
+- Si hay duda, es question.
+
+## CAMBIO DE PRODUCTO
+- "quiero cotizar salud/prepaga", "cotizame viajero", "mejor el hogar" = quote + producto nuevo.
+- new_quote=true al cambiar de producto: limpia auto/planes/salud anterior. CONSERVÁ nombre, celular y localidad. No los pidas de nuevo.
+- reply=null; el sistema pregunta SOLO lo que falta del producto nuevo.
 
 ## INTENTS
 quote | question | greeting | cancel | other
@@ -38,11 +49,12 @@ quote | question | greeting | cancel | other
 {"intent":"quote","new_quote":false,"producto":"seguros","seguro_grupo":"auto","year":2020,"is0km":false,"brand_id":null,"brand_name":null,"model_id":null,"model_name":null,"version_id":null,"version_name":null,"cp":null,"localidad":null,"nombre":null,"celular":null,"seguro_detalle":null,"viajero_destino":null,"modalidad":null,"grupo_familiar":null,"edades":null,"uso":null,"reply":null,"needs_more_info":true,"missing":["marca"],"confidence":0.9}
 
 ## REGLAS FINALES
-1. Si hay año (o marca/modelo) → intent=quote. reply=null; el sistema pregunta lo que falta.
+1. Si hay año (o marca/modelo) del auto EN un flujo de auto → intent=quote. reply=null; el sistema pregunta lo que falta.
 2. No copies un saludo largo del historial.
 3. brand_id/model_id/version_id tienen que existir en el resultado de la tool.
-4. Preguntas de cobertura → search_knowledge y reply corto. Conservá el flujo.
-5. Nunca pidas de nuevo un dato que el estado ya tiene.`;
+4. Preguntas de cobertura (odontología, prótesis, cartilla, A2/A4, viajero) → search_knowledge y reply corto. Conservá el flujo. NO las trates como cotización.
+5. Nunca pidas de nuevo un dato que el estado ya tiene (nombre, WhatsApp, localidad).
+6. Un mensaje de otro producto sin verbo de cotizar no avanza el flujo abierto.`;
 
 export function buildQuoteTurnPreamble({
   alreadyGreeted = false,
