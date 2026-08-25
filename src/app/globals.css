@@ -3050,9 +3050,99 @@ body:has(.crm-shell) {
   padding: 0.28rem;
 }
 
-.crm-wa-media-audio {
+/* ── Custom Audio Bubble ── */
+.crm-wa-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   width: min(18rem, 100%);
-  margin-bottom: 0.2rem;
+  padding: 0.45rem 0.1rem 0.35rem;
+}
+
+.crm-wa-audio--unavailable {
+  opacity: 0.55;
+  font-size: 0.75rem;
+  color: inherit;
+  gap: 0.4rem;
+}
+
+.crm-wa-audio-play {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #25d366;
+  color: #fff;
+  transition: background 0.15s, transform 0.1s;
+  padding: 0;
+}
+.crm-wa-bubble.is-mine .crm-wa-audio-play {
+  background: rgba(255,255,255,0.25);
+}
+.crm-wa-audio-play:hover { background: #1ebe5d; transform: scale(1.06); }
+.crm-wa-bubble.is-mine .crm-wa-audio-play:hover { background: rgba(255,255,255,0.4); }
+.crm-wa-audio-play:active { transform: scale(0.96); }
+
+.crm-wa-audio-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.crm-wa-audio-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  background: linear-gradient(
+    to right,
+    #25d366 var(--pct, 0%),
+    rgba(0,0,0,0.15) var(--pct, 0%)
+  );
+}
+.crm-wa-bubble.is-mine .crm-wa-audio-bar {
+  background: linear-gradient(
+    to right,
+    rgba(255,255,255,0.9) var(--pct, 0%),
+    rgba(255,255,255,0.3) var(--pct, 0%)
+  );
+}
+.crm-wa-audio-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #25d366;
+  cursor: pointer;
+  border: none;
+}
+.crm-wa-bubble.is-mine .crm-wa-audio-bar::-webkit-slider-thumb {
+  background: #fff;
+}
+.crm-wa-audio-bar::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #25d366;
+  cursor: pointer;
+  border: none;
+}
+
+.crm-wa-audio-time {
+  font-size: 0.68rem;
+  opacity: 0.65;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 .crm-wa-file {

@@ -53,22 +53,28 @@ export function formatProducerQuoteMessage(input: {
   leadId?: string | null;
 }) {
   const celular = input.celular ? normalizeArPhone(input.celular) || input.celular : "";
-  const lines = [
-    "*Lead listo para cotizar*",
-    `Canal: ${input.canal}`,
-    input.nombre ? `Nombre: ${input.nombre}` : null,
-    celular ? `WhatsApp: ${displayPhone(celular)}` : null,
-    celular ? `Abrir chat: https://wa.me/${celular}` : null,
-    input.email ? `Email: ${input.email}` : null,
-    input.dni ? `DNI: ${input.dni}` : null,
-    input.edad ? `Edad: ${input.edad}` : null,
-    input.provincia ? `Provincia: ${input.provincia}` : null,
-    input.localidad ? `Localidad: ${input.localidad}` : null,
-    input.interes ? `Interés: ${input.interes}` : null,
-    input.notas ? `\n${input.notas}` : null,
-    input.leadId ? `\nCRM: /crm/leads/${input.leadId}` : null,
+
+  // Solo incluir líneas de notas con detalles técnicos — excluir los que ya están en el header
+  const SKIP_RE = /^(Lead desde chatbot MARXEN|Nombre:|WhatsApp:|Localidad:|Interés:)/;
+  const detailLines = (input.notas || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !SKIP_RE.test(l));
+
+  const contactLine = [input.nombre, celular ? displayPhone(celular) : null]
+    .filter(Boolean)
+    .join(" · ");
+
+  const lines: (string | null)[] = [
+    `🔔 *Lead MARXEN*`,
+    contactLine || null,
+    celular ? `wa.me/${celular}` : null,
+    input.localidad ? `📍 ${input.localidad}` : null,
+    input.interes ? `📌 ${input.interes}` : null,
+    detailLines.length > 0 ? detailLines.join("\n") : null,
+    input.leadId ? `\n🔗 /crm/leads/${input.leadId}` : null,
   ];
-  return lines.filter((line) => line != null && String(line).trim() !== "").join("\n");
+  return lines.filter((l) => l != null && String(l).trim() !== "").join("\n");
 }
 
 async function alreadySentKind(leadId: string, kind: "nuevo" | "actualizacion") {
@@ -78,6 +84,20 @@ async function alreadySentKind(leadId: string, kind: "nuevo" | "actualizacion") 
     .select("id")
     .eq("lead_id", leadId)
     .contains("meta", { source: "producer_notify", kind })
+    .limit(1);
+  return Boolean(data?.length);
+}
+
+/** Verifica si ya se notificó al productor (cualquier kind) en los últimos N ms */
+async function notifiedRecently(leadId: string, windowMs = 5 * 60_000) {
+  const supabase = createServiceClient();
+  const since = new Date(Date.now() - windowMs).toISOString();
+  const { data } = await supabase
+    .from("actividades")
+    .select("id")
+    .eq("lead_id", leadId)
+    .contains("meta", { source: "producer_notify" })
+    .gte("created_at", since)
     .limit(1);
   return Boolean(data?.length);
 }
@@ -127,11 +147,14 @@ export async function notifyProducerQuoteReady(input: {
       if (await alreadySentKind(input.leadId, "nuevo")) return;
     }
     if (input.leadId && kind === "actualizacion") {
+      // Si ya se notificó en los últimos 5 minutos (p.ej. "nuevo" enviado hace segundos),
+      // no enviar otro mensaje de actualización — evita duplicados en la misma sesión.
+      if (await notifiedRecently(input.leadId, 5 * 60_000)) return;
       if (await alreadySentKind(input.leadId, "actualizacion")) return;
     }
 
     const header =
-      kind === "actualizacion" ? "*Actualización de cotización*\n" : "";
+      kind === "actualizacion" ? "🔄 *Actualización de cotización*\n" : "";
     const text = `${header}${formatProducerQuoteMessage(input)}`.trim();
     const sent = await sendToProducer(text);
     if (!sent.ok) return;

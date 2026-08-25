@@ -383,6 +383,106 @@ function FileBubble({
   );
 }
 
+function AudioBubble({ src, mine }: { src: string; mine: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [errored, setErrored] = useState(false);
+
+  const toggle = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+    } else {
+      void a.play().then(() => setPlaying(true)).catch(() => setErrored(true));
+    }
+  }, [playing]);
+
+  const seek = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const a = audioRef.current;
+      if (!a) return;
+      a.currentTime = Number(e.target.value);
+      setProgress(Number(e.target.value));
+    },
+    []
+  );
+
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sc = Math.floor(s % 60);
+    return `${m}:${sc.toString().padStart(2, "0")}`;
+  };
+
+  const displayTime =
+    progress > 0 ? fmt(progress) : duration > 0 ? fmt(duration) : "0:00";
+
+  if (!src || errored) {
+    return (
+      <div className={`crm-wa-audio crm-wa-audio--unavailable${mine ? " is-mine" : ""}`}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <span>Audio no disponible</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`crm-wa-audio${mine ? " is-mine" : ""}`}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="crm-wa-audio-play"
+        aria-label={playing ? "Pausar audio" : "Reproducir audio"}
+      >
+        {playing ? (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <rect x="3" y="2" width="4" height="12" rx="1.5" />
+            <rect x="9" y="2" width="4" height="12" rx="1.5" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <path d="M4 2l10 6-10 6V2z" />
+          </svg>
+        )}
+      </button>
+
+      <div className="crm-wa-audio-body">
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={progress}
+          step={0.1}
+          onChange={seek}
+          className="crm-wa-audio-bar"
+          aria-label="Progreso del audio"
+          style={{ "--pct": duration > 0 ? `${(progress / duration) * 100}%` : "0%" } as React.CSSProperties}
+        />
+        <span className="crm-wa-audio-time">{displayTime}</span>
+      </div>
+
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={() => setProgress(audioRef.current?.currentTime ?? 0)}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onEnded={() => { setPlaying(false); setProgress(0); }}
+        onError={() => setErrored(true)}
+        preload="metadata"
+        hidden
+      />
+    </div>
+  );
+}
+
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
 
@@ -420,8 +520,8 @@ function Bubble({ message }: { message: CrmChatMessage }) {
         {kind === "video" && src ? (
           <video src={src} controls className="crm-wa-media-video" preload="metadata" />
         ) : null}
-        {kind === "audio" && src ? (
-          <audio src={src} controls className="crm-wa-media-audio" preload="metadata" />
+        {kind === "audio" ? (
+          <AudioBubble src={src} mine={mine} />
         ) : null}
         {kind === "file" ? (
           <FileBubble
