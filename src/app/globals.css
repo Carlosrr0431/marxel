@@ -2582,6 +2582,29 @@ body:has(.crm-shell) {
   font-style: normal;
 }
 
+.crm-wa-file--unavailable {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.crm-wa-file.is-loading {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.crm-wa-file.is-loading .crm-wa-file__icon {
+  background: #667781;
+}
+
+button.crm-wa-file {
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
 .crm-wa-error {
   margin: 0;
   padding: 0.35rem 1rem 0;

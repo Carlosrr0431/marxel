@@ -281,15 +281,33 @@ export async function fetchWhatsmeowMediaBytes(messageId: string, type: string) 
 
 export async function persistInboundMedia(inbound: InboundMessage) {
   if (!CRM_MEDIA_TYPES.has(inbound.type) || !inbound.id) return null;
-  const downloaded = await fetchWhatsmeowMediaBytes(inbound.id, inbound.type);
-  if (!downloaded) return null;
-  const mime = inbound.mimetype || downloaded.contentType;
-  return uploadCrmMediaBuffer(
-    downloaded.buffer,
-    mime,
-    inbound.phone || "inbox",
-    inbound.id
-  );
+
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 2_000;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+    }
+    const downloaded = await fetchWhatsmeowMediaBytes(inbound.id, inbound.type);
+    if (downloaded) {
+      const mime = inbound.mimetype || downloaded.contentType;
+      const url = await uploadCrmMediaBuffer(
+        downloaded.buffer,
+        mime,
+        inbound.phone || "inbox",
+        inbound.id
+      );
+      if (url) return url;
+    }
+    console.warn(
+      `[whatsapp-crm] media attempt ${attempt + 1}/${MAX_ATTEMPTS} failed`,
+      inbound.id,
+      inbound.type
+    );
+  }
+
+  return null;
 }
 
 export async function persistCrmInbound(inbound: InboundMessage) {

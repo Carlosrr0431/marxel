@@ -292,6 +292,97 @@ function MediaFallback({ src, name, mine }: { src: string; name: string | null; 
   );
 }
 
+function FileBubble({
+  src,
+  mime,
+  fileName,
+}: {
+  src: string;
+  mime: string | null;
+  fileName: string | null;
+}) {
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const label = fileName || "Archivo";
+  const icon = fileIconLabel(mime, fileName);
+
+  // Sin URL → no disponible de entrada
+  if (!src) {
+    return (
+      <div className="crm-wa-file crm-wa-file--unavailable">
+        <span className="crm-wa-file__icon" aria-hidden="true">📎</span>
+        <span>
+          <strong>{label}</strong>
+          <em>No disponible</em>
+        </span>
+      </div>
+    );
+  }
+
+  // URL directa de Supabase → enlace simple (siempre funciona)
+  if (!src.startsWith("/api/")) {
+    return (
+      <a href={src} target="_blank" rel="noreferrer" className="crm-wa-file">
+        <span className="crm-wa-file__icon" aria-hidden="true">{icon}</span>
+        <span>
+          <strong>{label}</strong>
+          <em>Tocar para abrir</em>
+        </span>
+      </a>
+    );
+  }
+
+  // URL de proxy → descargar con manejo de error
+  if (status === "error") {
+    return (
+      <div className="crm-wa-file crm-wa-file--unavailable">
+        <span className="crm-wa-file__icon" aria-hidden="true">📎</span>
+        <span>
+          <strong>{label}</strong>
+          <em>Archivo no disponible</em>
+        </span>
+      </div>
+    );
+  }
+
+  async function handleClick() {
+    if (status === "loading") return;
+    setStatus("loading");
+    try {
+      const res = await fetch(src);
+      if (!res.ok) { setStatus("error"); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "archivo";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={`crm-wa-file${status === "loading" ? " is-loading" : ""}`}
+      onClick={handleClick}
+      disabled={status === "loading"}
+    >
+      <span className="crm-wa-file__icon" aria-hidden="true">
+        {status === "loading" ? "⏳" : icon}
+      </span>
+      <span>
+        <strong>{label}</strong>
+        <em>{status === "loading" ? "Descargando…" : "Tocar para descargar"}</em>
+      </span>
+    </button>
+  );
+}
+
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
 
@@ -332,16 +423,12 @@ function Bubble({ message }: { message: CrmChatMessage }) {
         {kind === "audio" && src ? (
           <audio src={src} controls className="crm-wa-media-audio" preload="metadata" />
         ) : null}
-        {kind === "file" && src ? (
-          <a href={src} target="_blank" rel="noreferrer" className="crm-wa-file">
-            <span className="crm-wa-file__icon" aria-hidden="true">
-              {fileIconLabel(message.media_mime || null, message.file_name || null)}
-            </span>
-            <span>
-              <strong>{message.file_name || "Archivo"}</strong>
-              <em>Tocar para abrir</em>
-            </span>
-          </a>
+        {kind === "file" ? (
+          <FileBubble
+            src={src}
+            mime={message.media_mime || null}
+            fileName={message.file_name || null}
+          />
         ) : null}
         {bodyText ? <p className="crm-wa-text">{bodyText}</p> : null}
         <span className="crm-wa-meta">
