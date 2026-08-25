@@ -174,8 +174,17 @@ export async function runChatTurn(input: {
     }
   }
 
+  // Si el mensaje es una pregunta informativa (contiene "?" o empieza con
+  // palabras de pregunta / menciona prestadores/cartilla), lo dejamos pasar
+  // directamente a classifyQuoteIntent para que el RAG responda, incluso
+  // cuando hay un flujo de cotización activo.
+  const isInfoQuestion =
+    message.includes("?") ||
+    /^\s*(qu[eé]|cu[aá]l(es)?|c[oó]mo|d[oó]nde|cu[aá]nto|hay\s|existe[n]?\s|tienen|me\s+pod[eé]s|pod[eé]s\s+decir|quiero\s+saber|dame\s|decime\s|lista\s|quiero\s+ver)/i.test(message) ||
+    /\b(prestador(es)?|cartilla|cl[ií]nica[s]?|sanatorio[s]?|hospital(es)?|farmacia[s]?|m[eé]dico[s]?|especialidad(es)?|coberturas?\s+del?\s+plan|qu[eé]\s+cubre|lista\s+de\s+prestadores?|qu[eé]\s+incluye)\b/i.test(message);
+
   const deterministic = isDeterministicQuoteInput(message, prevState);
-  if (deterministic || prevState.active) {
+  if (!isInfoQuestion && (deterministic || prevState.active)) {
     const quote = await processQuoteFlow(message, prevState, input.channel);
     if (quote.handled && quote.answer) {
       return finishQuoteResult(quote, input.channel, input.knownPhone);

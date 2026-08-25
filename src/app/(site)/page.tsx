@@ -6,7 +6,7 @@ import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/Reveal";
 import { FaqAccordion } from "@/components/FaqAccordion";
-import { JsonLd } from "@/components/JsonLd";
+import { CartillaMedicaSection } from "@/components/CartillaMedicaSection";
 import { faqHome, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
@@ -259,6 +259,9 @@ export default function HomePage() {
           </Reveal>
         </div>
       </section>
+
+      {/* ——— CARTILLA MÉDICA ——— */}
+      <CartillaMedicaSection />
 
       {/* ——— COTIZÁ ——— */}
       <section className="bg-atmosphere">

@@ -145,7 +145,12 @@ export async function runQuoteIntentTool(
 
   if (name === "search_knowledge") {
     const query = String(args.query || "").trim();
-    const chunks = retrieveChunks(query, 4);
+    const isProviderQuery =
+      /prestador|cl[ií]nica|sanatorio|hospital|farmacia|cartilla|m[eé]dico|especialidad|guardia|laboratorio|radiolog|imagenes?/i.test(
+        query
+      );
+    const limit = isProviderQuery ? 12 : 6;
+    const chunks = retrieveChunks(query, limit);
     return {
       query,
       found: chunks.length > 0,
