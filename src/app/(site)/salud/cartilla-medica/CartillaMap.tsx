@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import maplibregl from "maplibre-gl";
 import type { Prestador } from "@/data/cartilla-prestadores";
-
-const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl/dist/maplibre-gl.css";
 
 interface Props {
   prestadores: Prestador[];
@@ -15,88 +14,84 @@ const SALTA_CENTER: [number, number] = [-65.4232, -24.7829];
 const TILE_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
 const TIPO_COLOR: Record<string, string> = {
-  clinica:        "#0ea5e9",
-  sanatorio:      "#8b5cf6",
-  policonsultorio:"#10b981",
-  diagnostico:    "#f59e0b",
-  laboratorio:    "#ef4444",
-  rehabilitacion: "#06b6d4",
-  vacunacion:     "#84cc16",
-  maternidad:     "#ec4899",
-  farmacia:       "#6366f1",
+  clinica:         "#0ea5e9",
+  sanatorio:       "#8b5cf6",
+  policonsultorio: "#10b981",
+  diagnostico:     "#f59e0b",
+  laboratorio:     "#ef4444",
+  rehabilitacion:  "#06b6d4",
+  vacunacion:      "#84cc16",
+  maternidad:      "#ec4899",
+  farmacia:        "#6366f1",
 };
 
 export function CartillaMap({ prestadores, selected, onSelect }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<unknown>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef     = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<Map<string, any>>(new Map());
 
+  // Inicializar mapa
   useEffect(() => {
-    if (!containerRef.current) return;
-    let map: { remove: () => void; flyTo: (opts: object) => void; on: (e: string, cb: () => void) => void };
+    if (!containerRef.current || mapRef.current) return;
 
-    // Inyectar CSS de MapLibre una sola vez
-    if (!document.querySelector('link[data-maplibre]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = MAPLIBRE_CSS;
-      link.setAttribute("data-maplibre", "1");
-      document.head.appendChild(link);
-    }
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: TILE_STYLE,
+      center: SALTA_CENTER,
+      zoom: 13,
+      attributionControl: false,
+    });
 
-    const withCoords = prestadores.filter((p) => p.lat != null && p.lng != null);
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: true }),
+      "bottom-left"
+    );
 
-    import("maplibre-gl").then((maplibregl) => {
+    mapRef.current = map;
 
-      map = new maplibregl.Map({
-        container: containerRef.current!,
-        style: TILE_STYLE,
-        center: SALTA_CENTER,
-        zoom: 13,
-        attributionControl: false,
-      });
+    map.on("load", () => {
+      const withCoords = prestadores.filter(
+        (p) => p.lat != null && p.lng != null
+      );
 
-      // @ts-expect-error compact attribution
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
+      withCoords.forEach((p) => {
+        const el = document.createElement("div");
+        el.className = "cartilla-marker";
+        el.style.setProperty("--mc", TIPO_COLOR[p.tipo] ?? "#0ea5e9");
 
-      mapRef.current = map;
+        const popup = new maplibregl.Popup({
+          offset: 14,
+          closeButton: false,
+          maxWidth: "240px",
+        }).setHTML(`
+          <div class="cartilla-popup">
+            <strong>${p.nombre}</strong>
+            <span>${p.direccion}</span>
+            ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
+          </div>
+        `);
 
-      map.on("load", () => {
-        withCoords.forEach((p) => {
-          const el = document.createElement("div");
-          el.className = "cartilla-marker";
-          el.style.setProperty("--mc", TIPO_COLOR[p.tipo] ?? "#0ea5e9");
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([p.lng!, p.lat!])
+          .setPopup(popup)
+          .addTo(map);
 
-          const popup = new maplibregl.Popup({ offset: 14, closeButton: false, maxWidth: "240px" }).setHTML(`
-            <div class="cartilla-popup">
-              <strong>${p.nombre}</strong>
-              <span>${p.direccion}</span>
-              ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
-            </div>
-          `);
-
-          const marker = new maplibregl.Marker({ element: el })
-            .setLngLat([p.lng!, p.lat!])
-            .setPopup(popup)
-            // @ts-expect-error map type
-            .addTo(map);
-
-          el.addEventListener("click", () => onSelect(p.id));
-          markersRef.current.set(p.id, { marker, el });
-        });
+        el.addEventListener("click", () => onSelect(p.id));
+        markersRef.current.set(p.id, { marker, el });
       });
     });
 
     return () => {
       markersRef.current.clear();
-      map?.remove();
+      map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Highlight selected marker
+  // Highlight marcador seleccionado
   useEffect(() => {
     markersRef.current.forEach(({ el }, id) => {
       el.classList.toggle("is-selected", id === selected);
@@ -104,18 +99,30 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
     if (selected) {
       const entry = markersRef.current.get(selected);
       if (entry) {
-        // @ts-expect-error map type
-        mapRef.current?.flyTo({ center: entry.marker.getLngLat(), zoom: 15, speed: 1.4 });
+        mapRef.current?.flyTo({
+          center: entry.marker.getLngLat(),
+          zoom: 15,
+          speed: 1.4,
+        });
         entry.marker.togglePopup();
       }
     }
   }, [selected]);
 
   return (
-    <div
-      ref={containerRef}
-      className="cartilla-map-container"
-      aria-label="Mapa de prestadores en Salta Capital"
-    />
+    <>
+      {/* Next.js App Router hoist este link al <head> automáticamente */}
+      {/* eslint-disable-next-line @next/next/no-css-tags */}
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css"
+        precedence="default"
+      />
+      <div
+        ref={containerRef}
+        className="cartilla-map-container"
+        aria-label="Mapa de prestadores en Salta Capital"
+      />
+    </>
   );
 }
