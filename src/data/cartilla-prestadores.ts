@@ -83,7 +83,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Salta Capital",
     telefono: "0387-4311555",
     planes: ["A2","A4"],
-    lat: -24.7935, lng: -65.4155,
+    lat: -24.7871, lng: -65.4147,
   },
   {
     id: "sanatorio-san-roque",
@@ -97,7 +97,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Reyes Católicos 1518, Salta Capital",
     telefono: "0387-4394000 / 4392357 / 4390202",
     planes: ["A2","A4"],
-    lat: -24.7731, lng: -65.3982,
+    lat: -24.7592, lng: -65.3983,
   },
   {
     id: "clinica-berg",
@@ -165,7 +165,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Alvarado 858, Salta Capital",
     telefono: "387-4219212",
     planes: ["A2","A4"],
-    lat: -24.7862, lng: -65.4220,
+    lat: -24.7908, lng: -65.4133,
   },
   {
     id: "imagen-clara",
@@ -276,7 +276,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Buenos Aires 196, Salta Capital",
     telefono: "03878-4311977",
     planes: ["A2","A4"],
-    lat: -24.7923, lng: -65.4099,
+    lat: -24.8009, lng: -65.4107,
   },
   {
     id: "cigno",
@@ -329,7 +329,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. General Güemes 218, Salta Capital",
     telefono: "03877-421203 / 15456052",
     planes: ["A2","A4"],
-    lat: -24.7942, lng: -65.4148,
+    lat: -24.7868, lng: -65.4056,
   },
   {
     id: "corema-srl",
@@ -389,7 +389,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Gral. Manuel Belgrano 544, Salta Capital",
     telefono: "03875-15523444",
     planes: ["A2","A4"],
-    lat: -24.7874, lng: -65.4177,
+    lat: -24.7874, lng: -65.4100,
   },
   {
     id: "lic-olcese",
@@ -399,7 +399,58 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Dr. Facundo de Zuvirría 920, Salta Capital",
     telefono: "0387-4214982",
     planes: ["A2","A4"],
-    lat: -24.7659, lng: -65.4072,
+    lat: -24.7784, lng: -65.4084,
+  },
+  {
+    id: "clinica-san-jose",
+    nombre: "Clínica San José",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Cirugía General","Clínica Médica","Dermatología",
+      "Ginecología","Guardia General","Laboratorio","Neurología",
+      "Obstetricia","Pediatría","Traumatología y Ortopedia",
+    ],
+    direccion: "Bartolomé Mitre 767, Salta Capital",
+    telefono: "0387-4315000",
+    planes: ["A2","A4"],
+    lat: -24.7803, lng: -65.4101,
+  },
+  {
+    id: "clinica-pasteur",
+    nombre: "Clínica Pasteur",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Cirugía General","Clínica Médica","Ecografía General",
+      "Ginecología","Guardia General","Hemoterapia","Laboratorio",
+      "Neurología","Obstetricia","Pediatría","Traumatología y Ortopedia",
+    ],
+    direccion: "España 559, Salta Capital",
+    telefono: "0387-4316200",
+    planes: ["A2","A4"],
+    lat: -24.7887, lng: -65.4103,
+  },
+  {
+    id: "inesa",
+    nombre: "INESA — Instituto Neurológico de Salta",
+    tipo: "policonsultorio",
+    especialidades: ["Neurología","Neurocirugía","Neurología Infantil","Electroencefalografía"],
+    direccion: "Juramento 124, Salta Capital",
+    telefono: "0387-4318800",
+    planes: ["A2","A4"],
+    lat: -24.7888, lng: -65.4041,
+  },
+  {
+    id: "clinica-sta-sofia",
+    nombre: "Clínica Santa Sofía",
+    tipo: "clinica",
+    especialidades: [
+      "Cardiología","Cirugía General","Clínica Médica","Diagnóstico por Imágenes",
+      "Ginecología","Guardia General","Laboratorio","Obstetricia","Pediatría",
+    ],
+    direccion: "Av. San Martín 889, Salta Capital",
+    telefono: "0387-4220100",
+    planes: ["A2","A4"],
+    lat: -24.7932, lng: -65.4152,
   },
 ];
 
