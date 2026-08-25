@@ -69,7 +69,7 @@ export function CartillaMedicaSection() {
             </h2>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
               Planes <strong>A2</strong> y <strong>A4</strong> de Prevención Salud con cobertura en
-              toda la provincia. Más de 30 prestadores en Salta Capital entre clínicas, sanatorios,
+              la <strong>provincia de Salta</strong>. Más de 30 prestadores en Salta Capital entre clínicas, sanatorios,
               laboratorios y especialistas.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -103,8 +103,8 @@ export function CartillaMedicaSection() {
           {/* Mapa */}
           <div className="cartilla-map-wrap">
             <iframe
-              title="Prestadores de salud en Salta"
-              src="https://maps.google.com/maps?q=cl%C3%ADnicas+sanatorios+Salta+Argentina&t=&z=13&ie=UTF8&iwloc=&output=embed"
+              title="Prestadores de salud en Salta Capital"
+              src="https://maps.google.com/maps?q=hospitales+cl%C3%ADnicas+Salta+Capital+Salta+Argentina&t=&z=13&ie=UTF8&iwloc=&output=embed"
               width="100%"
               height="100%"
               style={{ border: 0 }}
@@ -117,7 +117,7 @@ export function CartillaMedicaSection() {
         {/* Grid de prestadores */}
         <div className="mt-12">
           <p className="mb-6 text-sm font-semibold uppercase tracking-widest text-muted">
-            Prestadores destacados — Planes A2 y A4
+            Prestadores destacados — Provincia de Salta · Planes A2 y A4
           </p>
           <div className="cartilla-grid">
             {PRESTADORES.map((p) => (
@@ -162,7 +162,7 @@ export function CartillaMedicaSection() {
 
         {/* Nota al pie */}
         <p className="mt-8 text-center text-xs leading-relaxed text-muted">
-          Cartilla actualizada al 11/07/2026 · Datos provistos por Prevención Salud (Grupo Sancor Seguros).{" "}
+          Cartilla actualizada al 11/07/2026 · Prestadores habilitados en <strong>Provincia de Salta</strong> · Datos provistos por Prevención Salud (Grupo Sancor Seguros).{" "}
           <Link
             href="https://www.prevencionsalud.com.ar/cartilla-medica"
             target="_blank"
