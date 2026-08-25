@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T22:06:37.851Z",
+  "generatedAt": "2026-08-25T22:39:56.138Z",
   "sources": [
     {
       "id": "plan-a2",
@@ -67,11 +67,11 @@
     },
     {
       "id": "goassistance",
-      "title": "Go Assistance — Asistencia al Viajero",
-      "file": "web:goassistance.com/ar",
-      "pages": 2,
-      "chars": 2800,
-      "chunks": 4
+      "title": "GO! ASSISTANCE — Asistencia al viajero (internacional y local)",
+      "file": "web:goassistance.com/ar + tríptico GO + cotizador MARXEN",
+      "pages": 16,
+      "chars": 11616,
+      "chunks": 12
     }
   ],
   "chunks": [
@@ -1750,30 +1750,6 @@
       "content": "Principales clínicas y sanatorios en Salta Capital (Provincia de Salta) incluidos en los planes A2 y A4 de Prevención Salud (datos actualizados al 11/7/2026):\n- HOSPITAL PRIVADO SANTA CLARA DE ASÍS: Urquiza 964, Salta. Tel: 0387-4321440. Especialidades: cardiología, diagnóstico por imágenes, kinesiología, oftalmología, pediatría, psicología, urología.\n- HOSPITAL PRIVADO TRES CERRITOS: Av. Juan B. Justo 93, Salta. Tel: 0387-4163500. Especialidades: cirugía general, guardia general y pediátrica, tomografía, unidad coronaria.\n- SANATORIO EL CARMEN: Tel 0387-4311555. Especialidades: cardiología, cirugía general y cardiovascular, oncología, neurología, terapia intensiva.\n- SANATORIO SAN ROQUE S.A.: Av. Reyes Católicos 1518, Salta. Tel: 0387-4394000. Especialidades: guardia general, ginecología, traumatología.\n- CLÍNICA LUIS GÜEMES S.A.: Adolfo Güemes 287, Salta. Tel: 0387-4210033. Especialidades: cirugía, clínica médica, neonatología, neurología, oncología.\n- VITAE MEDICAL SRL: Zabala 432, Salta. Tel: 0387-4237373. Especialidades: cardiología, cirugía plástica, diagnóstico por imágenes, laboratorio.\n- DIAGNÓSTICO SALTA S.A.: Dr. Mariano Boedo 62, Salta. Tel: 0387-4215529. Especialidades: ecografía, mamografía, tomografía, radiodiagnóstico.\n- IMAGEN CLARA SRL: Gral. Urquiza 968, Salta. WhatsApp turnos: 387-4026562. Especialidades: diagnóstico por imágenes, eco doppler, tomografía.\n- IMAC CENTRO (Grupo Esmeralda): Alvarado 858, Salta. Tel: 387-4219212. Especialidades: cirugía general, ginecología, laboratorio, pediatría.\n- MEDICINA AMBULATORIA SALTA: Buenos Aires 196, Salta. Tel: 03878-4311977. Especialidades: clínica médica, diagnóstico por imágenes, laboratorio.\nPara acceder al listado completo: prevencionsalud.com.ar/cartilla-medica. Para afiliarse, contactar a MARXEN.\nNOTA IMPORTANTE: Esta cartilla es válida exclusivamente para la Provincia de Salta. Para otras provincias, consultá directamente con un asesor de MARXEN."
     },
     {
-      "id": "goassistance-0001",
-      "sourceId": "goassistance",
-      "sourceTitle": "Go Assistance — Asistencia al Viajero Internacional: qué es y coberturas",
-      "content": "GO! ASSISTANCE es una empresa argentina con 25 años de trayectoria en asistencia al viajero internacional, presente en 10 países. MARXEN comercializa sus planes para viajeros desde Salta.\n\nQUÉ ES: servicio de cobertura médica, legal y logística durante viajes internacionales. A diferencia de un seguro de viaje tradicional, GO! gestiona y paga los servicios DIRECTAMENTE en destino (no requiere adelantar dinero ni esperar reembolsos). También incluye cobertura indirecta para cancelaciones y pérdida de equipaje.\n\nCOBERTURAS PRINCIPALES:\n- Urgencias médicas: hasta USD 40.000 de cobertura\n- Hospitalización en destino\n- Traslado sanitario y repatriación\n- Asistencia odontológica de urgencia\n- Enfermedades preexistentes (en planes específicos, declarando previamente)\n- Pérdida y demora de equipaje: monto para artículos de primera necesidad durante la demora; indemnización por pérdida total\n- Demora y cancelación de vuelos (gastos incurridos en territorio internacional)\n- Embarazos hasta las 26 semanas\n- Doctor online (telemedicina)\n- Repatriación sanitaria y funeraria\n- Beneficios VIP GO! Experience\n\nCÓMO FUNCIONA EN URGENCIA: llamá a la central 24/7/365 antes de pagar cualquier gasto médico. Un equipo coordina la atención en destino. NO pagar sin autorización previa.\n\nPLANES: para América Latina, Europa, EE.UU., mundo. También planes anuales multitrip para viajeros frecuentes. Plan GO! Adventure para deportes de aventura y esquí.\n\nVALIDEZ: debe contratarse ANTES de salir del país. Una vez iniciado el viaje no puede activarse."
-    },
-    {
-      "id": "goassistance-0002",
-      "sourceId": "goassistance",
-      "sourceTitle": "Go Assistance — Cómo contratar y preguntas frecuentes",
-      "content": "GO! ASSISTANCE — Cómo contratar y FAQ:\n\nCÓMO CONTRATAR (4 pasos):\n1. Ingresá destino, fechas y edades de los viajeros en el cotizador online\n2. Elegí el plan ideal según tu viaje y necesidades\n3. Pagá online con tarjeta de crédito (hasta 6 cuotas sin interés)\n4. Recibís el voucher por email de forma inmediata con las instrucciones\n\nPREGUNTAS FRECUENTES:\n\n¿Es obligatoria? Sí para Europa (zona Schengen) y recomendada para cualquier destino internacional. Muchos países la exigen como requisito de visa. GO! cumple requisitos de visa Schengen.\n\n¿Qué plan conviene? Para Europa/EE.UU.: cobertura médica mínima USD 30.000 y cancelación incluida. Para América Latina: planes más económicos. Para viajeros frecuentes: plan anual multitrip.\n\n¿Cubre preexistencias? Algunos planes incluyen cobertura para preexistencias controladas (hipertensión, diabetes tipo 2, etc.). Declarar al contratar.\n\n¿Y el equipaje? Al perder equipaje, hacer la denuncia en el aeropuerto ante la aerolínea y conservar el PIR. GO! brinda monto para artículos de primera necesidad durante la demora e indemnización por pérdida definitiva.\n\n¿Cuánto cuesta? Varía según destino, duración, edades y nivel de cobertura. Los planes más accesibles son para viajes cortos en América Latina. Para Europa y EE.UU. los valores son más altos.\n\nCONTACTO GO! ASSISTANCE: WhatsApp +54 9 11 5218-7034 · Central 24hs activa los 365 días del año.\n\nPara cotizar y contratar desde Salta, contactá a MARXEN: WhatsApp 387 634-8199."
-    },
-    {
-      "id": "goassistance-0003",
-      "sourceId": "goassistance",
-      "sourceTitle": "Go Assistance — Requisitos de visa Schengen y planes por destino",
-      "content": "GO! ASSISTANCE — Coberturas por destino y requisitos:\n\nVISA SCHENGEN (Europa):\nLa asistencia al viajero es OBLIGATORIA para obtener la visa Schengen. Debe cubrir gastos médicos mínimos de 30.000 EUR, tener validez en todos los países Schengen y cubrir repatriación. GO! ASSISTANCE cumple todos estos requisitos. Documentación que puede solicitarse: soporte migratorio (primera hoja del pasaporte con foto + sello de salida o boarding pass).\n\nDESTINOS Y RECOMENDACIONES:\n- Europa / Schengen: plan con USD 30.000 mínimo + cancelación. GO! cubre todos los países del área.\n- Estados Unidos: cobertura médica alta recomendada (sistema de salud muy costoso).\n- Brasil: planes económicos. El cruce terrestre también requiere asistencia.\n- América Latina: planes accesibles. Recomendado igual para evitar gastos inesperados.\n- Australia y Nueva Zelanda: planes específicos para estadías largas o Working Holiday.\n- Deportes de aventura (esquí, senderismo, etc.): contratar el plan GO! Adventure con cobertura específica.\n\nWORKING HOLIDAY: GO! tiene planes especiales para programas de Working Holiday en Australia, Nueva Zelanda, Japón, Islandia, México, Polonia y Europa.\n\nIMPORTANTE: la asistencia debe contratarse ANTES de salir de Argentina. No puede activarse una vez iniciado el viaje.\n\nPara cotizar asistencia al viajero GO! desde Salta: MARXEN WhatsApp 387 634-8199."
-    },
-    {
-      "id": "goassistance-0004",
-      "sourceId": "goassistance",
-      "sourceTitle": "Go Assistance — Diferencia asistencia/seguro y qué hacer en emergencia",
-      "content": "GO! ASSISTANCE — Asistencia vs seguro de viaje:\n\nDIFERENCIA CLAVE:\n- Seguro de viaje clásico: el viajero paga los gastos en destino y luego pide reembolso. Proceso lento y burocrático.\n- Asistencia al viajero GO!: gestiona y paga los servicios DIRECTAMENTE en destino. El viajero no desembolsa dinero (excepto para coberturas de reembolso como cancelación de vuelo). Además incluye GO! Pay, una visa virtual para asistirse de forma directa.\n\nQUÉ HACER EN EMERGENCIA MÉDICA:\n1. Llamar o WhatsApp a la central de GO! ASSISTANCE las 24hs (antes de pagar cualquier servicio médico)\n2. Un operador atiende en tiempo real y coordina la atención\n3. NO pagar servicios médicos sin autorización previa de GO! (puede afectar el reembolso)\n4. La primera urgencia se autoriza en los primeros minutos de contacto\n\nCENTRAL DE EMERGENCIAS: disponible 24hs, 365 días, desde cualquier parte del mundo.\nWhatsApp: +54 9 11 5218-7034\n\nCALIDAD Y CONFIANZA:\n- 25 años de trayectoria\n- Presencia en 10 países\n- Puntuación 4.6 en Trustpilot y 4.6 en Google Reviews\n- Sponsor oficial de Club Atlético Vélez Sarsfield\n- Red médica en más de 100 países\n\nPara contratar GO! ASSISTANCE desde Salta: MARXEN WhatsApp 387 634-8199."
-    },
-    {
       "id": "sancristobal-0001",
       "sourceId": "sancristobal",
       "sourceTitle": "San Cristóbal Seguros — Quiénes somos y cómo trabaja MARXEN",
@@ -1892,6 +1868,78 @@
       "sourceId": "sancristobal",
       "sourceTitle": "San Cristóbal — App, Santi, teléfonos y cómo cotizar con MARXEN",
       "content": "GESTIÓN SAN CRISTÓBAL + MARXEN\n\nPRODUCTOR EN SALTA: MARXEN Protección Integral. WhatsApp 387 634-8199. Mail hola@marxel.com.ar. Cotizador auto/moto/hogar/AP/comercio: https://www.marxen.com.ar/seguros\n\nAUTOGESTIÓN DEL ASEGURADO (una vez emitida la póliza):\n- App San Cristóbal (iOS y Android): póliza, tarjeta para circular, certificado para viajar, denuncia de siniestro, pagos.\n- Sitio del Asegurado / autogestión en sancristobal.com.ar\n- Santi: asistente de San Cristóbal por WhatsApp para trámites de póliza vigente.\n\nTELÉFONOS SAN CRISTÓBAL:\n- Central / autogestión comercial: 0810 222 8887 — lunes a viernes 9 a 16.30\n- Asistencia mecánica y hogar 24 h: 0810 222 8887\n- Denuncia de siniestros (manuales): 0810 222 8887 y 0810 444 0100\n- AP Prestacional (accidente, red de prestadores): 0810 888 8889\n- Desde el exterior: +54 9 341 420-2097\n\nPara COTIZAR o CONTRATAR una póliza nueva, el camino es MARXEN (productor), no la central de siniestros.\n\nMedios de pago habituales (pólizas): tarjeta, CBU/débito, efectivo según producto. Puede haber descuento por pago en 1 o más cuotas; se ve en la propuesta.\n\nToda cotización concreta (premio, franquicia, suma) la confirma MARXEN. No inventar números."
+    },
+    {
+      "id": "goassistance-0001",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Qué es y cómo la comercializa MARXEN",
+      "content": "GO! ASSISTANCE (también Go Assistance / GO!) es una empresa argentina de asistencia al viajero, con 25 años de trayectoria, presencia en 10 países y red médica en más de 100 destinos. Central operativa PROPIA, atención 24/7 en tu idioma. Sponsor oficial de Club Atlético Vélez Sarsfield. Sitio: https://www.goassistance.com/ar\n\nMARXEN Protección Integral (Salta) comercializa GO! como productor/asesor. Para cotizar o contratar desde Salta: WhatsApp MARXEN 387 634-8199 o https://www.marxen.com.ar/viajero\n\nDIFERENCIALES (ficha comercial GO):\n- Cobertura en viaje\n- Asistencia 24/7 en tu idioma\n- Central operativa propia (no un call center tercerizado)\n- GO! PAY: tarjeta VISA virtual para asistirse de forma directa\n- Emisión online (voucher por mail)\n- Cobertura para deportes (según plan, p. ej. GO! Adventure)\n- Cobertura para mascotas (Pet Assistance en planes que la incluyen, p. ej. Adventure)\n\nREGLA: las coberturas, topes y exclusiones rigen por el voucher/condiciones del plan cotizado. No inventar precios ni montos si no están en esta ficha. Un asesor de MARXEN confirma la cotización."
+    },
+    {
+      "id": "goassistance-0002",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Asistencia al viajero vs seguro de viaje",
+      "content": "ASISTENCIA AL VIAJERO vs SEGURO DE VIAJE\n\nAsistencia GO!: cuando hay un problema (enfermedad, accidente, valija, documentos) llamás a la central. GO! coordina el prestador, autoriza y PAGA DIRECTO en destino. No es “adelantá y después reclama”. El seguro clásico suele reembolsar después de que pagaste.\n\nGO! combina ambos: cobertura DIRECTA médica/traslado en destino y reembolso para algunos adicionales (p. ej. cancelación de vuelo o gastos presentados).\n\nFrase útil: el seguro te indemniza; la asistencia te resuelve.\n\nGO! PAY: visa virtual para asistirse de forma directa cuando aplica.\n\nEn urgencia: contactar la central ANTES de pagar un médico. Pagar por cuenta propia sin autorización puede afectar el reembolso.\n\nCotizar con MARXEN: 387 634-8199."
+    },
+    {
+      "id": "goassistance-0003",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Qué cubre (según plan)",
+      "content": "QUÉ CUBRE GO! ASSISTANCE (varía según el plan elegido)\n\nLa FAQ pública lista, a modo general: urgencias médicas, hospitalización, traslado sanitario, odontología de urgencia, pérdida y demora de equipaje, demora y cancelación de vuelos, embarazos hasta las 26 semanas, doctor online (telemedicina), repatriación sanitaria y funeraria, VIP GO! Experience. El tope médico de esa FAQ genérica (“hasta USD 40.000”) NO es el tope de todos los planes: el Monto Máximo Global (MMG) real está en cada producto (p. ej. GO! 365 USD 45.000, SMART 80.000, PRIORITY 300.000). Siempre se confirma al cotizar.\n\nTambién (según plan): COVID-19, medicamentos, preexistencias en urgencia con tope, concierge y extras premium.\n\nNO es una prepaga ni reemplaza OSDE/Prevención Salud en Argentina. Es cobertura de VIAJE.\n\nDebe contratarse ANTES de salir del país de residencia. Una vez iniciado el viaje, no se activa.\n\nCotizar: MARXEN 387 634-8199 · https://www.marxen.com.ar/viajero"
+    },
+    {
+      "id": "goassistance-0004",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Planes de referencia (MMG y para quién)",
+      "content": "PLANES GO! — montos de referencia publicados para Europa (goassistance.com, 2026). Al cotizar pueden variar nombre/tope según destino. No citar precio en pesos.\n\n- GO! 365 ECO — MMG USD 45.000. Preexistencias de urgencia aprox. USD 350. Viajes cortos, presupuesto ajustado.\n- GO! 365 — MMG USD 45.000, sin deducible en la ficha Europa. Escapadas a una ciudad.\n- GO! ADVENTURE — MMG USD 60.000. Deportes recreativos (esquí en pistas, trekking, etc.). COVID con tope elevado en ficha Europa (USD 50.000). Pet Assistance en recomendaciones España/Adventure. Los planes estándar NO siempre incluyen deportes: hay que pedir Adventure al cotizar.\n- GO! SMART — MMG USD 80.000, sin deducible. Equilibrio para la mayoría de viajes a Europa (2-3 semanas, varios países). Odontología y equipaje con topes de plan; repatriación y traslados sanitarios según ficha.\n- GO! NOMADS — MMG USD 150.000. Estadías largas, nómadas, intercambio, trabajo remoto. Preexistencias intermedias (aprox. USD 3.500).\n- GO! PRIORITY — MMG USD 300.000. Premium: preexistencias hasta aprox. USD 5.000, embarazo y extras (concierge, seguridad privada, personal shopper, asistente personal según ficha).\n\nA partir de 75 años, GO! aplica un incremento del 50% sobre la tarifa. Edad máxima 75/85 según plan.\n\nMultitrip / anual: para quien viaja seguido; se arma en cotización.\n\nTodos los planes INTERNACIONALES de GO! superan el mínimo Schengen de 30.000 euros.\n\nCotizar el plan exacto con MARXEN: 387 634-8199."
+    },
+    {
+      "id": "goassistance-0005",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Schengen, Europa y ETIAS",
+      "content": "EUROPA / ESPACIO SCHENGEN\n\nEs OBLIGATORIO contar con asistencia/seguro de viaje que cumpla:\n- Cobertura médica mínima 30.000 euros (aprox. 32.000-33.000 USD) por enfermedad o accidente\n- Repatriación sanitaria y funeraria, más hospitalización\n- Validez en TODOS los países Schengen\n- Vigencia por TODOS los días de la estadía (si viajás 20 días, 20 días cubiertos)\n- Sin franquicia/deducible para el requisito típico de visa Schengen\n\nGO! ASSISTANCE cumple el estándar Schengen en sus planes internacionales.\n\nArgentinos en turismo corto (hasta 90 días) pueden no necesitar visa, pero igual conviene y a menudo se pide el comprobante. ETIAS (autorización electrónica de ingreso, implementación 2026) NO reemplaza la asistencia: son dos trámites distintos. Hace falta ambos cuando ETIAS esté vigente.\n\nReino Unido u otros destinos fuera de Schengen: no aplica la obligatoriedad Schengen, pero la necesidad médica es la misma.\n\nSoporte migratorio: primera hoja del pasaporte (foto) + sello de salida o boarding pass (no la reserva). Argentinos: también constancia de último tránsito en Migraciones.\n\nPara Europa, GO! recomienda en general SMART (mayoría), 365 para escapadas cortas, NOMADS para estadías largas, ADVENTURE si hay deportes, PRIORITY si se busca el tope más alto.\n\nCotizar Europa con MARXEN: 387 634-8199."
+    },
+    {
+      "id": "goassistance-0006",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Destinos del cotizador MARXEN y recomendaciones",
+      "content": "DESTINOS QUE COTIZA MARXEN CON GO! (catálogo del sitio):\n- Brasil\n- América del Sur\n- América del Norte (incluye EE.UU.: sistema de salud caro, conviene MMG alto)\n- América Central\n- Europa (Schengen)\n- Resto del Mundo (Australia, Nueva Zelanda, Asia, etc.)\n- Cobertura Local (asistencia nacional / dentro de Argentina)\n\nRecomendaciones (FAQ GO!, sin precios):\n- Europa o EE.UU.: plan con cobertura médica de al menos USD 30.000 y cancelación si se necesita. En Europa el mínimo legal Schengen es 30.000 EUR; GO! recomienda 50.000 USD o más para viajes largos.\n- América Latina / Brasil: planes más accesibles; el cruce terrestre también conviene llevar asistencia.\n- Working Holiday / estadías largas: planes específicos (Australia, Nueva Zelanda, Japón, Islandia, México, Polonia, Europa). NOMADS para nómadas/temporadas.\n\nEl precio depende de destino, días, edades y plan. Cotización real: MARXEN 387 634-8199 o https://www.marxen.com.ar/viajero"
+    },
+    {
+      "id": "goassistance-0007",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Cómo contratar y cuándo se puede emitir",
+      "content": "CÓMO CONTRATAR GO! (pasos oficiales):\n1. Destino, fechas y edades de los viajeros\n2. Elegir el plan (comparar MMG y adicionales)\n3. Pago: online con tarjeta; GO! anuncia hasta 6 cuotas sin interés en productos seleccionados (no asumir que siempre aplica)\n4. Voucher/póliza por email al instante, con instrucciones y teléfono de la central\n\nEn MARXEN: mismo armado por WhatsApp 387 634-8199 o el cotizador de https://www.marxen.com.ar/viajero\n\nCUÁNDO CONTRATAR: ANTES de salir del país de residencia. Una vez iniciado el viaje, GO! NO activa la cobertura. Conviene contratarla con anticipación, válida desde el vuelo de ida hasta el regreso.\n\nEl tríptico habla de “emisión desde cualquier parte del mundo”: es la capacidad de emitir el voucher online/con productor, NO que se pueda comprar ya estando de viaje.\n\nLlevar el voucher (PDF o celular) con el número de la central."
+    },
+    {
+      "id": "goassistance-0008",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Qué hacer en una urgencia médica",
+      "content": "URGENCIA CON GO! ASSISTANCE\n\n1. Comunicarse con la CENTRAL 24/7/365 ANTES de pagar un médico (teléfono del voucher o WhatsApp GO! +54 9 11 5218-7034).\n2. Un operador atiende en tiempo real, en español, y coordina prestador de la red (más de 30.000 en el mundo) o ambulancia. Consultas simples: Dr. Online / telemedicina.\n3. GO! autoriza y paga al prestador en la mayoría de los casos. No adelantar dinero sin autorización: puede afectar el reembolso.\n4. La primera urgencia suele autorizarse en los primeros minutos.\n5. Si hay internación, medicamentos, traslado de un familiar o repatriación, la central sigue el caso.\n\nCentral propia: te atiende GO!, no un call center ajeno.\n\nPara armar o entender la póliza desde Salta: MARXEN 387 634-8199. En destino, el número operativo es el del voucher / WhatsApp GO!."
+    },
+    {
+      "id": "goassistance-0009",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Preexistencias, embarazo, COVID y odontología",
+      "content": "PREEXISTENCIAS: algunos planes cubren enfermedades preexistentes CONTROLADAS (p. ej. hipertensión, diabetes tipo 2, cardiopatía estable) SOLO en urgencia/emergencia, con TOPE según plan (ficha Europa: desde aprox. USD 350 en 365/Adventure/Smart hasta USD 3.500 Nomads y USD 5.000 Priority). Hay que DECLARARLAS al contratar. El mito de que “nunca cubren preexistentes” es falso: cubren la emergencia, con límite.\n\nEMBARAZO: la FAQ general menciona cobertura hasta las 26 semanas. Priority/Nomads publican topes de embarazo (p. ej. USD 7.500 / 5.000 en ficha Europa). Confirmar en el plan cotizado.\n\nCOVID-19: debe estar explícita. Los planes GO! la incluyen; Adventure/Nomads publican montos específicos altos en la guía Europa.\n\nODONTOLOGÍA: urgencia (dolor, rotura de pieza), con tope de plan (p. ej. SMART hasta USD 450 en ficha Europa). No es un tratamiento odontológico completo.\n\nTELEMEDICINA: Dr. Online 24 h, en español.\n\nCotizar declarando edad y condiciones: MARXEN 387 634-8199."
+    },
+    {
+      "id": "goassistance-0010",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Equipaje, demora y cancelación de vuelo",
+      "content": "EQUIPAJE\nSi la aerolínea extravía la valija: denuncia en el aeropuerto (PIR) y conservarlo. GO! hace seguimiento. Durante la DEMORA: monto para artículos de primera necesidad. Si hay PÉRDIDA total o parcial determinada por la aerolínea: indemnización según el plan (p. ej. SMART hasta USD 1.000, PRIORITY hasta USD 2.000 en fichas Europa).\n\nDEMORA O CANCELACIÓN DE VUELO\nEs respaldo de GASTOS realizados en territorio INTERNACIONAL (estadía, comida, traslado) con comprobantes. NO es una compensación fija. NO aplica cuando todavía estás por salir del país de residencia.\n\nDocumentos robados: la asistencia orienta la reposición y ayuda legal según plan.\n\nSiempre el tope es el del voucher. Cotizar: MARXEN 387 634-8199."
+    },
+    {
+      "id": "goassistance-0011",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Deportes, mascotas y Working Holiday",
+      "content": "DEPORTES: GO! Adventure cubre deportes de aventura y recreativos (esquí recreativo en pistas reglamentarias, senderismo, etc.). Los planes estándar NO siempre lo incluyen: hay que elegir Adventure (o el adicional que figure en la cotización) y chequear la actividad en las condiciones.\n\nMASCOTAS: el material comercial GO incluye cobertura para mascotas. En fichas de destino, Pet Assistance aparece asociado a planes como Adventure. Confirmar en la cotización si viaja con mascota.\n\nWORKING HOLIDAY / estadías largas: GO! publica guías para Australia, Nueva Zelanda, Japón, Islandia, México, Polonia y Working Holiday Europa. NOMADS encaja en temporadas e intercambio.\n\nEdad: incremento del 50% de tarifa desde los 75 años. Tope de edad según plan (75/85).\n\nCotizar el caso (deporte, mascota, visa Working Holiday) con MARXEN: 387 634-8199."
+    },
+    {
+      "id": "goassistance-0012",
+      "sourceId": "goassistance",
+      "sourceTitle": "GO! ASSISTANCE — Contactos, reseñas y cómo cotizar en Salta",
+      "content": "CONTACTOS\n\nMARXEN (cotizar/contratar desde Salta): WhatsApp 387 634-8199 · hola@marxel.com.ar · https://www.marxen.com.ar/viajero\n\nGO! ASSISTANCE (central 24 h, una vez emitido el voucher): WhatsApp +54 9 11 5218-7034. El número de emergencias del voucher manda.\n\nCONFIANZA (datos públicos GO!): 25 años; 10 países; red en más de 100 destinos; más de 30.000 prestadores; sponsor Vélez. Reseñas del sitio: Trustpilot ~4.6-4.7 y Google ~4.6 (la FAQ también citó 4.4 en Google; usar “reseñas altas en Trustpilot y Google” si hay duda).\n\nPrecio: depende de destino, días, edades y plan. América Latina suele ser más accesible; Europa y EE.UU. más altos. NUNCA inventar un premio en pesos.\n\nDatos mínimos para cotizar: destino (o región), fechas de ida y vuelta, cantidad de viajeros y edades, si hay preexistencia, deporte o mascota."
     }
   ]
 }

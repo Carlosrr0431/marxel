@@ -73,6 +73,10 @@ function sourceBoost(query: string, sourceId: string): number {
     return 2.5;
   if (/(hogar|motos?|mala\s+praxis|accidentes\s+personales|\bap\b|alquiler|comercio|incendio|embarcacion|sepelio|cauci[oó]n)/.test(q) && sourceId.includes("sancristobal"))
     return 2.3;
+  if (/go\s*assistance|goassistance|\bgo!|asistencia al viajero|seguro de viaje|schengen|equipaje|repatriaci|voucher|multitrip|working holiday|go\s*pay/.test(q) && sourceId.includes("goassistance"))
+    return 2.5;
+  if (/(viajero|europa|brasil|ee\.?uu|estados unidos|nomads|adventure)/.test(q) && sourceId.includes("goassistance"))
+    return 2.2;
   if (/plan|cobertura|reintegro|odont|kine|fono|optica|viajero/.test(q) && sourceId.startsWith("plan-"))
     return 1.8;
   return 1;
