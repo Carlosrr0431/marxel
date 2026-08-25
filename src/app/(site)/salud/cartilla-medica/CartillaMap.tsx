@@ -36,8 +36,7 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
 
     const withCoords = prestadores.filter((p) => p.lat != null && p.lng != null);
 
-    import("maplibre-gl").then((mod) => {
-      const maplibregl = mod.default;
+    import("maplibre-gl").then((maplibregl) => {
 
       map = new maplibregl.Map({
         container: containerRef.current!,
