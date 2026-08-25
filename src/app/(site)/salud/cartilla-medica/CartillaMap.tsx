@@ -1,8 +1,9 @@
 "use client";
 
-import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { Prestador } from "@/data/cartilla-prestadores";
+
+const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl/dist/maplibre-gl.css";
 
 interface Props {
   prestadores: Prestador[];
@@ -34,6 +35,15 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
   useEffect(() => {
     if (!containerRef.current) return;
     let map: { remove: () => void; flyTo: (opts: object) => void; on: (e: string, cb: () => void) => void };
+
+    // Inyectar CSS de MapLibre una sola vez
+    if (!document.querySelector('link[data-maplibre]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = MAPLIBRE_CSS;
+      link.setAttribute("data-maplibre", "1");
+      document.head.appendChild(link);
+    }
 
     const withCoords = prestadores.filter((p) => p.lat != null && p.lng != null);
 
