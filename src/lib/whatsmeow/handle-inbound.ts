@@ -153,6 +153,19 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
       }).catch(() => null);
     } else if (!poll.messageId) {
       console.info("[whatsapp][poll]", "queued", dest);
+    } else {
+      // Guardar el poll en el historial del CRM con sus opciones
+      const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
+      await saveCrmWhatsappMessage({
+        phone: conv.phone,
+        direction: "outbound",
+        body: "Elegí una opción",
+        messageType: "poll",
+        fromMe: true,
+        waMessageId: poll.messageId,
+        source: "bot",
+        pollOptions: pollOptions.map((item) => item.label),
+      }).catch(() => null);
     }
   }
 

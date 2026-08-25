@@ -2226,6 +2226,19 @@ body:has(.crm-shell) {
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  overflow: hidden;
+}
+
+.crm-wa-avatar--sm {
+  height: 2.45rem;
+  width: 2.45rem;
+  font-size: 0.73rem;
+}
+
+.crm-wa-avatar--lg {
+  height: 2.85rem;
+  width: 2.85rem;
+  font-size: 0.8rem;
 }
 
 .crm-wa-item__copy {
@@ -2345,11 +2358,6 @@ body:has(.crm-shell) {
   backdrop-filter: blur(8px);
 }
 
-.crm-wa-thread__head .crm-wa-avatar {
-  height: 2.45rem;
-  width: 2.45rem;
-  font-size: 0.73rem;
-}
 
 .crm-wa-thread__who {
   min-width: 0;
@@ -2827,6 +2835,74 @@ body:has(.crm-shell) {
 
 .crm-wa-preview .crm-wa-error {
   color: #ff8a80;
+}
+
+/* ── Burbujas de encuesta (poll) ── */
+.crm-wa-bubble--poll {
+  min-width: 12rem;
+}
+
+.crm-wa-poll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.12rem 0.1rem 0.3rem;
+}
+
+.crm-wa-poll__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.crm-wa-poll__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111b21;
+  line-height: 1.35;
+}
+
+.crm-wa-bubble.is-mine .crm-wa-poll__title {
+  color: #0a4a2d;
+}
+
+.crm-wa-poll__opts {
+  margin: 0.12rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.crm-wa-poll__opts li {
+  padding: 0.22rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 0.82rem;
+  color: #41525d;
+}
+
+.crm-wa-bubble.is-mine .crm-wa-poll__opts li {
+  background: rgba(0, 100, 60, 0.08);
+  color: #234d32;
+}
+
+.crm-wa-poll__label {
+  font-size: 0.68rem;
+  color: #8696a0;
+  font-style: normal;
+  margin-top: 0.1rem;
+}
+
+.crm-wa-poll--vote .crm-wa-poll__icon {
+  color: #00a884;
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.crm-wa-poll--vote .crm-wa-poll__title {
+  font-size: 0.88rem;
 }
 
 @media (max-width: 860px) {

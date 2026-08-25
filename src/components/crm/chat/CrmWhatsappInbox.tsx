@@ -193,6 +193,75 @@ function Ticks({ status }: { status: CrmDeliveryStatus }) {
   );
 }
 
+function PollBubble({ message, mine }: { message: CrmChatMessage; mine: boolean }) {
+  const isPollVote = message.direction === "inbound" && !mine;
+  const options = message.poll_options ?? [];
+  const status = deliveryOf(message);
+  return (
+    <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>
+      <div className={`crm-wa-bubble crm-wa-bubble--poll${mine ? " is-mine" : ""}`}>
+        {!isPollVote ? (
+          <div className="crm-wa-poll">
+            <span className="crm-wa-poll__icon" aria-hidden="true">📊</span>
+            <span className="crm-wa-poll__title">{message.body || "Encuesta"}</span>
+            {options.length > 0 && (
+              <ul className="crm-wa-poll__opts">
+                {options.map((opt, i) => (
+                  <li key={i}>{opt}</li>
+                ))}
+              </ul>
+            )}
+            <em className="crm-wa-poll__label">Encuesta</em>
+          </div>
+        ) : (
+          <div className="crm-wa-poll crm-wa-poll--vote">
+            <span className="crm-wa-poll__icon" aria-hidden="true">✓</span>
+            <span className="crm-wa-poll__title">{message.body || "Votó"}</span>
+          </div>
+        )}
+        <span className="crm-wa-meta">
+          <time dateTime={message.created_at}>{clock(message.created_at)}</time>
+          {mine ? <Ticks status={status} /> : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function AvatarImg({
+  initials: ini,
+  src,
+  size = "lg",
+}: {
+  initials: string;
+  src?: string | null;
+  size?: "sm" | "lg";
+}) {
+  const [err, setErr] = useState(false);
+  if (src && !err) {
+    return (
+      <span
+        className={`crm-wa-avatar crm-wa-avatar--${size}`}
+        aria-hidden="true"
+        style={{ padding: 0 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          style={{ width: "100%", height: "100%", borderRadius: "999px", objectFit: "cover" }}
+          onError={() => setErr(true)}
+        />
+      </span>
+    );
+  }
+  return (
+    <span className={`crm-wa-avatar crm-wa-avatar--${size}`} aria-hidden="true">
+      {ini}
+    </span>
+  );
+}
+
 function fileIconLabel(mime: string | null, name: string | null) {
   const m = (mime || "").toLowerCase();
   const ext = (name || "").split(".").pop()?.toUpperCase() || "FILE";
@@ -225,6 +294,11 @@ function MediaFallback({ src, name, mine }: { src: string; name: string | null; 
 
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
+
+  if ((message.message_type || "").toLowerCase() === "poll") {
+    return <PollBubble message={message} mine={mine} />;
+  }
+
   const kind = mediaKind(message);
   const src = kind === "text" ? "" : mediaSrc(message);
   const status = deliveryOf(message);
@@ -295,6 +369,7 @@ export function CrmWhatsappInbox() {
   const [schemaMissing, setSchemaMissing] = useState(false);
   const [live, setLive] = useState(false);
   const [composerPhone, setComposerPhone] = useState("");
+  const [profilePics, setProfilePics] = useState<Record<string, string>>({});
   const threadRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef<HTMLTextAreaElement>(null);
@@ -361,6 +436,19 @@ export function CrmWhatsappInbox() {
     if (fileRef.current) fileRef.current.value = "";
     setLoadingThread(true);
     setError("");
+
+    // Fetch foto de perfil si no la tenemos aún
+    if (!profilePics[normalized]) {
+      fetch(`/api/crm/whatsapp/profile-pic?phone=${encodeURIComponent(normalized)}`)
+        .then((r) => r.json())
+        .then((json: { ok?: boolean; url?: string }) => {
+          if (json.ok && json.url) {
+            setProfilePics((prev) => ({ ...prev, [normalized]: json.url as string }));
+          }
+        })
+        .catch(() => null);
+    }
+
     try {
       const res = await fetch(
         `/api/crm/whatsapp/messages?phone=${encodeURIComponent(normalized)}`,
@@ -603,9 +691,11 @@ export function CrmWhatsappInbox() {
                 className={`crm-wa-item${active ? " is-active" : ""}`}
                 onClick={() => void openChat(chat.phone)}
               >
-                <span className="crm-wa-avatar" aria-hidden="true">
-                  {initials(chat.name, chat.phone)}
-                </span>
+                <AvatarImg
+                  initials={initials(chat.name, chat.phone)}
+                  src={profilePics[chat.phone] ?? chat.profile_pic_url}
+                  size="lg"
+                />
                 <span className="crm-wa-item__copy">
                   <span className="crm-wa-item__top">
                     <strong>{chat.name || displayPhone(chat.phone)}</strong>
@@ -652,9 +742,11 @@ export function CrmWhatsappInbox() {
         ) : (
           <>
             <header className="crm-wa-thread__head">
-              <span className="crm-wa-avatar" aria-hidden="true">
-                {initials(activeChat?.name || null, selected)}
-              </span>
+              <AvatarImg
+                initials={initials(activeChat?.name || null, selected)}
+                src={profilePics[selected] ?? activeChat?.profile_pic_url}
+                size="sm"
+              />
               <div className="crm-wa-thread__who">
                 <strong>{activeChat?.name || displayPhone(selected)}</strong>
                 <p>{displayPhone(selected)}</p>

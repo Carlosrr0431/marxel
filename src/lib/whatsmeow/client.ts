@@ -430,3 +430,29 @@ export async function sendWhatsmeowPoll(
   markDirectSent();
   return sent;
 }
+
+export async function fetchWhatsmeowProfilePicUrl(
+  phone: string
+): Promise<string | null> {
+  try {
+    const agentCode = getWhatsmeowAgentCode();
+    const qs = new URLSearchParams({ agent_code: agentCode, phone });
+    const res = await fetch(
+      `${getWhatsmeowApiBase()}/api/profile-pic?${qs}`,
+      {
+        headers: { "X-API-Key": getWhatsmeowApiKey() },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
+      }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    const url = String(json?.data && typeof json.data === "object"
+      ? (json.data as Record<string, unknown>).url ?? ""
+      : json?.url ?? ""
+    ).trim();
+    return url || null;
+  } catch {
+    return null;
+  }
+}

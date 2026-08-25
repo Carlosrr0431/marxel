@@ -14,6 +14,7 @@ export type CrmChat = {
   id: string;
   phone: string;
   name: string | null;
+  profile_pic_url?: string | null;
   last_message: string | null;
   last_message_at: string | null;
   unread_count: number;
@@ -38,6 +39,7 @@ export type CrmChatMessage = {
   source: string;
   delivery_status?: CrmDeliveryStatus;
   queue_id?: string | null;
+  poll_options?: string[] | null;
   created_at: string;
 };
 
@@ -55,6 +57,7 @@ export type SaveCrmMessageInput = {
   source?: string;
   deliveryStatus?: CrmDeliveryStatus;
   queueId?: string | null;
+  pollOptions?: string[] | null;
 };
 
 const MIME_NORMALIZATIONS: Record<string, string> = {
@@ -141,6 +144,7 @@ export async function saveCrmWhatsappMessage(input: SaveCrmMessageInput) {
     ...base,
     p_delivery_status: input.deliveryStatus || "sent",
     p_queue_id: input.queueId || null,
+    p_poll_options: input.pollOptions || null,
   };
 
   let { data, error } = await supabase.rpc("save_whatsapp_crm_message", withQueue);
