@@ -344,6 +344,25 @@ export async function persistCrmInbound(inbound: InboundMessage) {
   });
 }
 
+/**
+ * Actualiza el nombre del chat solo si actualmente está vacío (null).
+ * Evita sobreescribir nombres que el operador pudo haber editado.
+ */
+export async function updateCrmChatNameIfMissing(phone: string, name: string) {
+  const cleanPhone = phone.replace(/\D/g, "");
+  if (!cleanPhone || !name.trim()) return;
+  try {
+    const supabase = createServiceClient();
+    await supabase
+      .from("whatsapp_chats")
+      .update({ name: name.trim() })
+      .eq("phone", cleanPhone)
+      .is("name", null);
+  } catch (err) {
+    console.warn("[crm-chat] updateCrmChatNameIfMissing:", err instanceof Error ? err.message : err);
+  }
+}
+
 async function adoptPendingCrmOutbound(inbound: InboundMessage) {
   const phone = normalizeArPhone(inbound.phone);
   if (!phone) return false;

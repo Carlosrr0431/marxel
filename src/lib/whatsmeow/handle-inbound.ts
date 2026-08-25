@@ -12,7 +12,7 @@ import {
   saveConversation,
   type ConversationRow,
 } from "@/lib/whatsmeow/conversations";
-import { persistCrmInbound } from "@/lib/whatsmeow/crm-chat";
+import { persistCrmInbound, updateCrmChatNameIfMissing } from "@/lib/whatsmeow/crm-chat";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
 import {
   detectsQuoteIntent,
@@ -255,6 +255,21 @@ export async function handleWhatsappInbound(body: unknown) {
     await persistCrmInbound(inbound);
   } catch (err) {
     console.error("[whatsapp-crm] persist", err instanceof Error ? err.message : err);
+  }
+
+  // Si el mensaje es entrante y no tiene push_name, buscar el nombre
+  // en la API de contactos de forma asíncrona (sin bloquear la respuesta).
+  // Igual que resolvePushNameFromMessage en remax-noa-oficial.
+  if (!inbound.fromMe && !inbound.pushName && inbound.phone) {
+    after(async () => {
+      try {
+        const { fetchWhatsmeowContactName } = await import("@/lib/whatsmeow/client");
+        const name = await fetchWhatsmeowContactName(inbound.phone);
+        if (name) await updateCrmChatNameIfMissing(inbound.phone, name);
+      } catch {
+        // best-effort: no interrumpir el flujo
+      }
+    });
   }
 
   if (inbound.fromMe && !inbound.isPoll) {

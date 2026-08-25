@@ -431,6 +431,44 @@ export async function sendWhatsmeowPoll(
   return sent;
 }
 
+/**
+ * Busca el nombre del contacto en el store local de whatsmeow-api.
+ * Útil cuando el webhook llega sin push_name.
+ */
+export async function fetchWhatsmeowContactName(
+  phone: string,
+  agentCode = getWhatsmeowAgentCode()
+): Promise<string | null> {
+  try {
+    if (!phone || !agentCode) return null;
+    const digits = phone.replace(/\D/g, "");
+    if (!digits || digits.length < 8) return null;
+
+    const qs = new URLSearchParams({ agent_code: agentCode });
+    const res = await fetch(`${getWhatsmeowApiBase()}/api/contacts?${qs}`, {
+      headers: { "X-API-Key": getWhatsmeowApiKey() },
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) return null;
+
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    const inner = json?.data && typeof json.data === "object" ? json.data as Record<string, unknown> : json;
+    const contacts = Array.isArray(inner?.contacts) ? inner.contacts as Record<string, unknown>[] : null;
+    if (!contacts) return null;
+
+    const match = contacts.find((c) => {
+      const cPhone = String(c.phone || c.jid || "").replace(/\D/g, "");
+      return cPhone && (cPhone === digits || cPhone.endsWith(digits.slice(-10)));
+    });
+    if (!match) return null;
+    const name = String(match.full_name || match.name || "").trim();
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWhatsmeowProfilePicUrl(
   phone: string
 ): Promise<string | null> {
