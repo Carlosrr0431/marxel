@@ -1522,6 +1522,12 @@ button.seguro-card .seguro-card__arrow {
 }
 
 /* MapLibre markers */
+.cartilla-marker-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
 .cartilla-marker {
   width: 28px;
   height: 28px;
@@ -1530,17 +1536,38 @@ button.seguro-card .seguro-card__arrow {
   background: var(--mc, #0ea5e9);
   border: 2.5px solid white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.cartilla-marker:hover,
-.cartilla-marker.is-selected {
+.cartilla-marker-wrap:hover .cartilla-marker,
+.cartilla-marker-wrap.is-selected .cartilla-marker {
   transform: rotate(-45deg) scale(1.25);
   box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
-.cartilla-marker.is-selected {
+.cartilla-marker-wrap.is-selected .cartilla-marker {
   border-color: var(--mc, #0ea5e9);
   outline: 3px solid color-mix(in srgb, var(--mc, #0ea5e9) 40%, transparent);
+}
+.cartilla-marker-label {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #1e293b;
+  background: white;
+  padding: 1px 6px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  border-color: var(--mc, #0ea5e9);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  pointer-events: none;
+  opacity: 0.92;
 }
 
 /* MapLibre popup */

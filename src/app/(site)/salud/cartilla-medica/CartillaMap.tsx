@@ -59,6 +59,14 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
+/** Genera una etiqueta corta para el marcador del mapa (máx. 16 chars) */
+function shortLabel(nombre: string): string {
+  const stopWords = new Set(["de", "del", "la", "el", "los", "las", "y", "e", "sa", "srl", "s.a.", "s.r.l."]);
+  const words = nombre.split(/\s+/).filter((w) => !stopWords.has(w.toLowerCase()));
+  const first = words.slice(0, 2).join(" ");
+  return first.length > 18 ? first.slice(0, 16) + "…" : first;
+}
+
 export function CartillaMap({ prestadores, selected, onSelect }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,9 +97,24 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
           prestadores
             .filter((p) => p.lat != null && p.lng != null)
             .forEach((p) => {
-              const el = document.createElement("div");
-              el.className = "cartilla-marker";
-              el.style.setProperty("--mc", TIPO_COLOR[p.tipo] ?? "#0ea5e9");
+              const color = TIPO_COLOR[p.tipo] ?? "#0ea5e9";
+              const shortName = shortLabel(p.nombre);
+
+              // Wrapper: pin + label — el MapLibre ancla al centro del wrapper
+              const wrap = document.createElement("div");
+              wrap.className = "cartilla-marker-wrap";
+              wrap.style.setProperty("--mc", color);
+
+              const pin = document.createElement("div");
+              pin.className = "cartilla-marker";
+
+              const label = document.createElement("div");
+              label.className = "cartilla-marker-label";
+              label.textContent = shortName;
+              label.style.borderColor = color;
+
+              wrap.appendChild(pin);
+              wrap.appendChild(label);
 
               const popup = new ml.Popup({ offset: 14, closeButton: false, maxWidth: "240px" })
                 .setHTML(`<div class="cartilla-popup">
@@ -100,13 +123,13 @@ export function CartillaMap({ prestadores, selected, onSelect }: Props) {
                   ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
                 </div>`);
 
-              new ml.Marker({ element: el })
+              new ml.Marker({ element: wrap })
                 .setLngLat([p.lng!, p.lat!])
                 .setPopup(popup)
                 .addTo(map);
 
-              el.addEventListener("click", () => onSelect(p.id));
-              markersRef.current.set(p.id, { el, getLngLat: () => [p.lng!, p.lat!] });
+              wrap.addEventListener("click", () => onSelect(p.id));
+              markersRef.current.set(p.id, { el: wrap, getLngLat: () => [p.lng!, p.lat!] });
             });
         });
       })

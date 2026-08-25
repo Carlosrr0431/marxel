@@ -64,8 +64,11 @@ export function CartillaBuscador() {
   const handleSelect = useCallback((id: string) => {
     setSelected((prev) => (prev === id ? null : id));
     if (tab !== "prestadores") setTab("prestadores");
-    const card = document.getElementById(`card-${id}`);
-    card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // Espera el re-render antes de hacer scroll para que el card esté en el DOM
+    setTimeout(() => {
+      const card = document.getElementById(`card-${id}`);
+      card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
   }, [tab]);
 
   const toggleSpecs = useCallback((id: string, e: React.MouseEvent) => {
