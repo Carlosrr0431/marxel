@@ -1,6 +1,10 @@
 import { site } from "@/lib/content";
 import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
 import {
+  findPrestadores,
+  formatPrestadorAnswer,
+} from "@/lib/chatbot/lookup-prestadores";
+import {
   listAutoBrands,
   listAutoLocations,
   listAutoModels,
@@ -146,15 +150,42 @@ export async function runQuoteIntentTool(
   if (name === "search_knowledge") {
     const query = String(args.query || "").trim();
     const isProviderQuery =
-      /prestador|cl[ií]nica|sanatorio|hospital|farmacia|cartilla|m[eé]dico|especialidad|guardia|laboratorio|radiolog|imagenes?/i.test(
+      /prestador|cl[ií]nica|sanatorio|hospital|farmacia|cartilla|m[eé]dico|especialidad|guardia|laboratorio|radiolog|imagenes?|atiend|atend|atent|instituto/i.test(
         query
       );
     const limit = isProviderQuery ? 12 : 6;
     const chunks = retrieveChunks(query, limit);
+    const prestadores = findPrestadores(query, 4);
+    const prestadorBlock = prestadores.length
+      ? `[Prestadores en cartilla A2/A4]\n${formatPrestadorAnswer(prestadores)}`
+      : "";
+    const context = [prestadorBlock, formatContext(chunks)].filter(Boolean).join("\n\n---\n\n");
     return {
       query,
-      found: chunks.length > 0,
-      context: formatContext(chunks),
+      found: chunks.length > 0 || prestadores.length > 0,
+      context: context || "No se encontraron fragmentos relevantes.",
+    };
+  }
+
+  if (name === "lookup_prestadores") {
+    const query = String(args.query || "").trim();
+    const matches = findPrestadores(query, 5);
+    return {
+      query,
+      found: matches.length > 0,
+      answer: matches.length ? formatPrestadorAnswer(matches) : null,
+      matches: matches.map((m) => ({
+        nombre: m.nombre,
+        tipo: m.tipoLabel,
+        direccion: m.direccion,
+        telefono: m.telefono,
+        whatsapp: m.whatsapp || null,
+        planes: m.planes,
+        especialidades: m.especialidades || [],
+      })),
+      note: matches.length
+        ? "Usá estos datos en reply. No inventes prestadores."
+        : "No hay coincidencia en la cartilla A2/A4 de Salta. Decí que un asesor de MARXEN lo confirma.",
     };
   }
 

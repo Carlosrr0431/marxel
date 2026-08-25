@@ -63,7 +63,7 @@ function sourceBoost(query: string, sourceId: string): number {
   if (/\ba2\b/.test(q) && sourceId.includes("a2")) return 2.2;
   if (/\ba4\b/.test(q) && sourceId.includes("a4")) return 2.2;
   if (/farmac/.test(q) && sourceId.includes("farmac")) return 2.4;
-  if (/cartilla|clinica|sanatorio|hospital|prestador/.test(q) && sourceId.includes("cartilla"))
+  if (/cartilla|clinica|sanatorio|hospital|prestador|jaraba|instituto/.test(q) && sourceId.includes("cartilla"))
     return 2;
   if (/manual|afili|aporte|monotribut|obra social|pmo|ley/.test(q) && sourceId.includes("manual"))
     return 1.6;

@@ -146,6 +146,21 @@ export const QUOTE_INTENT_TOOLS = [
   },
   {
     type: "function",
+    name: "lookup_prestadores",
+    description:
+      "Busca clínicas, sanatorios, institutos y centros de la cartilla A2/A4 en Salta por nombre (Jaraba, Tres Cerritos, Berg, etc.). Usalo SIEMPRE si preguntan si atienden, cubren o trabajan con un lugar.",
+    strict: false,
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["query"],
+      properties: {
+        query: { type: "string", description: "Nombre del prestador o parte, ej. jaraba, tres cerritos" },
+      },
+    },
+  },
+  {
+    type: "function",
     name: "search_knowledge",
     description:
       "Consulta la base de MARXEN (salud, seguros, viajero, contacto). Usalo para preguntas. No inventes coberturas ni precios.",

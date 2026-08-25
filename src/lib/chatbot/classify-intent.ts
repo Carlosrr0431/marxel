@@ -244,8 +244,9 @@ export async function classifyQuoteIntent(input: {
       tools: QUOTE_INTENT_TOOLS,
       jsonSchema: QUOTE_INTENT_JSON_SCHEMA,
       runTool: (name, args) => runQuoteIntentTool(name, args),
-      maxRounds: 3,
-      maxOutputTokens: 800,
+      maxRounds: 4,
+      maxOutputTokens: 2000,
+      thinking: true,
     });
     return normalizeIntent(parseModelJson(result.text));
   } catch (err) {

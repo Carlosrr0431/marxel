@@ -22,6 +22,11 @@ import {
   upsertHotLeadFromQuote,
 } from "@/lib/chatbot/persist-lead";
 import { getChatAi } from "@/lib/chatbot/ai-client";
+import {
+  findPrestadores,
+  formatPrestadorAnswer,
+  looksLikePrestadorQuery,
+} from "@/lib/chatbot/lookup-prestadores";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -186,11 +191,24 @@ export async function runChatTurn(input: {
     /^\s*(dale|s[ií]|ok|bueno|listo|claro|perfecto|anda(ndo)?|va(le)?|genial|quiero|manda(me)?|pas[aá](me)?)\s*[!.,]*\s*$/i.test(message) &&
     /\b(cartilla|prestador|cl[ií]nica|sanatorio|hospital|farmacia|plan\s+[aA][24]|prevenci[oó]n\s+salud|cobertura|m[eé]dico)\b/i.test(lastBotMsg);
 
+  const prestadorHits = findPrestadores(message);
   const isInfoQuestion =
     isAffirmativeFollowupHealth ||
+    looksLikePrestadorQuery(message) ||
     message.includes("?") ||
     /^\s*(qu[eé]|cu[aá]l(es)?|c[oó]mo|d[oó]nde|cu[aá]nto|hay\s|existe[n]?\s|tienen|me\s+pod[eé]s|pod[eé]s\s+decir|quiero\s+saber|dame\s|decime\s|lista\s|quiero\s+ver)/i.test(message) ||
     /\b(prestador(es)?|cartilla|cl[ií]nica[s]?|sanatorio[s]?|hospital(es)?|farmacia[s]?|m[eé]dico[s]?|especialidad(es)?|coberturas?\s+del?\s+plan|qu[eé]\s+cubre|lista\s+de\s+prestadores?|qu[eé]\s+incluye)\b/i.test(message);
+
+  // Respuesta directa de cartilla (Jaraba, Tres Cerritos, etc.) aunque el flujo
+  // de cotización esté activo: no pedir plan ni enviar poll.
+  if (prestadorHits.length > 0) {
+    return {
+      answer: formatPrestadorAnswer(prestadorHits),
+      quoteState: prevState,
+      quickReplies: [],
+      mode: "rag",
+    };
+  }
 
   const deterministic = isDeterministicQuoteInput(message, prevState);
   if (!isInfoQuestion && (deterministic || prevState.active)) {

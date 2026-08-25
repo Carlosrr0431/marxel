@@ -2,6 +2,12 @@ import OpenAI from "openai";
 
 const DEEPSEEK_PRO = "deepseek-v4-pro";
 
+function resolveDeepSeekModel(): string {
+  const override = (process.env.DEEPSEEK_PRO_MODEL || "").trim();
+  if (override.toLowerCase().includes("pro")) return override;
+  return DEEPSEEK_PRO;
+}
+
 export type ChatAi = {
   client: OpenAI;
   model: string;
@@ -30,7 +36,7 @@ export function getChatAi(): ChatAi | null {
         apiKey: deepseekKey,
         baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
       }),
-      model: process.env.DEEPSEEK_PRO_MODEL || process.env.DEEPSEEK_MODEL || DEEPSEEK_PRO,
+      model: resolveDeepSeekModel(),
       provider: "deepseek",
     };
     return _client;
@@ -145,8 +151,9 @@ export async function respondWithTools({
   tools = [],
   jsonSchema,
   runTool,
-  maxRounds = 3,
-  maxOutputTokens = 800,
+  maxRounds = 4,
+  maxOutputTokens = 1600,
+  thinking = true,
 }: {
   instructions: string;
   userContent: string;
@@ -156,9 +163,11 @@ export async function respondWithTools({
   runTool?: ToolRunner | null;
   maxRounds?: number;
   maxOutputTokens?: number;
+  thinking?: boolean;
 }): Promise<{ text: string; api: "responses" | "chat" }> {
   const ai = getChatAi();
   if (!ai) throw new Error("missing_ai");
+  const useThinking = thinking && ai.provider === "deepseek";
 
   const text = jsonSchema?.schema
     ? {
@@ -184,7 +193,7 @@ export async function respondWithTools({
         input,
         max_output_tokens: maxOutputTokens,
         stream: false,
-        reasoning: { effort: "none" },
+        reasoning: { effort: useThinking ? "medium" : "none" },
         text,
       };
       if (tools.length) request.tools = tools;
@@ -239,7 +248,7 @@ export async function respondWithTools({
     max_tokens: maxOutputTokens,
     response_format: { type: "json_object" },
     ...(ai.provider === "deepseek"
-      ? ({ thinking: { type: "disabled" } } as Record<string, unknown>)
+      ? ({ thinking: { type: useThinking ? "enabled" : "disabled" } } as Record<string, unknown>)
       : {}),
   } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
