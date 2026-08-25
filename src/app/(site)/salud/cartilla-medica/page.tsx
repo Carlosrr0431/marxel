@@ -68,7 +68,7 @@ export default function CartillaMedicaPage() {
 
       {/* ── Buscador + listados ── */}
       <section className="cartilla-page-content">
-        <div className="container-mx py-10 pb-20">
+        <div className="container-mx py-6 pb-16">
           <CartillaBuscador />
         </div>
       </section>

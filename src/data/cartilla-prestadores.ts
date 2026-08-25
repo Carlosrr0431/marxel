@@ -18,6 +18,8 @@ export interface Prestador {
   telefono: string;
   whatsapp?: string;
   planes: ("A2" | "A4")[];
+  lat?: number;
+  lng?: number;
 }
 
 export interface Farmacia {
@@ -26,6 +28,8 @@ export interface Farmacia {
   direccion: string;
   telefono: string;
   planes: ("A2" | "A4")[];
+  lat?: number;
+  lng?: number;
 }
 
 // ─── CLÍNICAS, SANATORIOS Y POLICONSULTORIOS ───────────────────────────────
@@ -42,6 +46,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 964, Salta Capital",
     telefono: "0387-4321440",
     planes: ["A2","A4"],
+    lat: -24.7870, lng: -65.4080,
   },
   {
     id: "hospital-tres-cerritos",
@@ -58,6 +63,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Juan B. Justo 93, Salta Capital",
     telefono: "0387-4163500",
     planes: ["A2","A4"],
+    lat: -24.7712, lng: -65.4195,
   },
   {
     id: "sanatorio-el-carmen",
@@ -77,6 +83,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Salta Capital",
     telefono: "0387-4311555",
     planes: ["A2","A4"],
+    lat: -24.7935, lng: -65.4155,
   },
   {
     id: "sanatorio-san-roque",
@@ -90,6 +97,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Reyes Católicos 1518, Salta Capital",
     telefono: "0387-4394000 / 4392357 / 4390202",
     planes: ["A2","A4"],
+    lat: -24.7901, lng: -65.4305,
   },
   {
     id: "clinica-berg",
@@ -112,6 +120,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "WhatsApp 387-4453008",
     whatsapp: "3874453008",
     planes: ["A2","A4"],
+    lat: -24.7857, lng: -65.4183,
   },
   {
     id: "vitae-medical",
@@ -127,6 +136,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Zabala 432, Salta Capital",
     telefono: "0387-4237373 / 4260300",
     planes: ["A2","A4"],
+    lat: -24.7833, lng: -65.4178,
   },
   {
     id: "clinica-luis-guemes",
@@ -142,6 +152,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Adolfo Güemes 287, Salta Capital",
     telefono: "0387-4210033",
     planes: ["A2","A4"],
+    lat: -24.7845, lng: -65.4158,
   },
   {
     id: "imac-centro",
@@ -154,6 +165,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Alvarado 858, Salta Capital",
     telefono: "387-4219212",
     planes: ["A2","A4"],
+    lat: -24.7862, lng: -65.4220,
   },
   {
     id: "imagen-clara",
@@ -167,6 +179,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "WhatsApp 387-4026562",
     whatsapp: "3874026562",
     planes: ["A2","A4"],
+    lat: -24.7870, lng: -65.4078,
   },
   {
     id: "diagnostico-salta",
@@ -179,6 +192,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Dr. Mariano Boedo 62, Salta Capital",
     telefono: "0387-4215529",
     planes: ["A2","A4"],
+    lat: -24.7888, lng: -65.4222,
   },
   {
     id: "imagenes-medicas",
@@ -189,6 +203,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "0387-4215529",
     whatsapp: "3873080555",
     planes: ["A2","A4"],
+    lat: -24.7888, lng: -65.4224,
   },
   {
     id: "imagenes-jaraba",
@@ -199,6 +214,7 @@ export const PRESTADORES: Prestador[] = [
     telefono: "0387-4314907",
     whatsapp: "3872275027",
     planes: ["A2","A4"],
+    lat: -24.7839, lng: -65.4215,
   },
   {
     id: "cordis-sa",
@@ -237,6 +253,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Urquiza 150, Salta Capital",
     telefono: "0387-4220654 / 4220053 / 4320385",
     planes: ["A2","A4"],
+    lat: -24.7874, lng: -65.4093,
   },
   {
     id: "servicio-nino-jesus",
@@ -330,6 +347,7 @@ export const PRESTADORES: Prestador[] = [
     direccion: "Av. Sarmiento 1301, Salta Capital",
     telefono: "0387-4325000",
     planes: ["A2","A4"],
+    lat: -24.7758, lng: -65.4205,
   },
   {
     id: "senyp-srl",
