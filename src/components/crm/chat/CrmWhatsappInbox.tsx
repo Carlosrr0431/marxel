@@ -14,9 +14,17 @@ const timeFmt = new Intl.DateTimeFormat("es-AR", {
   minute: "2-digit",
 });
 
+const dayFmt = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
 function displayPhone(phone: string) {
   const raw = String(phone || "");
-  if (raw.startsWith("549") && raw.length >= 12) return `+${raw.slice(0, 2)} ${raw.slice(2, 3)} ${raw.slice(3)}`;
+  if (raw.startsWith("549") && raw.length >= 12) {
+    return `+${raw.slice(0, 2)} ${raw.slice(2, 3)} ${raw.slice(3)}`;
+  }
   if (raw.startsWith("54")) return `+${raw}`;
   return raw;
 }
@@ -26,6 +34,45 @@ function clock(value: string | null) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
   return timeFmt.format(d);
+}
+
+function dayKey(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function dayLabel(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (dayKey(value) === dayKey(today.toISOString())) return "Hoy";
+  if (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  ) {
+    return "Ayer";
+  }
+  const label = dayFmt.format(d);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function initials(name: string | null, phone: string) {
+  const source = (name || "").trim();
+  if (source) {
+    const parts = source.split(/\s+/).slice(0, 2);
+    return parts.map((part) => part[0]?.toUpperCase() || "").join("") || "•";
+  }
+  return (phone.slice(-2) || "•").toUpperCase();
+}
+
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function mediaKind(message: CrmChatMessage) {
@@ -45,13 +92,20 @@ function mediaSrc(message: CrmChatMessage) {
   return `/api/crm/whatsapp/media/${encodeURIComponent(message.wa_message_id)}?type=${encodeURIComponent(type)}`;
 }
 
+function fileKind(file: File) {
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("audio/")) return "audio";
+  return "file";
+}
+
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
   const kind = mediaKind(message);
   const src = kind === "text" ? "" : mediaSrc(message);
   return (
     <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>
-      <div className={`crm-wa-bubble${mine ? " is-mine" : ""}`}>
+      <div className={`crm-wa-bubble${mine ? " is-mine" : ""}${kind !== "text" ? " has-media" : ""}`}>
         {kind === "image" && src ? (
           <a href={src} target="_blank" rel="noreferrer" className="crm-wa-media-link">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -66,11 +120,25 @@ function Bubble({ message }: { message: CrmChatMessage }) {
         ) : null}
         {kind === "file" && src ? (
           <a href={src} target="_blank" rel="noreferrer" className="crm-wa-file">
-            {message.file_name || "Descargar archivo"}
+            <span className="crm-wa-file__icon" aria-hidden="true">
+              PDF
+            </span>
+            <span>
+              <strong>{message.file_name || "Archivo"}</strong>
+              <em>Tocar para abrir</em>
+            </span>
           </a>
         ) : null}
         {message.body ? <p className="crm-wa-text">{message.body}</p> : null}
-        <time dateTime={message.created_at}>{clock(message.created_at)}</time>
+        <span className="crm-wa-meta">
+          <time dateTime={message.created_at}>{clock(message.created_at)}</time>
+          {mine ? (
+            <svg viewBox="0 0 16 15" className="crm-wa-ticks" aria-hidden="true">
+              <path d="M15.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L8.14 9.97 6.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L15.08 3.92a.45.45 0 0 0-.07-.604z" />
+              <path d="M11.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L4.14 9.97 2.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L11.08 3.92a.45.45 0 0 0-.07-.604z" />
+            </svg>
+          ) : null}
+        </span>
       </div>
     </div>
   );
@@ -92,8 +160,20 @@ export function CrmWhatsappInbox() {
   const [composerPhone, setComposerPhone] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const captionRef = useRef<HTMLTextAreaElement>(null);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
+
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (file) captionRef.current?.focus();
+  }, [file]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -134,6 +214,8 @@ export function CrmWhatsappInbox() {
     const normalized = normalizeArPhone(phone);
     if (!normalized) return;
     setSelected(normalized);
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
     setLoadingThread(true);
     setError("");
     try {
@@ -213,7 +295,12 @@ export function CrmWhatsappInbox() {
           const row = payload.new as CrmChatMessage;
           if (!row?.id) return;
           setMessages((prev) => {
-            if (prev.some((item) => item.id === row.id || (row.wa_message_id && item.wa_message_id === row.wa_message_id))) {
+            if (
+              prev.some(
+                (item) =>
+                  item.id === row.id || (row.wa_message_id && item.wa_message_id === row.wa_message_id)
+              )
+            ) {
               return prev;
             }
             return [...prev, row];
@@ -233,6 +320,11 @@ export function CrmWhatsappInbox() {
       void supabase.removeChannel(msgsChannel);
     };
   }, [selected]);
+
+  function clearFile() {
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   async function startNewChat(event: React.FormEvent) {
     event.preventDefault();
@@ -283,14 +375,15 @@ export function CrmWhatsappInbox() {
         return;
       }
       setDraft("");
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
+      clearFile();
     } catch {
       setError("Error de red al enviar");
     } finally {
       setSending(false);
     }
   }
+
+  const attachedKind = file ? fileKind(file) : null;
 
   return (
     <div className="crm-wa">
@@ -300,28 +393,36 @@ export function CrmWhatsappInbox() {
             <p className="crm-wa-kicker">WhatsApp</p>
             <h1>Chats</h1>
           </div>
-          <span className={`crm-wa-live${live ? " is-on" : ""}`}>{live ? "En vivo" : "Sin vivo"}</span>
+          <span className={`crm-wa-live${live ? " is-on" : ""}`}>
+            <i />
+            {live ? "En vivo" : "Sin vivo"}
+          </span>
         </div>
         <form className="crm-wa-new" onSubmit={startNewChat}>
           <input
-            className="crm-input"
+            className="crm-wa-field"
             value={composerPhone}
             onChange={(e) => setComposerPhone(e.target.value)}
             placeholder="Nuevo chat: 387..."
             inputMode="tel"
             aria-label="Celular para nuevo chat"
           />
-          <button type="submit" className="crm-btn crm-btn-primary">
+          <button type="submit" className="crm-wa-open">
             Abrir
           </button>
         </form>
-        <input
-          className="crm-input crm-wa-search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar chats"
-          aria-label="Buscar chats"
-        />
+        <label className="crm-wa-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M16 16.5L20 20.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar o empezar un chat"
+            aria-label="Buscar chats"
+          />
+        </label>
         <div className="crm-wa-list__body">
           {loadingChats ? <p className="crm-wa-empty">Cargando chats…</p> : null}
           {!loadingChats && schemaMissing ? (
@@ -340,18 +441,26 @@ export function CrmWhatsappInbox() {
                 onClick={() => void openChat(chat.phone)}
               >
                 <span className="crm-wa-avatar" aria-hidden="true">
-                  {(chat.name || chat.phone).slice(0, 1).toUpperCase()}
+                  {initials(chat.name, chat.phone)}
                 </span>
                 <span className="crm-wa-item__copy">
                   <span className="crm-wa-item__top">
                     <strong>{chat.name || displayPhone(chat.phone)}</strong>
-                    <time>{relativeTime(chat.last_message_at)}</time>
+                    <time className={chat.unread_count > 0 ? "is-unread" : ""}>
+                      {relativeTime(chat.last_message_at)}
+                    </time>
                   </span>
-                  <span className="crm-wa-item__preview">{chat.last_message || displayPhone(chat.phone)}</span>
+                  <span className="crm-wa-item__bottom">
+                    <span className="crm-wa-item__preview">
+                      {chat.last_message || displayPhone(chat.phone)}
+                    </span>
+                    {chat.unread_count > 0 ? (
+                      <span className="crm-wa-unread">
+                        {chat.unread_count > 99 ? "99+" : chat.unread_count}
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
-                {chat.unread_count > 0 ? (
-                  <span className="crm-wa-unread">{chat.unread_count > 99 ? "99+" : chat.unread_count}</span>
-                ) : null}
               </button>
             );
           })}
@@ -361,18 +470,34 @@ export function CrmWhatsappInbox() {
       <section className="crm-wa-thread" aria-live="polite">
         {!selected ? (
           <div className="crm-wa-placeholder">
-            <h2>Elegí un chat</h2>
-            <p>El historial, los archivos y los envíos quedan acá en tiempo real, aunque el agente esté en pausa.</p>
+            <span className="crm-wa-placeholder__mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M4.5 7.5A3.5 3.5 0 0 1 8 4h8a3.5 3.5 0 0 1 3.5 3.5v5A3.5 3.5 0 0 1 16 16h-3.2L8.5 19.2V16H8A3.5 3.5 0 0 1 4.5 12.5v-5z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+              </svg>
+            </span>
+            <h2>WhatsApp para Marxen</h2>
+            <p>
+              Elegí un chat a la izquierda para ver el historial, enviar archivos y responder en
+              tiempo real.
+            </p>
           </div>
         ) : (
           <>
             <header className="crm-wa-thread__head">
-              <div>
+              <span className="crm-wa-avatar" aria-hidden="true">
+                {initials(activeChat?.name || null, selected)}
+              </span>
+              <div className="crm-wa-thread__who">
                 <strong>{activeChat?.name || displayPhone(selected)}</strong>
                 <p>{displayPhone(selected)}</p>
               </div>
               <a
-                className="crm-btn crm-btn-ghost"
+                className="crm-wa-ext"
                 href={`https://wa.me/${selected}`}
                 target="_blank"
                 rel="noreferrer"
@@ -380,70 +505,127 @@ export function CrmWhatsappInbox() {
                 Abrir en WhatsApp
               </a>
             </header>
-            <div className="crm-wa-thread__body" ref={threadRef}>
-              {loadingThread ? <p className="crm-wa-empty">Cargando mensajes…</p> : null}
-              {!loadingThread && messages.length === 0 ? (
-                <p className="crm-wa-empty">No hay mensajes todavía. Escribí el primero.</p>
-              ) : null}
-              {messages.map((message) => (
-                <Bubble key={message.id} message={message} />
-              ))}
-            </div>
-            {error ? <p className="crm-wa-error">{error}</p> : null}
-            <form className="crm-wa-composer" onSubmit={sendMessage}>
-              {file ? (
-                <div className="crm-wa-attach">
-                  <span>{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFile(null);
-                      if (fileRef.current) fileRef.current.value = "";
-                    }}
-                  >
-                    Quitar
+
+            {file ? (
+              <div className="crm-wa-preview">
+                <div className="crm-wa-preview__bar">
+                  <button type="button" className="crm-wa-preview__close" onClick={clearFile} aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
                   </button>
+                  <div>
+                    <strong>{file.name}</strong>
+                    <p>{formatBytes(file.size)}</p>
+                  </div>
                 </div>
-              ) : null}
-              <div className="crm-wa-composer__row">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept={ACCEPT}
-                  className="sr-only"
-                  id="crm-wa-file"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-                <label htmlFor="crm-wa-file" className="crm-wa-clip" title="Adjuntar archivo">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M16.5 6.5l-7.8 7.8a2.5 2.5 0 1 0 3.5 3.5l8.2-8.2a4.5 4.5 0 0 0-6.4-6.4L5.2 11.8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="sr-only">Adjuntar archivo</span>
-                </label>
-                <textarea
-                  className="crm-input"
-                  rows={1}
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Escribí un mensaje"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void sendMessage();
-                    }
-                  }}
-                />
-                <button type="submit" className="crm-btn crm-btn-primary" disabled={sending || (!draft.trim() && !file)}>
-                  {sending ? "Enviando…" : "Enviar"}
-                </button>
+                <div className="crm-wa-preview__stage">
+                  {attachedKind === "image" && previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={previewUrl} alt={file.name} />
+                  ) : null}
+                  {attachedKind === "video" && previewUrl ? (
+                    <video src={previewUrl} controls />
+                  ) : null}
+                  {attachedKind === "audio" && previewUrl ? (
+                    <audio src={previewUrl} controls />
+                  ) : null}
+                  {attachedKind === "file" ? (
+                    <div className="crm-wa-preview__doc">
+                      <span>{file.name.split(".").pop()?.toUpperCase() || "FILE"}</span>
+                      <strong>{file.name}</strong>
+                      <p>{formatBytes(file.size)}</p>
+                    </div>
+                  ) : null}
+                </div>
+                <form className="crm-wa-preview__caption" onSubmit={sendMessage}>
+                  <textarea
+                    ref={captionRef}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Añadí un comentario"
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
+                  />
+                  <button type="submit" className="crm-wa-send" disabled={sending} aria-label="Enviar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3.5 11.5 21 4.5l-5.2 16-3.6-6.2L3.5 11.5z" />
+                    </svg>
+                  </button>
+                </form>
+                {error ? <p className="crm-wa-error">{error}</p> : null}
               </div>
-            </form>
+            ) : (
+              <>
+                <div className="crm-wa-thread__body" ref={threadRef}>
+                  {loadingThread ? <p className="crm-wa-empty">Cargando mensajes…</p> : null}
+                  {!loadingThread && messages.length === 0 ? (
+                    <p className="crm-wa-empty">No hay mensajes todavía. Escribí el primero.</p>
+                  ) : null}
+                  {messages.map((message, index) => {
+                    const prev = messages[index - 1];
+                    const showDay = !prev || dayKey(prev.created_at) !== dayKey(message.created_at);
+                    return (
+                      <div key={message.id}>
+                        {showDay ? <div className="crm-wa-day">{dayLabel(message.created_at)}</div> : null}
+                        <Bubble message={message} />
+                      </div>
+                    );
+                  })}
+                </div>
+                {error ? <p className="crm-wa-error">{error}</p> : null}
+                <form className="crm-wa-composer" onSubmit={sendMessage}>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept={ACCEPT}
+                    className="sr-only"
+                    id="crm-wa-file"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                  <label htmlFor="crm-wa-file" className="crm-wa-clip" title="Adjuntar archivo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M16.5 6.5l-7.8 7.8a2.5 2.5 0 1 0 3.5 3.5l8.2-8.2a4.5 4.5 0 0 0-6.4-6.4L5.2 11.8"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="sr-only">Adjuntar archivo</span>
+                  </label>
+                  <textarea
+                    className="crm-wa-composer__input"
+                    rows={1}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Escribí un mensaje"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="crm-wa-send"
+                    disabled={sending || !draft.trim()}
+                    aria-label="Enviar"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3.5 11.5 21 4.5l-5.2 16-3.6-6.2L3.5 11.5z" />
+                    </svg>
+                  </button>
+                </form>
+              </>
+            )}
           </>
         )}
       </section>

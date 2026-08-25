@@ -29,5 +29,5 @@
     <path class="cls-1" d="M314.4,415.1c1.6-1.3,2.5-3.1,2.5-5s-.9-3.7-2.5-5l-12.3-9.7c-.7-.5-1.5-.8-2.3-.8s-.3,0-.4,0c-1,.1-2,.7-2.6,1.5-1.3,1.8-1,4.4.7,5.8l10.4,8.2-10.4,8.2c-1.7,1.4-2.1,4-.7,5.8,1.3,1.7,3.7,2,5.4.8l12.3-9.7ZM309.3,412.7v-1.2s0,0,0,0v1.2Z"/>
     <circle class="cls-1" cx="313.6" cy="395" r="3.7"/>
   </g>
-  <text class="cls-4" transform="translate(248.5 447.8)"><tspan x="0" y="0">Protección Integral</tspan></text>
+  <text class="cls-4" text-anchor="end" x="390.4" y="447.8">Protección Integral</text>
 </svg>
