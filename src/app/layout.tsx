@@ -60,8 +60,8 @@ export const metadata: Metadata = {
     description: SHARE_DESCRIPTION,
   },
   icons: {
-    icon: "/brand/marxel-mark.png",
-    apple: "/apple-icon.png",
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: "/apple-icon",
   },
   formatDetection: {
     telephone: true,
@@ -80,7 +80,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0a355c",
+  themeColor: "#352872",
 };
 
 export default function RootLayout({

@@ -12,16 +12,16 @@ export default async function CrmLoginPage({
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#0b3d6b_0%,_#071f35_45%,_#041525_100%)]" />
-      <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-teal/30 blur-3xl" />
-      <div className="absolute -right-10 bottom-10 h-80 w-80 rounded-full bg-sky/25 blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#4a3091_0%,_#1a1038_45%,_#120c24_100%)]" />
+      <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-sky/30 blur-3xl" />
+      <div className="absolute -right-10 bottom-10 h-80 w-80 rounded-full bg-navy/40 blur-3xl" />
 
       <form
         action={loginCrm}
         className="relative w-full max-w-md rounded-[1.75rem] border border-white/15 bg-white/95 p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur"
       >
         <Logo href={null} size="lg" />
-        <p className="mt-2 text-xs font-bold uppercase tracking-[0.28em] text-teal">
+        <p className="mt-2 text-xs font-bold uppercase tracking-[0.28em] text-sky">
           CRM Studio
         </p>
         <p className="mt-4 text-sm leading-relaxed text-muted">

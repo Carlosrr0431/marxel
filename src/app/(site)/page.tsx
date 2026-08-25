@@ -83,7 +83,6 @@ export default function HomePage() {
 
           <div className="hero-visual animate-rise-delay-2">
             <div className="hero-card animate-float">
-              <div className="hero-card__glow" aria-hidden />
               <div className="hero-card__inner">
                 <div className="hero-card__badge">
                   <span className="hero-card__badge-icon">

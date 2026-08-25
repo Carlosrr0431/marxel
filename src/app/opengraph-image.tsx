@@ -1,14 +1,10 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt = "Tu protección, sin vueltas. MARXEN — Salta, Argentina";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function OGImage() {
-  const logo = await readFile(join(process.cwd(), "public/brand/marxel-logo-light.png"));
-
+export default function OGImage() {
   return new ImageResponse(
     (
       <div
@@ -19,17 +15,34 @@ export default async function OGImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "64px 72px 56px",
-          background: "linear-gradient(148deg, #051e36 0%, #0a3d5e 52%, #0d5752 100%)",
+          background: "linear-gradient(148deg, #1a1038 0%, #352872 52%, #2a6f8a 100%)",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
-        <img
-          src={`data:image/png;base64,${logo.toString("base64")}`}
-          width={248}
-          height={70}
-          alt=""
-          style={{ objectFit: "contain", objectPosition: "left center" }}
-        />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              fontSize: 42,
+              fontWeight: 700,
+              letterSpacing: "-0.04em",
+              color: "#c8c8c8",
+            }}
+          >
+            marxen
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 16,
+              letterSpacing: "0.08em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            Protección Integral
+          </div>
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div
@@ -44,7 +57,7 @@ export default async function OGImage() {
             }}
           >
             <span>Tu protección,</span>
-            <span style={{ color: "#2ab5ad" }}>sin vueltas.</span>
+            <span style={{ color: "#5fc4e5" }}>sin vueltas.</span>
           </div>
           <div
             style={{

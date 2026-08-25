@@ -46,7 +46,7 @@ export function HeroProtectionVisual() {
     <div className="hero-orbit" aria-hidden>
       <div className="hero-orbit__ring" />
       <div className="hero-orbit__core">
-        <span>MARXEN</span>
+        <img src="/brand/marxel-mark.svg" alt="" width={28} height={28} />
       </div>
 
       <ul className="hero-orbit__wheel">

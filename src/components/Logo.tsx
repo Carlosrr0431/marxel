@@ -3,19 +3,17 @@ import Link from "next/link";
 
 type LogoProps = {
   href?: string | null;
-  /** Kept for compatibility; official lockup always includes Salud */
   showSalud?: boolean;
   className?: string;
-  /** Light wordmark for dark backgrounds */
   light?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
 };
 
 const sizes = {
-  sm: { width: 118, height: 34 },
-  md: { width: 148, height: 42 },
-  lg: { width: 196, height: 56 },
-  xl: { width: 260, height: 74 },
+  sm: { width: 132, height: 38 },
+  md: { width: 164, height: 47 },
+  lg: { width: 214, height: 61 },
+  xl: { width: 280, height: 80 },
 } as const;
 
 export function Logo({
@@ -25,19 +23,18 @@ export function Logo({
   size = "md",
 }: LogoProps) {
   const { width, height } = sizes[size];
-  const src = light
-    ? "/brand/marxel-logo-light.png"
-    : "/brand/marxel-logo.png";
+  const src = light ? "/brand/marxel-logo-light.svg" : "/brand/marxel-logo.svg";
 
   const mark = (
     <Image
       src={src}
-      alt="MARXEN Protección integral"
+      alt="marxen Protección Integral"
       width={width}
       height={height}
       className={`h-auto w-auto ${className}`}
       style={{ width, height: "auto" }}
       priority={size === "md" || size === "lg"}
+      unoptimized
     />
   );
 
@@ -47,7 +44,7 @@ export function Logo({
     <Link
       href={href}
       className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/40 focus-visible:ring-offset-2"
-      aria-label="MARXEN Protección integral"
+      aria-label="marxen Protección Integral"
     >
       {mark}
     </Link>

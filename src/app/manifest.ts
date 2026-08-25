@@ -8,14 +8,14 @@ export default function manifest(): MetadataRoute.Manifest {
     description: site.description,
     start_url: "/",
     display: "standalone",
-    background_color: "#f6fafc",
-    theme_color: "#0a355c",
+    background_color: "#f7f8fc",
+    theme_color: "#352872",
     lang: "es-AR",
     icons: [
       {
-        src: "/brand/marxel-mark.png",
-        sizes: "192x192",
-        type: "image/png",
+        src: "/icon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
       },
     ],
   };
