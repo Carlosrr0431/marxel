@@ -44,6 +44,7 @@ const pillars = [
 export function HeroProtectionVisual() {
   return (
     <div className="hero-orbit" aria-hidden>
+      <div className="hero-orbit__bg" />
       <div className="hero-orbit__ring" />
       <div className="hero-orbit__core">
         <img src="/brand/marxel-mark.svg" alt="" width={28} height={28} />
@@ -54,6 +55,7 @@ export function HeroProtectionVisual() {
           <li
             key={pillar.key}
             className={`hero-orbit__node hero-orbit__node--${index + 1}`}
+            data-pillar={pillar.key}
           >
             <div className="hero-orbit__face">
               <span className="hero-orbit__icon">{pillar.icon}</span>
