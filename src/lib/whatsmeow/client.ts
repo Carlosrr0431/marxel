@@ -122,10 +122,7 @@ function pngFromDataUrl(value: string) {
   }
 }
 
-const DIRECT_GAP_MS = Math.max(
-  20_000,
-  Math.round(Number(process.env.WHATSAPP_OUTBOUND_INTERVAL_MS || 30_000) || 30_000)
-);
+const DIRECT_GAP_MS = 15_000;
 
 let lastDirectSendAt = 0;
 let linePausedUntil = 0;

@@ -16,7 +16,7 @@ async function handle(request: Request) {
 
   const batch = await processWhatsappOutboundBatch({
     claimer: "queue-worker",
-    maxMessages: 2,
+    maxMessages: 3,
     deadlineMs: 55_000,
   });
 

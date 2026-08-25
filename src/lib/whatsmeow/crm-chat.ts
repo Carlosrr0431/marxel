@@ -21,6 +21,8 @@ export type CrmChat = {
   updated_at: string;
 };
 
+export type CrmDeliveryStatus = "pending" | "sending" | "sent" | "failed";
+
 export type CrmChatMessage = {
   id: string;
   chat_id: string;
@@ -34,6 +36,8 @@ export type CrmChatMessage = {
   wa_message_id: string | null;
   from_me: boolean;
   source: string;
+  delivery_status?: CrmDeliveryStatus;
+  queue_id?: string | null;
   created_at: string;
 };
 
@@ -49,6 +53,8 @@ export type SaveCrmMessageInput = {
   fromMe?: boolean;
   pushName?: string | null;
   source?: string;
+  deliveryStatus?: CrmDeliveryStatus;
+  queueId?: string | null;
 };
 
 const MIME_NORMALIZATIONS: Record<string, string> = {
@@ -118,7 +124,7 @@ export async function saveCrmWhatsappMessage(input: SaveCrmMessageInput) {
   if (!phone) return { ok: false as const, error: "teléfono inválido" };
 
   const supabase = createServiceClient();
-  const { data, error } = await supabase.rpc("save_whatsapp_crm_message", {
+  const base = {
     p_phone: phone,
     p_direction: input.direction,
     p_body: input.body || "",
@@ -130,7 +136,17 @@ export async function saveCrmWhatsappMessage(input: SaveCrmMessageInput) {
     p_from_me: Boolean(input.fromMe),
     p_push_name: input.pushName || null,
     p_source: input.source || "webhook",
-  });
+  };
+  const withQueue = {
+    ...base,
+    p_delivery_status: input.deliveryStatus || "sent",
+    p_queue_id: input.queueId || null,
+  };
+
+  let { data, error } = await supabase.rpc("save_whatsapp_crm_message", withQueue);
+  if (error && /could not find the function|PGRST202/i.test(String(error.message || ""))) {
+    ({ data, error } = await supabase.rpc("save_whatsapp_crm_message", base));
+  }
 
   if (error) {
     if (missingCrmTable(error)) {
@@ -142,6 +158,47 @@ export async function saveCrmWhatsappMessage(input: SaveCrmMessageInput) {
   }
 
   return { ok: true as const, id: data ? String(data) : null };
+}
+
+export async function getCrmMessageById(id: string | null | undefined) {
+  const messageId = String(id || "").trim();
+  if (!messageId) return null;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("whatsapp_chat_messages")
+    .select("*")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as CrmChatMessage;
+}
+
+export async function markCrmMessageFromQueue({
+  queueId,
+  waMessageId,
+  status,
+}: {
+  queueId: string;
+  waMessageId?: string | null;
+  status: CrmDeliveryStatus;
+}) {
+  const id = String(queueId || "").trim();
+  if (!id) return { ok: false as const, updated: false };
+  const supabase = createServiceClient();
+  const patch: Record<string, unknown> = { delivery_status: status };
+  if (waMessageId) patch.wa_message_id = waMessageId;
+  const { data, error } = await supabase
+    .from("whatsapp_chat_messages")
+    .update(patch)
+    .eq("queue_id", id)
+    .select("id");
+  if (error) {
+    if (!missingCrmTable(error)) {
+      console.warn("[whatsapp-crm] mark queue", error.message);
+    }
+    return { ok: false as const, updated: false };
+  }
+  return { ok: true as const, updated: Boolean(data?.length), id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
 export async function markCrmChatRead(phone: string) {
@@ -236,6 +293,11 @@ export async function persistCrmInbound(inbound: InboundMessage) {
   if (!inbound.phone) return;
   if (!inbound.text.trim() && !isMedia && !inbound.isPoll) return;
 
+  if (inbound.fromMe) {
+    const adopted = await adoptPendingCrmOutbound(inbound);
+    if (adopted) return;
+  }
+
   let mediaUrl: string | null = null;
   if (isMedia) {
     mediaUrl = await persistInboundMedia(inbound);
@@ -255,4 +317,28 @@ export async function persistCrmInbound(inbound: InboundMessage) {
     pushName: inbound.pushName || null,
     source: "webhook",
   });
+}
+
+async function adoptPendingCrmOutbound(inbound: InboundMessage) {
+  const phone = normalizeArPhone(inbound.phone);
+  if (!phone) return false;
+  const body = inbound.text.trim() || inbound.caption.trim();
+  const supabase = createServiceClient();
+  const since = new Date(Date.now() - 20 * 60_000).toISOString();
+  let query = supabase
+    .from("whatsapp_chat_messages")
+    .select("id")
+    .eq("phone", phone)
+    .eq("from_me", true)
+    .eq("delivery_status", "pending")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (body) query = query.eq("body", body);
+  const { data, error } = await query.maybeSingle();
+  if (error || !data?.id) return false;
+  const patch: Record<string, unknown> = { delivery_status: "sent" };
+  if (inbound.id) patch.wa_message_id = inbound.id;
+  const { error: upErr } = await supabase.from("whatsapp_chat_messages").update(patch).eq("id", data.id);
+  return !upErr;
 }

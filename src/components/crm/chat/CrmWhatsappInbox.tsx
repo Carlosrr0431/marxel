@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { relativeTime } from "@/lib/crm/utils";
-import type { CrmChat, CrmChatMessage } from "@/lib/whatsmeow/crm-chat";
+import type { CrmChat, CrmChatMessage, CrmDeliveryStatus } from "@/lib/whatsmeow/crm-chat";
 
 const ACCEPT =
   "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt";
@@ -99,13 +99,103 @@ function fileKind(file: File) {
   return "file";
 }
 
+function deliveryOf(message: CrmChatMessage): CrmDeliveryStatus {
+  return message.delivery_status || "sent";
+}
+
+function autosizeTextarea(el: HTMLTextAreaElement | null, maxPx = 168) {
+  if (!el) return;
+  el.style.height = "0px";
+  const next = Math.min(el.scrollHeight, maxPx);
+  el.style.height = `${Math.max(next, 46)}px`;
+  el.style.overflowY = el.scrollHeight > maxPx ? "auto" : "hidden";
+}
+
+function sameMessage(a: CrmChatMessage, b: CrmChatMessage) {
+  if (a.id && b.id && a.id === b.id) return true;
+  if (a.queue_id && b.queue_id && a.queue_id === b.queue_id) return true;
+  if (a.wa_message_id && b.wa_message_id && a.wa_message_id === b.wa_message_id) return true;
+  return false;
+}
+
+function mergeMessage(prev: CrmChatMessage[], incoming: CrmChatMessage) {
+  const index = prev.findIndex((item) => sameMessage(item, incoming));
+  if (index < 0) return [...prev, incoming];
+  const next = prev.slice();
+  next[index] = { ...next[index], ...incoming };
+  return next;
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3.4 11.2 20.8 3.9c.55-.23 1.1.32.87.87l-7.3 17.4c-.24.56-1.04.56-1.27 0l-3.2-7.55-7.55-3.2c-.56-.23-.56-1.03 0-1.27z" />
+    </svg>
+  );
+}
+
+function SendButton({
+  loading,
+  disabled,
+}: {
+  loading: boolean;
+  disabled: boolean;
+}) {
+  const [pressed, setPressed] = useState(false);
+  const idle = disabled || loading;
+  return (
+    <button
+      type="submit"
+      className={`crm-wa-send${loading ? " is-loading" : ""}${pressed ? " is-pressed" : ""}`}
+      disabled={idle}
+      aria-label={loading ? "Enviando" : "Enviar"}
+      aria-busy={loading}
+      onPointerDown={() => {
+        if (!idle) setPressed(true);
+      }}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      onPointerCancel={() => setPressed(false)}
+    >
+      {loading ? <span className="crm-wa-send__spin" aria-hidden="true" /> : <SendIcon />}
+    </button>
+  );
+}
+
+function Ticks({ status }: { status: CrmDeliveryStatus }) {
+  if (status === "pending" || status === "sending") {
+    return (
+      <svg viewBox="0 0 16 16" className="crm-wa-ticks is-pending" aria-hidden="true">
+        <circle cx="8" cy="8" r="6.1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 4.6v3.5l2.2 1.4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <span className="crm-wa-failed" title="No se pudo enviar">
+        !
+      </span>
+    );
+  }
+  return (
+    <svg viewBox="0 0 16 15" className="crm-wa-ticks" aria-hidden="true">
+      <path d="M15.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L8.14 9.97 6.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L15.08 3.92a.45.45 0 0 0-.07-.604z" />
+      <path d="M11.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L4.14 9.97 2.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L11.08 3.92a.45.45 0 0 0-.07-.604z" />
+    </svg>
+  );
+}
+
 function Bubble({ message }: { message: CrmChatMessage }) {
   const mine = message.direction === "outbound" || message.from_me;
   const kind = mediaKind(message);
   const src = kind === "text" ? "" : mediaSrc(message);
+  const status = deliveryOf(message);
   return (
     <div className={`crm-wa-bubble-row${mine ? " is-mine" : ""}`}>
-      <div className={`crm-wa-bubble${mine ? " is-mine" : ""}${kind !== "text" ? " has-media" : ""}`}>
+      <div
+        className={`crm-wa-bubble${mine ? " is-mine" : ""}${kind !== "text" ? " has-media" : ""}${status === "failed" ? " is-failed" : ""}`}
+      >
         {kind === "image" && src ? (
           <a href={src} target="_blank" rel="noreferrer" className="crm-wa-media-link">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -131,13 +221,10 @@ function Bubble({ message }: { message: CrmChatMessage }) {
         ) : null}
         {message.body ? <p className="crm-wa-text">{message.body}</p> : null}
         <span className="crm-wa-meta">
+          {status === "pending" || status === "sending" ? <em className="crm-wa-queued">En cola</em> : null}
+          {status === "failed" ? <em className="crm-wa-queued is-failed">No enviado</em> : null}
           <time dateTime={message.created_at}>{clock(message.created_at)}</time>
-          {mine ? (
-            <svg viewBox="0 0 16 15" className="crm-wa-ticks" aria-hidden="true">
-              <path d="M15.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L8.14 9.97 6.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L15.08 3.92a.45.45 0 0 0-.07-.604z" />
-              <path d="M11.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L4.14 9.97 2.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L11.08 3.92a.45.45 0 0 0-.07-.604z" />
-            </svg>
-          ) : null}
+          {mine ? <Ticks status={status} /> : null}
         </span>
       </div>
     </div>
@@ -161,6 +248,7 @@ export function CrmWhatsappInbox() {
   const threadRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
 
@@ -174,6 +262,11 @@ export function CrmWhatsappInbox() {
   useEffect(() => {
     if (file) captionRef.current?.focus();
   }, [file]);
+
+  useEffect(() => {
+    autosizeTextarea(composerRef.current);
+    autosizeTextarea(captionRef.current, 140);
+  }, [draft, file]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -286,26 +379,20 @@ export function CrmWhatsappInbox() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "whatsapp_chat_messages",
           filter: `phone=eq.${selected}`,
         },
         (payload) => {
-          const row = payload.new as CrmChatMessage;
+          const row = (payload.new || payload.old) as CrmChatMessage | undefined;
           if (!row?.id) return;
-          setMessages((prev) => {
-            if (
-              prev.some(
-                (item) =>
-                  item.id === row.id || (row.wa_message_id && item.wa_message_id === row.wa_message_id)
-              )
-            ) {
-              return prev;
-            }
-            return [...prev, row];
-          });
-          if (row.direction === "inbound") {
+          if (payload.eventType === "DELETE") {
+            setMessages((prev) => prev.filter((item) => item.id !== row.id));
+            return;
+          }
+          setMessages((prev) => mergeMessage(prev, row));
+          if (payload.eventType === "INSERT" && row.direction === "inbound") {
             void fetch("/api/crm/whatsapp/read", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -369,10 +456,36 @@ export function CrmWhatsappInbox() {
     }
     try {
       const res = await fetch("/api/crm/whatsapp/send", { method: "POST", body: form });
-      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        message?: CrmChatMessage | null;
+      };
       if (!res.ok || !json.ok) {
         setError(json.error || "No se pudo enviar");
         return;
+      }
+      if (json.message) {
+        setMessages((prev) => mergeMessage(prev, json.message as CrmChatMessage));
+        setChats((prev) => {
+          const preview = json.message?.body || file?.name || "Mensaje";
+          const now = json.message?.created_at || new Date().toISOString();
+          const next = prev.filter((chat) => chat.phone !== selected);
+          const current = prev.find((chat) => chat.phone === selected);
+          return [
+            {
+              id: current?.id || `tmp-${selected}`,
+              phone: selected,
+              name: current?.name || null,
+              last_message: preview,
+              last_message_at: now,
+              unread_count: 0,
+              created_at: current?.created_at || now,
+              updated_at: now,
+            },
+            ...next,
+          ];
+        });
       }
       setDraft("");
       clearFile();
@@ -545,6 +658,7 @@ export function CrmWhatsappInbox() {
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder="Añadí un comentario"
                     rows={1}
+                    maxLength={4096}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -552,11 +666,7 @@ export function CrmWhatsappInbox() {
                       }
                     }}
                   />
-                  <button type="submit" className="crm-wa-send" disabled={sending} aria-label="Enviar">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3.5 11.5 21 4.5l-5.2 16-3.6-6.2L3.5 11.5z" />
-                    </svg>
-                  </button>
+                  <SendButton loading={sending} disabled={sending} />
                 </form>
                 {error ? <p className="crm-wa-error">{error}</p> : null}
               </div>
@@ -601,11 +711,13 @@ export function CrmWhatsappInbox() {
                     <span className="sr-only">Adjuntar archivo</span>
                   </label>
                   <textarea
+                    ref={composerRef}
                     className="crm-wa-composer__input"
                     rows={1}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder="Escribí un mensaje"
+                    maxLength={4096}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -613,16 +725,7 @@ export function CrmWhatsappInbox() {
                       }
                     }}
                   />
-                  <button
-                    type="submit"
-                    className="crm-wa-send"
-                    disabled={sending || !draft.trim()}
-                    aria-label="Enviar"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3.5 11.5 21 4.5l-5.2 16-3.6-6.2L3.5 11.5z" />
-                    </svg>
-                  </button>
+                  <SendButton loading={sending} disabled={sending || !draft.trim()} />
                 </form>
               </>
             )}

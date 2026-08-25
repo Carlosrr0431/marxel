@@ -1,11 +1,11 @@
 -- Espaciado anti-bloqueo WhatsApp (Meta).
 -- Idempotente. Ejecutar en el SQL Editor de Supabase después de whatsapp_outbound_queue.sql.
--- 1 mensaje cada 30s en toda la línea, y no dos al mismo destino más rápido que eso.
+-- Vigente: 15s (whatsapp_outbound_queue_v4_crm_15s.sql). Este archivo no sube el intervalo si ya está en 15s+.
 
 update public.whatsapp_send_throttle
-set interval_ms = 30000, updated_at = now()
+set interval_ms = 15000, updated_at = now()
 where id = 1
-  and interval_ms < 30000;
+  and interval_ms < 15000;
 
 alter table public.whatsapp_send_throttle
   drop constraint if exists whatsapp_send_throttle_interval_ms_check;
@@ -28,7 +28,7 @@ declare
   v_dest_digits text;
 begin
   insert into public.whatsapp_send_throttle (id, last_sent_at, interval_ms)
-  values (1, null, 30000)
+  values (1, null, 15000)
   on conflict (id) do nothing;
 
   select interval_ms, last_sent_at
@@ -37,7 +37,7 @@ begin
   where id = 1
   for update;
 
-  v_interval_ms := greatest(coalesce(v_interval_ms, 30000), 1000);
+  v_interval_ms := greatest(coalesce(v_interval_ms, 15000), 1000);
 
   if v_last is not null
      and (extract(epoch from (v_now - v_last)) * 1000) < v_interval_ms then

@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getWhatsmeowWebhookSecret } from "@/lib/whatsmeow/config";
 import {
+  sendWhatsmeowMediaDirect,
   sendWhatsmeowPollDirect,
   sendWhatsmeowTextDirect,
   markWhatsappLinePaused,
@@ -14,17 +15,14 @@ import {
   WHATSAPP_DISCONNECT_PAUSE_MS,
 } from "@/lib/whatsmeow/anti-ban";
 
-export const WHATSAPP_OUTBOUND_INTERVAL_MS = Math.max(
-  20_000,
-  Math.round(Number(process.env.WHATSAPP_OUTBOUND_INTERVAL_MS || 30_000) || 30_000)
-);
+export const WHATSAPP_OUTBOUND_INTERVAL_MS = 15_000;
 
 export const OUTBOUND_PRIORITY = Object.freeze({
   DEFAULT: 0,
   POLL: 0,
 });
 
-type QueueKind = "text" | "poll";
+type QueueKind = "text" | "poll" | "media";
 
 type QueuePayload = {
   text?: string;
@@ -32,6 +30,11 @@ type QueuePayload = {
   options?: string[];
   maxSelections?: number;
   max_selections?: number;
+  caption?: string;
+  mediaUrl?: string;
+  mimetype?: string;
+  filename?: string;
+  type?: string;
 };
 
 type QueueRow = {
@@ -42,6 +45,7 @@ type QueueRow = {
   payload: QueuePayload;
   attempts: number;
   max_attempts: number;
+  meta?: Record<string, unknown> | null;
 };
 
 export type EnqueueResult =
@@ -162,6 +166,8 @@ export async function enqueueWhatsappOutbound({
   maxAttempts = 5,
   wake = true,
   delayMs = 0,
+  unique = false,
+  dedupKey: customDedup,
 }: {
   agentCode: string;
   to: string;
@@ -172,21 +178,28 @@ export async function enqueueWhatsappOutbound({
   maxAttempts?: number;
   wake?: boolean;
   delayMs?: number;
+  unique?: boolean;
+  dedupKey?: string;
 }): Promise<EnqueueResult> {
   const dest = String(to || "").trim();
   const code = String(agentCode || "").trim();
-  const messageKind: QueueKind = kind === "poll" ? "poll" : "text";
+  const messageKind: QueueKind = kind === "poll" ? "poll" : kind === "media" ? "media" : "text";
 
   if (!code || !dest) return { success: false, error: "agentCode y to son requeridos" };
   if (messageKind === "text" && !String(payload?.text || "").trim()) {
     return { success: false, error: "text vacío" };
+  }
+  if (messageKind === "media" && !String(payload?.mediaUrl || "").trim()) {
+    return { success: false, error: "mediaUrl vacío" };
   }
   if (messageKind === "poll") {
     const opts = Array.isArray(payload?.options) ? payload.options.filter(Boolean) : [];
     if (opts.length < 2) return { success: false, error: "poll requiere al menos 2 options" };
   }
 
-  const dedupKey = buildOutboundDedupKey({ kind: messageKind, dest, payload });
+  const dedupKey = unique
+    ? String(customDedup || `u:${randomUUID()}`).slice(0, 80)
+    : buildOutboundDedupKey({ kind: messageKind, dest, payload });
   const jitter = 400 + Math.floor(Math.random() * 1600);
   const waitMs = Math.max(0, Math.trunc(delayMs) || 0) + (delayMs > 0 ? jitter : 0);
 
@@ -243,7 +256,7 @@ export function triggerWhatsappQueueWorker() {
   const run = () =>
     processWhatsappOutboundBatch({
       claimer: "wake",
-      maxMessages: 2,
+      maxMessages: 3,
       deadlineMs: 55_000,
     }).catch((err) => {
       console.warn("[whatsapp-queue]", err instanceof Error ? err.message : err);
@@ -362,7 +375,88 @@ async function sendClaimedRow(row: QueueRow) {
       maxSelections: row.payload?.maxSelections ?? row.payload?.max_selections ?? 1,
     });
   }
+  if (row.kind === "media") {
+    const url = String(row.payload?.mediaUrl || "").trim();
+    if (!url) return { success: false as const, error: "mediaUrl vacío" };
+    try {
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
+      if (!res.ok) return { success: false as const, error: `media fetch ${res.status}` };
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length < 8) return { success: false as const, error: "archivo vacío" };
+      return sendWhatsmeowMediaDirect(row.agent_code, row.dest, {
+        mediaBase64: buf.toString("base64"),
+        caption: String(row.payload?.caption || row.payload?.text || ""),
+        type: String(row.payload?.type || ""),
+        mimetype: String(row.payload?.mimetype || res.headers.get("content-type") || ""),
+        filename: String(row.payload?.filename || ""),
+      });
+    } catch (err) {
+      return {
+        success: false as const,
+        error: err instanceof Error ? err.message : "media fetch failed",
+      };
+    }
+  }
   return sendWhatsmeowTextDirect(row.agent_code, row.dest, String(row.payload?.text || ""));
+}
+
+function queueMeta(row: QueueRow) {
+  return row.meta && typeof row.meta === "object" ? row.meta : {};
+}
+
+async function afterQueueAttempt(
+  row: QueueRow,
+  status: "sent" | "failed",
+  messageId?: string | null
+) {
+  const meta = queueMeta(row);
+  const body = String(row.payload?.caption || row.payload?.text || "");
+  const messageType = row.kind === "media" ? String(row.payload?.type || "document") : "text";
+  try {
+    const { markCrmMessageFromQueue, saveCrmWhatsappMessage } = await import(
+      "@/lib/whatsmeow/crm-chat"
+    );
+    if (String(meta.source || "") === "crm") {
+      const marked = await markCrmMessageFromQueue({
+        queueId: row.id,
+        waMessageId: messageId,
+        status,
+      });
+      if (!marked.updated && status === "sent") {
+        await saveCrmWhatsappMessage({
+          phone: row.dest,
+          direction: "outbound",
+          body,
+          messageType,
+          mediaUrl: row.payload?.mediaUrl || null,
+          mediaMime: row.payload?.mimetype || null,
+          fileName: row.payload?.filename || null,
+          waMessageId: messageId || `queue:${row.id}`,
+          fromMe: true,
+          source: "crm",
+          deliveryStatus: "sent",
+          queueId: row.id,
+        });
+      }
+      return;
+    }
+    if (status === "sent" && (row.kind === "text" || row.kind === "media")) {
+      await saveCrmWhatsappMessage({
+        phone: row.dest,
+        direction: "outbound",
+        body,
+        messageType,
+        mediaUrl: row.payload?.mediaUrl || null,
+        mediaMime: row.payload?.mimetype || null,
+        fileName: row.payload?.filename || null,
+        fromMe: true,
+        waMessageId: messageId || `queue:${row.id}`,
+        source: "bot",
+      });
+    }
+  } catch {
+    // el inbox CRM es opcional hasta aplicar el SQL
+  }
 }
 
 export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
@@ -393,21 +487,7 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   if (result.success) {
     await restoreLineInterval();
     await markSent(row.id, result.messageId);
-    if (row.kind === "text") {
-      try {
-        const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
-        await saveCrmWhatsappMessage({
-          phone: row.dest,
-          direction: "outbound",
-          body: String(row.payload?.text || ""),
-          fromMe: true,
-          waMessageId: result.messageId || `queue:${row.id}`,
-          source: "bot",
-        });
-      } catch {
-        // el inbox CRM es opcional hasta aplicar el SQL
-      }
-    }
+    await afterQueueAttempt(row, "sent", result.messageId);
     return { claimed: true as const, sent: true as const, queueId: row.id, messageId: result.messageId };
   }
 
@@ -418,6 +498,7 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
       forceFailed: true,
       pauseMs: WHATSAPP_BAN_PAUSE_MS,
     });
+    if (fail.permanent) await afterQueueAttempt(row, "failed");
     return {
       claimed: true as const,
       sent: false as const,
@@ -429,6 +510,7 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   }
   if (isWhatsappPermanentSendError(failError)) {
     const fail = await markRetryOrFailed(row, failError, { forceFailed: true });
+    if (fail.permanent) await afterQueueAttempt(row, "failed");
     return {
       claimed: true as const,
       sent: false as const,
@@ -440,6 +522,7 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   if (isWhatsappTransientDisconnect(failError)) {
     await pauseWhatsappLine(WHATSAPP_DISCONNECT_PAUSE_MS);
     const fail = await markRetryOrFailed(row, failError, { pauseMs: WHATSAPP_DISCONNECT_PAUSE_MS });
+    if (fail.permanent) await afterQueueAttempt(row, "failed");
     return {
       claimed: true as const,
       sent: false as const,
@@ -451,6 +534,7 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   }
 
   const fail = await markRetryOrFailed(row, failError);
+  if (fail.permanent) await afterQueueAttempt(row, "failed");
   return {
     claimed: true as const,
     sent: false as const,
@@ -462,12 +546,12 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
 
 export async function processWhatsappOutboundBatch({
   claimer = "worker",
-  maxMessages = 2,
+  maxMessages = 3,
   deadlineMs = 55_000,
 } = {}) {
   const started = Date.now();
   const results: Awaited<ReturnType<typeof processOneWhatsappOutbound>>[] = [];
-  const limit = Math.max(1, Math.min(2, Math.trunc(maxMessages) || 2));
+  const limit = Math.max(1, Math.min(3, Math.trunc(maxMessages) || 3));
 
   for (let i = 0; i < limit; i += 1) {
     if (Date.now() - started > deadlineMs) break;

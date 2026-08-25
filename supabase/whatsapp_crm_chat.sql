@@ -36,8 +36,24 @@ create table if not exists public.whatsapp_chat_messages (
   wa_message_id text,
   from_me boolean not null default false,
   source text not null default 'webhook',
+  delivery_status text not null default 'sent'
+    check (delivery_status in ('pending', 'sending', 'sent', 'failed')),
+  queue_id uuid,
   created_at timestamptz not null default now()
 );
+
+alter table public.whatsapp_chat_messages
+  add column if not exists delivery_status text not null default 'sent';
+
+alter table public.whatsapp_chat_messages
+  add column if not exists queue_id uuid;
+
+alter table public.whatsapp_chat_messages
+  drop constraint if exists whatsapp_chat_messages_delivery_status_check;
+
+alter table public.whatsapp_chat_messages
+  add constraint whatsapp_chat_messages_delivery_status_check
+  check (delivery_status in ('pending', 'sending', 'sent', 'failed'));
 
 create index if not exists whatsapp_chats_last_message_at_idx
   on public.whatsapp_chats (last_message_at desc nulls last);
@@ -51,6 +67,10 @@ create index if not exists whatsapp_chat_messages_phone_created_idx
 create unique index if not exists whatsapp_chat_messages_wa_id_uidx
   on public.whatsapp_chat_messages (wa_message_id)
   where wa_message_id is not null;
+
+create index if not exists whatsapp_chat_messages_queue_id_idx
+  on public.whatsapp_chat_messages (queue_id)
+  where queue_id is not null;
 
 alter table public.whatsapp_chats replica identity full;
 alter table public.whatsapp_chat_messages replica identity full;
@@ -107,8 +127,11 @@ begin
 end $$;
 
 -- -----------------------------------------------------------------------------
--- RPC: upsert chat + insert mensaje (idempotente por wa_message_id)
+-- RPC: upsert chat + insert mensaje (idempotente por wa_message_id / queue_id)
 -- -----------------------------------------------------------------------------
+drop function if exists public.save_whatsapp_crm_message(text, text, text, text, text, text, text, text, boolean, text, text);
+drop function if exists public.save_whatsapp_crm_message(text, text, text, text, text, text, text, text, boolean, text, text, text, uuid);
+
 create or replace function public.save_whatsapp_crm_message(
   p_phone text,
   p_direction text,
@@ -120,7 +143,9 @@ create or replace function public.save_whatsapp_crm_message(
   p_wa_message_id text default null,
   p_from_me boolean default false,
   p_push_name text default null,
-  p_source text default 'webhook'
+  p_source text default 'webhook',
+  p_delivery_status text default 'sent',
+  p_queue_id uuid default null
 )
 returns uuid
 language plpgsql
@@ -131,6 +156,7 @@ declare
   v_preview text;
   v_phone text;
   v_is_inbound boolean;
+  v_status text;
 begin
   v_phone := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
   if v_phone = '' then
@@ -141,10 +167,25 @@ begin
     raise exception 'direction inválida';
   end if;
 
+  v_status := coalesce(nullif(btrim(p_delivery_status), ''), 'sent');
+  if v_status not in ('pending', 'sending', 'sent', 'failed') then
+    v_status := 'sent';
+  end if;
+
   if p_wa_message_id is not null and btrim(p_wa_message_id) <> '' then
     select id into v_msg_id
     from public.whatsapp_chat_messages
     where wa_message_id = p_wa_message_id
+    limit 1;
+    if v_msg_id is not null then
+      return v_msg_id;
+    end if;
+  end if;
+
+  if p_queue_id is not null then
+    select id into v_msg_id
+    from public.whatsapp_chat_messages
+    where queue_id = p_queue_id
     limit 1;
     if v_msg_id is not null then
       return v_msg_id;
@@ -189,7 +230,7 @@ begin
   begin
     insert into public.whatsapp_chat_messages (
       chat_id, phone, direction, body, message_type, media_url, media_mime,
-      file_name, wa_message_id, from_me, source
+      file_name, wa_message_id, from_me, source, delivery_status, queue_id
     ) values (
       v_chat_id,
       v_phone,
@@ -201,7 +242,9 @@ begin
       p_file_name,
       nullif(btrim(coalesce(p_wa_message_id, '')), ''),
       coalesce(p_from_me, false),
-      coalesce(nullif(p_source, ''), 'webhook')
+      coalesce(nullif(p_source, ''), 'webhook'),
+      v_status,
+      p_queue_id
     )
     returning id into v_msg_id;
   exception
@@ -209,6 +252,7 @@ begin
       select id into v_msg_id
       from public.whatsapp_chat_messages
       where wa_message_id = p_wa_message_id
+         or (p_queue_id is not null and queue_id = p_queue_id)
       limit 1;
   end;
 
@@ -217,7 +261,7 @@ end;
 $$;
 
 grant execute on function public.save_whatsapp_crm_message(
-  text, text, text, text, text, text, text, text, boolean, text, text
+  text, text, text, text, text, text, text, text, boolean, text, text, text, uuid
 ) to anon, authenticated, service_role;
 
 -- -----------------------------------------------------------------------------

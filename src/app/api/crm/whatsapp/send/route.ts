@@ -1,17 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
 import { getWhatsmeowAgentCode, normalizeArPhone } from "@/lib/whatsmeow/config";
-import { sendWhatsmeowMediaDirect, sendWhatsmeowTextDirect } from "@/lib/whatsmeow/client";
+import { enqueueWhatsappOutbound } from "@/lib/whatsmeow/outbound-queue";
 import {
+  getCrmMessageById,
+  previewFromMessage,
   saveCrmWhatsappMessage,
   uploadCrmMediaBuffer,
 } from "@/lib/whatsmeow/crm-chat";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
+const MAX_TEXT = 4096;
 
 function inferType(mime: string, filename: string) {
   const type = String(mime || "").toLowerCase();
@@ -54,6 +58,23 @@ async function parseBody(request: NextRequest) {
   };
 }
 
+async function touchChatPreview(
+  phone: string,
+  body: string,
+  messageType: string,
+  fileName: string | null
+) {
+  const supabase = createServiceClient();
+  await supabase
+    .from("whatsapp_chats")
+    .update({
+      last_message: previewFromMessage(body, messageType, fileName),
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("phone", phone);
+}
+
 export async function POST(request: NextRequest) {
   if (!(await requireCrmSession())) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
@@ -65,7 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Falta el teléfono" }, { status: 400 });
   }
 
-  const caption = String(parsed.caption || parsed.mensaje || "").trim();
+  const caption = String(parsed.caption || parsed.mensaje || "").trim().slice(0, MAX_TEXT);
   const agentCode = getWhatsmeowAgentCode();
   let buffer: Buffer | null = null;
   let mime = "";
@@ -99,54 +120,83 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Escribí un mensaje o adjuntá un archivo" }, { status: 400 });
   }
 
+  const messageType = buffer ? inferType(mime, filename) : "text";
+  let mediaUrl: string | null = null;
   if (buffer) {
-    const messageType = inferType(mime, filename);
-    const mediaUrl = await uploadCrmMediaBuffer(buffer, mime || "application/octet-stream", phone, `${Date.now()}`);
-    const sent = await sendWhatsmeowMediaDirect(agentCode, phone, {
-      mediaBase64: buffer.toString("base64"),
-      caption,
-      type: messageType,
-      mimetype: mime,
-      filename,
-    });
-    if (!sent.success) {
-      return NextResponse.json({ ok: false, error: sent.error }, { status: 502 });
-    }
-    const saved = await saveCrmWhatsappMessage({
+    mediaUrl = await uploadCrmMediaBuffer(
+      buffer,
+      mime || "application/octet-stream",
       phone,
-      direction: "outbound",
-      body: caption,
-      messageType,
-      mediaUrl,
-      mediaMime: mime || null,
-      fileName: filename || null,
-      waMessageId: sent.messageId,
-      fromMe: true,
-      source: "crm",
-    });
-    return NextResponse.json({
-      ok: true,
-      messageId: sent.messageId,
-      savedId: saved.ok ? saved.id : null,
-    });
+      `${Date.now()}`
+    );
+    if (!mediaUrl) {
+      return NextResponse.json(
+        { ok: false, error: "No se pudo subir el archivo. Reintentá." },
+        { status: 502 }
+      );
+    }
   }
 
-  const sent = await sendWhatsmeowTextDirect(agentCode, phone, caption);
-  if (!sent.success) {
-    return NextResponse.json({ ok: false, error: sent.error }, { status: 502 });
+  const queued = await enqueueWhatsappOutbound({
+    agentCode,
+    to: phone,
+    kind: buffer ? "media" : "text",
+    payload: buffer
+      ? {
+          text: caption,
+          caption,
+          mediaUrl: mediaUrl || "",
+          mimetype: mime,
+          filename,
+          type: messageType,
+        }
+      : { text: caption },
+    unique: true,
+    meta: { source: "crm" },
+    wake: true,
+  });
+
+  if (!queued.success) {
+    const sqlHint =
+      queued.missingTable || /kind_check|kind in \(/i.test(queued.error || "")
+        ? " Falta aplicar supabase/whatsapp_outbound_queue_v4_crm_15s.sql en Supabase."
+        : "";
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `${queued.error || "No se pudo encolar"}${sqlHint}`,
+        missingTable: queued.missingTable,
+      },
+      { status: queued.missingTable ? 503 : 502 }
+    );
   }
+
+  const queueId = queued.queueId;
   const saved = await saveCrmWhatsappMessage({
     phone,
     direction: "outbound",
     body: caption,
-    messageType: "text",
-    waMessageId: sent.messageId,
+    messageType,
+    mediaUrl,
+    mediaMime: mime || null,
+    fileName: filename || null,
+    waMessageId: queueId ? `queue:${queueId}` : null,
     fromMe: true,
     source: "crm",
+    deliveryStatus: "pending",
+    queueId,
   });
+
+  const message = saved.ok ? await getCrmMessageById(saved.id) : null;
+  if (!message) {
+    await touchChatPreview(phone, caption, messageType, filename || null);
+  }
+
   return NextResponse.json({
     ok: true,
-    messageId: sent.messageId,
+    queued: true,
+    queueId,
     savedId: saved.ok ? saved.id : null,
+    message,
   });
 }
