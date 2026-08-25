@@ -96,7 +96,7 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     { role: "assistant" as const, content: result.answer },
   ].slice(-20);
 
-  const pollOptions = shouldSendWhatsappPoll(result.quoteState.step, result.quickReplies)
+  const pollOptions = result.mode !== "rag" && shouldSendWhatsappPoll(result.quoteState.step, result.quickReplies)
     ? pollOptionsFromReplies(result.quickReplies)
     : [];
   const agentCode = getWhatsmeowAgentCode();

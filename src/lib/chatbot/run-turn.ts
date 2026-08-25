@@ -210,21 +210,34 @@ export async function runChatTurn(input: {
     }
 
     const merged = mergeIntentIntoState(prevState, classified);
+
+    // FIX: si el usuario hizo una pregunta informativa durante un flujo activo
+    // (ej: "trabajan con el hospital tres cerritos?" mientras se cotiza un auto),
+    // responder directamente sin avanzar el estado de la cotización.
+    // Esto evita que intentAdvancesQuote() dispare resumeQuoteState() y
+    // envíe el poll del paso siguiente.
+    const forcedInfo = isInfoQuestion && prevState.active;
+
     const questionOnly =
-      (classified.intent === "question" || classified.intent === "other") &&
+      forcedInfo ||
+      ((classified.intent === "question" || classified.intent === "other") &&
       classified.reply &&
-      !intentAdvancesQuote(classified);
+      !intentAdvancesQuote(classified));
 
     if (questionOnly) {
-      return {
-        answer: stripMarkdownNoise(classified.reply || ""),
-        quoteState: prevState,
-        quickReplies: prevState.active ? [] : menuForChannel(input.channel),
-        mode: "rag",
-      };
+      if (classified.reply) {
+        return {
+          answer: stripMarkdownNoise(classified.reply),
+          quoteState: prevState,
+          quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+          mode: "rag",
+        };
+      }
+      // classified.reply es null pero es forcedInfo: continúa para obtener respuesta de IA
+      // sin avanzar el flujo (el guard al final lo evita)
     }
 
-    if (intentAdvancesQuote(classified) || classified.intent === "quote") {
+    if (!forcedInfo && (intentAdvancesQuote(classified) || classified.intent === "quote")) {
       const resumed = await resumeQuoteState(withChannel(merged, input.channel));
       if (resumed?.handled && resumed.answer) {
         return finishQuoteResult(resumed, input.channel, input.knownPhone);
@@ -234,9 +247,9 @@ export async function runChatTurn(input: {
     if (classified.reply) {
       return {
         answer: stripMarkdownNoise(classified.reply),
-        quoteState: merged,
+        quoteState: forcedInfo ? prevState : merged,
         quickReplies:
-          input.channel === "whatsapp" && !merged.active
+          input.channel === "whatsapp" && !(forcedInfo ? prevState : merged).active
             ? menuForChannel("whatsapp")
             : [],
         mode: classified.intent === "quote" ? "quote" : "rag",
@@ -244,9 +257,13 @@ export async function runChatTurn(input: {
     }
   }
 
-  const quote = await processQuoteFlow(message, prevState, input.channel);
-  if (quote.handled && quote.answer) {
-    return finishQuoteResult(quote, input.channel, input.knownPhone);
+  // No llamar a processQuoteFlow si es pregunta informativa con flujo activo:
+  // evita que el paso actual del flujo se regenere y dispare un poll no solicitado.
+  if (!(isInfoQuestion && prevState.active)) {
+    const quote = await processQuoteFlow(message, prevState, input.channel);
+    if (quote.handled && quote.answer) {
+      return finishQuoteResult(quote, input.channel, input.knownPhone);
+    }
   }
 
   if (!getChatAi()) {
