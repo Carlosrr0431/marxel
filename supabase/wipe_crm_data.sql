@@ -19,6 +19,13 @@ truncate table
   public.leads
 restart identity cascade;
 
+do $$
+begin
+  if to_regclass('public.mailing_campaigns') is not null then
+    execute 'truncate table public.mailing_campaigns restart identity';
+  end if;
+end $$;
+
 delete from public.whatsapp_conversations
 where phone is distinct from '__agent__';
 

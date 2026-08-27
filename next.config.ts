@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["xlsx"],
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: "inline",

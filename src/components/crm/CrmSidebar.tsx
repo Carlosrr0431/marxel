@@ -16,6 +16,7 @@ const links = [
   { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
   { href: "/crm/seguimientos", label: "Agenda", icon: "calendar" as const },
   { href: "/crm/plantillas", label: "Plantillas", icon: "chat" as const },
+  { href: "/crm/mailing", label: "Mailing", icon: "mail" as const },
 ];
 
 function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
@@ -103,6 +104,14 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       <svg {...props}>
         <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h7A2.5 2.5 0 0 1 17 6.5v4a2.5 2.5 0 0 1-2.5 2.5H11l-3 2.2V13H7.5A2.5 2.5 0 0 1 5 10.5v-4z" />
         <path d="M8 16.2c.4 1.4 1.8 2.3 3.4 2.3h2.1L16.8 21v-2.2h.7A2.5 2.5 0 0 0 20 16.3v-3.2" />
+      </svg>
+    );
+  }
+  if (name === "mail") {
+    return (
+      <svg {...props}>
+        <rect x="3.5" y="6" width="17" height="12" rx="2" />
+        <path d="M4 7.5 12 13l8-5.5" />
       </svg>
     );
   }
