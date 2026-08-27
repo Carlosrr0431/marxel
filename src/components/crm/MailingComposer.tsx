@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MAIL_PRESETS, buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 import {
@@ -17,6 +18,13 @@ type Campaign = {
   sent_count: number;
   status: string;
   error: string | null;
+  stats?: {
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+  };
 };
 
 const firstPreset = MAIL_PRESETS[0];
@@ -175,6 +183,7 @@ export function MailingComposer() {
         ok?: boolean;
         error?: string;
         sent?: number;
+        campaignId?: string;
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo enviar");
       setOkMsg(
@@ -182,6 +191,10 @@ export function MailingComposer() {
           ? `Prueba enviada a ${testEmail}.`
           : `Campaña enviada a ${data.sent} destinatarios.`
       );
+      if (!test && data.campaignId) {
+        window.location.href = `/crm/mailing/${data.campaignId}`;
+        return;
+      }
       await loadMeta();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de envío");
@@ -370,15 +383,26 @@ export function MailingComposer() {
 
       {campaigns.length ? (
         <section className="crm-card p-5">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Últimos envíos</p>
-          <ul className="space-y-2 text-sm">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Historial de campañas</p>
+          <ul className="space-y-3">
             {campaigns.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line/70 py-2 last:border-0">
-                <span className="font-medium text-navy">{item.subject}</span>
-                <span className="text-muted">
-                  {item.sent_count}/{item.recipient_count} · {item.status} ·{" "}
-                  {new Date(item.created_at).toLocaleString("es-AR")}
-                </span>
+              <li key={item.id}>
+                <Link
+                  href={`/crm/mailing/${item.id}`}
+                  className="crm-card-hover block rounded-2xl border border-line px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="font-medium text-navy">{item.subject}</p>
+                    <p className="text-xs text-muted">
+                      {new Date(item.created_at).toLocaleString("es-AR")}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm text-muted">
+                    {item.stats?.sent ?? item.sent_count} enviados · {item.stats?.delivered ?? 0} entregados ·{" "}
+                    {item.stats?.opened ?? 0} abrieron · {item.stats?.clicked ?? 0} clics
+                    {item.stats?.bounced ? ` · ${item.stats.bounced} rebotes` : ""}
+                  </p>
+                </Link>
               </li>
             ))}
           </ul>

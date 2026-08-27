@@ -6,6 +6,7 @@ export type BrevoSendInput = {
   html: string;
   recipients: { email: string; name: string }[];
   greetings: string[];
+  tags?: string[];
 };
 
 function getConfig() {
@@ -75,12 +76,15 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
   for (let i = 0; i < input.recipients.length; i += VERSION_CHUNK) {
     const slice = input.recipients.slice(i, i + VERSION_CHUNK);
     const greetings = input.greetings.slice(i, i + VERSION_CHUNK);
+    const tags = input.tags?.filter(Boolean).length
+      ? input.tags.filter(Boolean)
+      : ["crm-mailing"];
     const body = {
       sender: { email: cfg.senderEmail, name: cfg.senderName },
       replyTo: { email: cfg.replyTo, name: cfg.senderName },
       subject: input.subject,
       htmlContent: input.html,
-      tags: ["crm-mailing"],
+      tags,
       messageVersions: slice.map((recipient, idx) => ({
         to: [{ email: recipient.email, name: (recipient.name || recipient.email).slice(0, 70) }],
         params: { greeting: greetings[idx] || "Hola," },
@@ -98,8 +102,8 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
       ? (result.data as { messageIds: string[] }).messageIds
       : [];
     const single = String((result.data as { messageId?: string }).messageId || "");
-    messageIds.push(...ids);
-    if (single) messageIds.push(single);
+    if (ids.length) messageIds.push(...ids);
+    else if (single) messageIds.push(single);
   }
 
   return { sent: input.recipients.length, messageIds };

@@ -21,8 +21,14 @@ restart identity cascade;
 
 do $$
 begin
+  if to_regclass('public.mailing_events') is not null then
+    execute 'truncate table public.mailing_events restart identity';
+  end if;
+  if to_regclass('public.mailing_recipients') is not null then
+    execute 'truncate table public.mailing_recipients restart identity';
+  end if;
   if to_regclass('public.mailing_campaigns') is not null then
-    execute 'truncate table public.mailing_campaigns restart identity';
+    execute 'truncate table public.mailing_campaigns restart identity cascade';
   end if;
 end $$;
 

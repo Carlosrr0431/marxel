@@ -3,6 +3,7 @@ import { requireCrmSession } from "@/lib/crm/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { isValidEmail, mergeRecipients, type MailRecipient } from "@/lib/mailing/recipients";
 import { brevoAccountStatus, sendBrevoCampaign } from "@/lib/mailing/brevo";
+import { campaignTagFromId } from "@/lib/mailing/events";
 import { buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 
 export const runtime = "nodejs";
@@ -72,6 +73,43 @@ export async function POST(request: NextRequest) {
     ctaUrl: String(body.ctaUrl || "https://wa.me/5493876348199"),
   });
   const greetings = recipients.map((r) => greetingFor(r.name));
+  const campaignId = crypto.randomUUID();
+  const tag = campaignTagFromId(campaignId);
+  const supabase = createServiceClient();
+
+  const { error: insertError } = await supabase.from("mailing_campaigns").insert({
+    id: campaignId,
+    subject,
+    preheader: String(body.preheader || ""),
+    title,
+    body: text,
+    cta_label: String(body.ctaLabel || ""),
+    cta_url: String(body.ctaUrl || ""),
+    template_id: String(body.templateId || "custom"),
+    tag,
+    recipient_count: recipients.length,
+    sent_count: 0,
+    status: "sending",
+  });
+  if (insertError) {
+    return NextResponse.json(
+      { ok: false, error: `No se pudo guardar la campaña: ${insertError.message}` },
+      { status: 400 }
+    );
+  }
+
+  const { error: recError } = await supabase.from("mailing_recipients").insert(
+    recipients.map((row) => ({
+      campaign_id: campaignId,
+      email: row.email,
+      name: row.name || "",
+      last_event: "queued",
+    }))
+  );
+  if (recError) {
+    await supabase.from("mailing_campaigns").update({ status: "failed", error: recError.message }).eq("id", campaignId);
+    return NextResponse.json({ ok: false, error: recError.message }, { status: 400 });
+  }
 
   try {
     const result = await sendBrevoCampaign({
@@ -79,26 +117,43 @@ export async function POST(request: NextRequest) {
       html,
       recipients,
       greetings,
+      tags: ["crm-mailing", tag],
     });
 
-    const supabase = createServiceClient();
-    await supabase.from("mailing_campaigns").insert({
-      subject,
-      template_id: String(body.templateId || "custom"),
-      recipient_count: recipients.length,
-      sent_count: result.sent,
-      status: testEmail ? "test" : "sent",
-      brevo_message_ids: result.messageIds.slice(0, 50),
-    });
+    const updates = recipients.map((row, index) => ({
+      campaign_id: campaignId,
+      email: row.email,
+      message_id: result.messageIds[index] || null,
+      last_event: "sent",
+    }));
+    for (const item of updates) {
+      if (!item.message_id) continue;
+      await supabase
+        .from("mailing_recipients")
+        .update({ message_id: item.message_id, last_event: "sent" })
+        .eq("campaign_id", campaignId)
+        .eq("email", item.email);
+    }
+
+    await supabase
+      .from("mailing_campaigns")
+      .update({
+        sent_count: result.sent,
+        status: testEmail ? "test" : "sent",
+        brevo_message_ids: result.messageIds.slice(0, 80),
+        error: null,
+      })
+      .eq("id", campaignId);
 
     return NextResponse.json({
       ok: true,
       sent: result.sent,
       test: Boolean(testEmail),
-      messageIds: result.messageIds.slice(0, 5),
+      campaignId,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "No se pudo enviar";
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
+    return NextResponse.json({ ok: false, error: message, campaignId }, { status: 400 });
   }
 }
