@@ -61,11 +61,11 @@ export function MailingComposer() {
 
   const previewHtml = useMemo(
     () =>
-      buildMailHtml({ preheader, title, body, ctaLabel, ctaUrl }).replaceAll(
+      buildMailHtml({ preheader, title, body, ctaLabel, ctaUrl, theme: presetId }).replaceAll(
         "{{params.greeting}}",
         greetingFor(recipients[0]?.name || "María")
       ),
-    [preheader, title, body, ctaLabel, ctaUrl, recipients]
+    [preheader, title, body, ctaLabel, ctaUrl, recipients, presetId]
   );
 
   const loadMeta = useCallback(async () => {

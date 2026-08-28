@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     body: text,
     ctaLabel: String(body.ctaLabel || "Hablar por WhatsApp"),
     ctaUrl: String(body.ctaUrl || "https://wa.me/5493876348199"),
+    theme: String(body.templateId || "institucional"),
   });
   const greetings = recipients.map((r) => greetingFor(r.name));
   const campaignId = crypto.randomUUID();
