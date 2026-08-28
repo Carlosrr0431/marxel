@@ -88,6 +88,8 @@ export type QuoteState = {
   leadId?: string;
   pendingSave?: "hot" | "optional" | null;
   channel?: "web" | "whatsapp";
+  /** Aviso corto al productor por el primer interés de WhatsApp. */
+  notifiedInterest?: boolean;
 };
 
 export type QuoteQuickReply = {

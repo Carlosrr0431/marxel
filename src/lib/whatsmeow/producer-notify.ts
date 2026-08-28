@@ -1,7 +1,22 @@
 import { getWhatsmeowAgentCode, normalizeArPhone } from "@/lib/whatsmeow/config";
 import { sendWhatsmeowText } from "@/lib/whatsmeow/client";
 import { createServiceClient } from "@/lib/supabase/server";
-import { buildNotas, type QuoteData, type QuoteState } from "@/lib/chatbot/quote-flow";
+import {
+  buildNotas,
+  detectsHealthCoverageIntent,
+  detectsQuoteIntent,
+  inferProductoFromMessage,
+  isGreeting,
+  looksLikeCoverageQuestion,
+  looksLikeExplicitQuote,
+  MENU_SALUD,
+  MENU_SEGUROS,
+  MENU_VIAJERO,
+  MENU_WHATSAPP,
+  type QuoteData,
+  type QuoteState,
+} from "@/lib/chatbot/quote-flow";
+import { loadConversation, saveConversation } from "@/lib/whatsmeow/conversations";
 
 export const PRODUCER_WHATSAPP_DEFAULT = "3875724473";
 
@@ -75,6 +90,145 @@ export function formatProducerQuoteMessage(input: {
     input.leadId ? `\n🔗 https://www.marxen.com.ar/crm/leads/${input.leadId}` : null,
   ];
   return lines.filter((l) => l != null && String(l).trim() !== "").join("\n");
+}
+
+const interestLocks = new Map<string, number>();
+
+export function looksLikeWhatsappInterest(text: string) {
+  const t = String(text || "").trim();
+  if (!t) return false;
+  if (isGreeting(t)) return false;
+  if (/^(cancelar|salir|dejar\s+cotiz|menu|men[uú])$/i.test(t)) return false;
+  if (t === MENU_WHATSAPP) return true;
+  if (looksLikeExplicitQuote(t) || detectsQuoteIntent(t)) return true;
+  if (looksLikeCoverageQuestion(t) || detectsHealthCoverageIntent(t)) return true;
+  return Boolean(inferProductoFromMessage(t));
+}
+
+function interestSnippet(message: string) {
+  const t = String(message || "").trim();
+  if (t === MENU_SEGUROS) return "Cotizar un seguro";
+  if (t === MENU_SALUD) return "Consultar cobertura de salud";
+  if (t === MENU_VIAJERO) return "Asistencia al viajero";
+  if (t === MENU_WHATSAPP) return "Quiere hablar con un asesor";
+  const compact = t.replace(/\s+/g, " ");
+  return compact.length > 140 ? `${compact.slice(0, 137)}…` : compact;
+}
+
+function interestProductLabel(producto?: string | null, message?: string) {
+  const inferred = producto || inferProductoFromMessage(message || "");
+  if (inferred === "salud") return "Salud";
+  if (inferred === "viajero") return "Viajero";
+  if (inferred === "seguros") return "Seguros";
+  return null;
+}
+
+export function formatProducerInterestMessage(input: {
+  nombre?: string | null;
+  celular: string;
+  producto?: string | null;
+  message?: string | null;
+  leadId?: string | null;
+}) {
+  const celular = normalizeArPhone(input.celular) || input.celular;
+  const product = interestProductLabel(input.producto, input.message || "");
+  const snippet = interestSnippet(input.message || "");
+  const crm = celular
+    ? `https://www.marxen.com.ar/crm/chats?phone=${encodeURIComponent(celular)}`
+    : "https://www.marxen.com.ar/crm/chats";
+  const lead = input.leadId
+    ? `https://www.marxen.com.ar/crm/leads/${input.leadId}`
+    : null;
+
+  return [
+    "🔔 WhatsApp — hay interés",
+    input.nombre ? String(input.nombre).trim() : null,
+    celular ? displayPhone(celular) : null,
+    celular ? `wa.me/${celular}` : null,
+    product ? `📌 ${product}` : null,
+    snippet ? `«${snippet}»` : null,
+    `\nCRM: ${lead || crm}`,
+  ]
+    .filter((line) => line != null && String(line).trim() !== "")
+    .join("\n");
+}
+
+function usableName(value?: string | null) {
+  const name = String(value || "").trim();
+  if (!name || /^yo$/i.test(name)) return "";
+  return name;
+}
+
+async function resolveChatName(phone: string, fallback?: string | null) {
+  const fromQuote = usableName(fallback);
+  if (fromQuote) return fromQuote;
+  try {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("whatsapp_chats")
+      .select("name")
+      .eq("phone", phone)
+      .maybeSingle();
+    return usableName(data?.name) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ping corto al productor en el primer mensaje con interés. Una vez por chat. */
+export async function notifyProducerWhatsappInterest(input: {
+  phone: string;
+  message: string;
+  pushName?: string | null;
+}) {
+  try {
+    const customer = normalizeArPhone(input.phone);
+    const producer = getProducerWhatsapp();
+    if (!customer || !producer || customer === producer) return;
+    if (!looksLikeWhatsappInterest(input.message)) return;
+
+    const now = Date.now();
+    const prevLock = interestLocks.get(customer) || 0;
+    if (prevLock && now - prevLock < 120_000) return;
+    interestLocks.set(customer, now);
+
+    const conv = await loadConversation(customer);
+    if (conv.quote_state.notifiedInterest) return;
+
+    await saveConversation({
+      ...conv,
+      quote_state: { ...conv.quote_state, notifiedInterest: true },
+    });
+
+    const nombre =
+      (await resolveChatName(
+        customer,
+        usableName(input.pushName) || conv.quote_state.data.nombre
+      )) || null;
+    const text = formatProducerInterestMessage({
+      nombre,
+      celular: customer,
+      producto: conv.quote_state.data.producto,
+      message: input.message,
+      leadId: conv.quote_state.leadId,
+    });
+    const sent = await sendToProducer(text);
+    if (!sent.ok) return;
+
+    if (conv.quote_state.leadId) {
+      const supabase = createServiceClient();
+      await supabase.from("actividades").insert({
+        lead_id: conv.quote_state.leadId,
+        tipo: "whatsapp",
+        titulo: "Interés de WhatsApp avisado al productor",
+        detalle: `Aviso a ${displayPhone(producer)}`,
+        autor: "sistema",
+        meta: { source: "producer_interest", kind: "interes", producer, phone: customer },
+      });
+    }
+  } catch (err) {
+    console.error("[productor][interes]", err instanceof Error ? err.message : err);
+  }
 }
 
 async function alreadySentKind(leadId: string, kind: "nuevo" | "actualizacion") {

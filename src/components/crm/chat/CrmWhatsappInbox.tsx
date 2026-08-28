@@ -574,10 +574,10 @@ function Bubble({ message }: { message: CrmChatMessage }) {
   );
 }
 
-export function CrmWhatsappInbox() {
+export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string }) {
   const [chats, setChats] = useState<CrmChat[]>([]);
   const [messages, setMessages] = useState<CrmChatMessage[]>([]);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(() => normalizeArPhone(initialPhone || ""));
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -686,6 +686,11 @@ export function CrmWhatsappInbox() {
       setLoadingThread(false);
     }
   }, []);
+
+  useEffect(() => {
+    const phone = normalizeArPhone(initialPhone || "");
+    if (phone) void openChat(phone);
+  }, [initialPhone, openChat]);
 
   useEffect(() => {
     loadChats().finally(() => setLoadingChats(false));

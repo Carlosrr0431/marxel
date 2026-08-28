@@ -20,6 +20,10 @@ import {
   shouldSendWhatsappPoll,
 } from "@/lib/chatbot/quote-flow";
 import { whatsappAgentGate } from "@/lib/whatsmeow/agent-control";
+import {
+  looksLikeWhatsappInterest,
+  notifyProducerWhatsappInterest,
+} from "@/lib/whatsmeow/producer-notify";
 
 const IGNORE_EVENTS = new Set([
   "messages.status",
@@ -89,6 +93,9 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     channel: "whatsapp",
     knownPhone: conv.phone,
   });
+  const quoteState = conv.quote_state.notifiedInterest
+    ? { ...result.quoteState, notifiedInterest: true }
+    : result.quoteState;
 
   const history = [
     ...conv.history,
@@ -96,7 +103,7 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     { role: "assistant" as const, content: result.answer },
   ].slice(-20);
 
-  const pollOptions = result.mode !== "rag" && shouldSendWhatsappPoll(result.quoteState.step, result.quickReplies)
+  const pollOptions = result.mode !== "rag" && shouldSendWhatsappPoll(quoteState.step, result.quickReplies)
     ? pollOptionsFromReplies(result.quickReplies)
     : [];
   const agentCode = getWhatsmeowAgentCode();
@@ -172,7 +179,7 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
 
   await saveConversation({
     ...conv,
-    quote_state: result.quoteState,
+    quote_state: quoteState,
     history,
     pending_poll: pendingPoll,
   });
@@ -275,6 +282,16 @@ export async function handleWhatsappInbound(body: unknown) {
 
   if (inbound.fromMe && !inbound.isPoll) {
     return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
+  }
+
+  if (!inbound.fromMe && inbound.phone && looksLikeWhatsappInterest(inbound.text)) {
+    after(() => {
+      void notifyProducerWhatsappInterest({
+        phone: inbound.phone,
+        message: inbound.text,
+        pushName: inbound.pushName,
+      });
+    });
   }
 
   const gate = await whatsappAgentGate(inbound.phone);
