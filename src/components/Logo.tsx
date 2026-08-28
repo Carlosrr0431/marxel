@@ -5,10 +5,11 @@ type LogoProps = {
   showSalud?: boolean;
   className?: string;
   light?: boolean;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 };
 
 const sizes = {
+  xs: { width: 128, height: 36 },
   sm: { width: 168, height: 48 },
   md: { width: 196, height: 56 },
   lg: { width: 236, height: 68 },

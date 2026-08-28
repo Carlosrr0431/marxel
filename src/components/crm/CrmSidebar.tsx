@@ -147,11 +147,7 @@ export function CrmSidebar({
             href="/crm"
             className="crm-sidebar__brand-copy block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-soft/70"
           >
-            <Logo href={null} light size="sm" />
-            <span className="mt-2 flex items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-white/45">
-              CRM
-              <span className="crm-pulse inline-block h-1.5 w-1.5 rounded-full bg-teal-soft" />
-            </span>
+            <Logo href={null} light size="xs" />
           </Link>
           <button
             type="button"
