@@ -14,6 +14,7 @@ import type {
   SeguimientoTipo,
 } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
+import { normalizeArPhone } from "@/lib/whatsmeow/config";
 
 const COOKIE = "marxel_crm_session";
 
@@ -65,6 +66,7 @@ function revalidateCrm() {
   revalidatePath("/crm/afiliados");
   revalidatePath("/crm/seguimientos");
   revalidatePath("/crm/inbox");
+  revalidatePath("/crm/chats");
 }
 
 export async function updateLeadEstado(leadId: string, estado: LeadEstado, motivo?: string) {
@@ -232,7 +234,7 @@ export async function snoozeSeguimiento(id: string, hours = 24) {
   revalidateCrm();
 }
 
-export async function convertLead(leadId: string) {
+export async function convertLeadQuiet(leadId: string) {
   await requireCrm();
   const supabase = createServiceClient();
   const { data, error } = await supabase.rpc("convertir_lead_a_afiliado", {
@@ -240,7 +242,62 @@ export async function convertLead(leadId: string) {
   });
   if (error) throw new Error(error.message);
   revalidateCrm();
-  redirect(`/crm/afiliados/${data}`);
+  return String(data || "");
+}
+
+export async function convertLead(leadId: string) {
+  const afiliadoId = await convertLeadQuiet(leadId);
+  redirect(`/crm/afiliados/${afiliadoId}`);
+}
+
+export async function ensureLeadFromChat(phone: string, name: string) {
+  await requireCrm();
+  const celular = normalizeArPhone(phone);
+  if (!celular) throw new Error("Celular inválido");
+  const supabase = createServiceClient();
+  const last8 = celular.slice(-8);
+  const { data: rows } = await supabase
+    .from("leads")
+    .select("id,celular")
+    .or(
+      [`celular.eq.${celular}`, celular.startsWith("549") ? `celular.eq.${celular.slice(3)}` : "", last8 ? `celular.ilike.%${last8}` : ""]
+        .filter(Boolean)
+        .join(",")
+    )
+    .order("updated_at", { ascending: false })
+    .limit(8);
+  const found = (rows || []).find((row) => {
+    const other = normalizeArPhone(String(row.celular || ""));
+    return other === celular || other.slice(-8) === last8;
+  });
+  if (found?.id) return found.id as string;
+
+  const payload = {
+    nombre: String(name || "").trim() || "WhatsApp",
+    celular,
+    origen: "whatsapp" as const,
+    origen_detalle: "chat crm",
+    estado: "contactado" as const,
+    producto: "general" as const,
+    prioridad: "media" as const,
+    tags: ["whatsapp", "chat"],
+    notas_iniciales: "Ficha creada desde el chat de WhatsApp.",
+    ultimo_contacto_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("leads")
+    .insert({ ...payload, puntaje: scoreLead(payload) })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  await supabase.from("actividades").insert({
+    lead_id: data.id,
+    tipo: "sistema",
+    titulo: "Lead creado desde el chat",
+    autor: "asesor",
+  });
+  revalidateCrm();
+  return data.id as string;
 }
 
 export async function updateAfiliado(id: string, data: Record<string, unknown>) {

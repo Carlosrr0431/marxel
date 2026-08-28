@@ -2881,7 +2881,6 @@ body:has(.crm-shell) {
 
 .crm-wa-field,
 .crm-wa-search input,
-.crm-wa-composer__input,
 .crm-wa-preview__caption textarea {
   width: 100%;
   border: 0;
@@ -3460,62 +3459,90 @@ button.crm-wa-file {
   font-size: 0.8rem;
 }
 
+.crm-wa-thread__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.crm-wa-headbtn {
+  border-radius: 999px;
+  background: #fff;
+  color: #111b21;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid #d8dde2;
+}
+
+.crm-wa-headbtn:hover,
+.crm-wa-headbtn.is-on {
+  border-color: #0f766e;
+  color: #0f766e;
+  background: #f0fdfa;
+}
+
 .crm-wa-composer {
   display: flex;
   align-items: flex-end;
-  gap: 0.45rem;
-  background: #f0f2f5;
-  padding: 0.65rem 0.8rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  gap: 0.55rem;
+  background: #eef1f4;
+  padding: 0.8rem 0.9rem calc(0.95rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #d5dbe0;
 }
 
 .crm-wa-clip {
   display: inline-flex;
-  height: 2.8rem;
-  width: 2.8rem;
+  height: 3.15rem;
+  width: 3.15rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  color: #54656f;
-  transition: background 0.12s ease;
+  border-radius: 1rem;
+  color: #3b4a54;
+  border: 1.5px solid #cfd6dc;
+  background: #fff;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .crm-wa-clip:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: #f7f9fa;
+  border-color: #8696a0;
 }
 
 .crm-wa-clip svg {
-  width: 1.28rem;
-  height: 1.28rem;
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
-/* Input auto-grow con borde sutil */
 .crm-wa-composer__input {
   flex: 1;
   width: auto;
   min-width: 0;
-  min-height: 2.8rem;
-  max-height: 10rem;
-  padding: 0.75rem 1rem;
-  border: 1.5px solid transparent;
-  border-radius: 1.4rem;
+  min-height: 3.15rem;
+  max-height: 12rem;
+  padding: 0.85rem 1.05rem;
+  border: 2px solid #b7c0c8;
+  border-radius: 1rem;
   background: #fff;
   resize: none;
   overflow-y: hidden;
   field-sizing: content;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.45;
+  color: #111b21;
   overflow-wrap: anywhere;
   scrollbar-width: thin;
   scrollbar-color: #c5c9cc transparent;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.07);
+  box-shadow: inset 0 1px 2px rgba(17, 27, 33, 0.04);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .crm-wa-composer__input:focus {
-  border-color: rgba(0, 168, 132, 0.35);
-  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.1);
+  border-color: #00a884;
+  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.16);
   outline: none;
 }
 
@@ -3530,12 +3557,12 @@ button.crm-wa-file {
 
 .crm-wa-send {
   display: inline-flex;
-  height: 2.8rem;
-  width: 2.8rem;
+  height: 3.15rem;
+  width: 3.15rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 1rem;
   background: radial-gradient(circle at 32% 28%, #1bd9a8, #00a884 58%, #008f6f);
   color: #fff;
   box-shadow: 0 3px 10px rgba(0, 168, 132, 0.35);
@@ -3584,6 +3611,298 @@ button.crm-wa-file {
   to {
     transform: rotate(360deg);
   }
+}
+
+.crm-wa-leadbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.8rem 0.4rem;
+  background: rgba(255, 255, 255, 0.82);
+  border-top: 1px solid #d8dee3;
+  backdrop-filter: blur(8px);
+}
+
+.crm-wa-leadbar__ficha {
+  flex-shrink: 0;
+  border-radius: 0.8rem;
+  background: #111b21;
+  color: #fff;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.crm-wa-leadbar__states {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: 0.28rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.crm-wa-leadbar__states::-webkit-scrollbar {
+  display: none;
+}
+
+.crm-wa-leadbar__states button {
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid #d0d7dc;
+  background: #fff;
+  color: #54656f;
+  padding: 0.38rem 0.62rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.crm-wa-leadbar__states button.is-on {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+
+.crm-wa-leadbar__states button:disabled {
+  opacity: 0.45;
+}
+
+.crm-wa-lead {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  display: flex;
+  width: min(23rem, 100%);
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid #e4e8ec;
+  box-shadow: -12px 0 32px rgba(17, 27, 33, 0.08);
+}
+
+.crm-wa-lead__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.75rem;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.crm-wa-lead__head p {
+  margin: 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8696a0;
+}
+
+.crm-wa-lead__head strong {
+  display: block;
+  margin-top: 0.15rem;
+  color: #111b21;
+  font-size: 1.05rem;
+}
+
+.crm-wa-lead__close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #f0f2f5;
+  color: #54656f;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.crm-wa-lead__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.1rem;
+  overflow: auto;
+  padding: 0.9rem 1rem 1.4rem;
+}
+
+.crm-wa-lead__body h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8696a0;
+}
+
+.crm-wa-lead__muted,
+.crm-wa-lead__error {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.crm-wa-lead__error {
+  color: #b42318;
+}
+
+.crm-wa-lead__empty {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.crm-wa-lead__empty p,
+.crm-wa-lead__notes,
+.crm-wa-lead__tags {
+  margin: 0;
+  color: #54656f;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.crm-wa-lead__empty button,
+.crm-wa-lead__form button,
+.crm-wa-lead__row button,
+.crm-wa-lead__mini button {
+  border-radius: 0.75rem;
+  background: #111b21;
+  color: #fff;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.crm-wa-lead__facts {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.crm-wa-lead__facts div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.crm-wa-lead__facts dt {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8696a0;
+}
+
+.crm-wa-lead__facts dd {
+  margin: 0;
+  color: #111b21;
+  font-size: 0.9rem;
+}
+
+.crm-wa-lead__link {
+  display: inline-block;
+  margin-top: 0.7rem;
+  color: #0f766e;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.crm-wa-lead__estados,
+.crm-wa-lead__templates,
+.crm-wa-lead__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.crm-wa-lead__estados button,
+.crm-wa-lead__templates button,
+.crm-wa-lead__quick button {
+  border-radius: 999px;
+  border: 1.5px solid #d0d7dc;
+  background: #fff;
+  color: #3b4a54;
+  padding: 0.38rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.crm-wa-lead__estados button.is-on {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+
+.crm-wa-lead__row,
+.crm-wa-lead__form {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.crm-wa-lead__row {
+  grid-template-columns: 1fr auto;
+}
+
+.crm-wa-lead__row select,
+.crm-wa-lead__form input {
+  width: 100%;
+  min-height: 2.4rem;
+  border: 1.5px solid #cfd6dc;
+  border-radius: 0.75rem;
+  background: #f7f9fa;
+  padding: 0.4rem 0.7rem;
+  color: #111b21;
+  font-size: 0.82rem;
+}
+
+.crm-wa-lead__row a {
+  align-self: center;
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.crm-wa-lead__list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crm-wa-lead__list li {
+  border: 1px solid #eef1f4;
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.7rem;
+}
+
+.crm-wa-lead__list strong,
+.crm-wa-lead__list span {
+  display: block;
+}
+
+.crm-wa-lead__list strong {
+  color: #111b21;
+  font-size: 0.82rem;
+}
+
+.crm-wa-lead__list span {
+  color: #8696a0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.crm-wa-lead__mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+
+.crm-wa-lead__mini button {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.68rem;
+  background: #f0f2f5;
+  color: #111b21;
+}
 }
 
 .crm-wa-preview {
@@ -3858,5 +4177,9 @@ button.crm-wa-file {
 
   .crm-wa-bubble {
     max-width: 88%;
+  }
+
+  .crm-wa-lead {
+    width: 100%;
   }
 }

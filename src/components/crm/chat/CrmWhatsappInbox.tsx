@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { relativeTime } from "@/lib/crm/utils";
+import { ChatLeadDock } from "@/components/crm/chat/ChatLeadPanel";
 import type { CrmChat, CrmChatMessage, CrmDeliveryStatus } from "@/lib/whatsmeow/crm-chat";
 
 const ACCEPT =
@@ -114,7 +115,7 @@ function autosizeTextarea(el: HTMLTextAreaElement | null, maxPx = 168) {
   if (!el) return;
   el.style.height = "0px";
   const next = Math.min(el.scrollHeight, maxPx);
-  el.style.height = `${Math.max(next, 46)}px`;
+  el.style.height = `${Math.max(next, 58)}px`;
   el.style.overflowY = el.scrollHeight > maxPx ? "auto" : "hidden";
 }
 
@@ -589,6 +590,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
   const [live, setLive] = useState(false);
   const [composerPhone, setComposerPhone] = useState("");
   const [profilePics, setProfilePics] = useState<Record<string, string>>({});
+  const [leadOpen, setLeadOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef<HTMLTextAreaElement>(null);
@@ -651,6 +653,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
     const normalized = normalizeArPhone(phone);
     if (!normalized) return;
     setSelected(normalized);
+    setLeadOpen(false);
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setLoadingThread(true);
@@ -975,14 +978,23 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                 <strong>{activeChat?.name || displayPhone(selected)}</strong>
                 <p>{displayPhone(selected)}</p>
               </div>
-              <a
-                className="crm-wa-ext"
-                href={`https://wa.me/${selected}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir en WhatsApp
-              </a>
+              <div className="crm-wa-thread__actions">
+                <button
+                  type="button"
+                  className={`crm-wa-headbtn${leadOpen ? " is-on" : ""}`}
+                  onClick={() => setLeadOpen((v) => !v)}
+                >
+                  Ficha
+                </button>
+                <a
+                  className="crm-wa-ext"
+                  href={`https://wa.me/${selected}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  WhatsApp
+                </a>
+              </div>
             </header>
 
             {file ? (
@@ -1055,6 +1067,16 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                   })}
                 </div>
                 {error ? <p className="crm-wa-error">{error}</p> : null}
+                <ChatLeadDock
+                  phone={selected}
+                  chatName={activeChat?.name || ""}
+                  open={leadOpen}
+                  onToggle={() => setLeadOpen((v) => !v)}
+                  onUseMessage={(text) => {
+                    setDraft(text);
+                    window.setTimeout(() => composerRef.current?.focus(), 0);
+                  }}
+                />
                 <form className="crm-wa-composer" onSubmit={sendMessage}>
                   <input
                     ref={fileRef}
@@ -1082,7 +1104,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                     rows={1}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Escribí un mensaje"
+                    placeholder="Escribí un mensaje…"
                     maxLength={4096}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
