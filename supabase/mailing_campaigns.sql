@@ -99,3 +99,15 @@ create policy "mailing_recipients_anon_all" on public.mailing_recipients
 drop policy if exists "mailing_events_anon_all" on public.mailing_events;
 create policy "mailing_events_anon_all" on public.mailing_events
   for all to anon, authenticated using (true) with check (true);
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.mailing_recipients;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.mailing_events;
+  exception when duplicate_object then null;
+  end;
+end $$;

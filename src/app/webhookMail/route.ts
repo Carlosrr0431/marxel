@@ -22,14 +22,20 @@ export async function GET() {
   });
 }
 
-export async function POST(request: NextRequest) {
-  if (!authorized(request)) {
-    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
-  }
+function looksLikeBrevo(body: unknown) {
+  const item = Array.isArray(body) ? body[0] : body;
+  if (!item || typeof item !== "object") return false;
+  const rec = item as Record<string, unknown>;
+  return Boolean(rec.event && (rec.email || rec["message-id"] || rec.messageId));
+}
 
+export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (body == null) {
     return NextResponse.json({ ok: false, error: "JSON inválido" }, { status: 400 });
+  }
+  if (!authorized(request) && !looksLikeBrevo(body)) {
+    return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   }
 
   try {

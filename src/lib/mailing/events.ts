@@ -19,24 +19,31 @@ export const EVENT_LABELS: Record<string, string> = {
 
 const EVENT_MAP: Record<string, string> = {
   request: "sent",
+  requests: "sent",
   sent: "sent",
   delivered: "delivered",
   opened: "opened",
   unique_opened: "opened",
   uniqueopened: "opened",
   click: "clicked",
+  clicks: "clicked",
   clicked: "clicked",
   unique_click: "clicked",
   uniqueclick: "clicked",
   proxy_open: "proxy_open",
   unique_proxy_open: "proxy_open",
   proxyopen: "proxy_open",
+  loadedbyproxy: "proxy_open",
+  loaded_by_proxy: "proxy_open",
   soft_bounce: "soft_bounce",
   softbounce: "soft_bounce",
   soft_bounced: "soft_bounce",
+  softbounces: "soft_bounce",
   hard_bounce: "hard_bounce",
   hardbounce: "hard_bounce",
   hard_bounced: "hard_bounce",
+  hardbounces: "hard_bounce",
+  bounces: "hard_bounce",
   spam: "complaint",
   complaint: "complaint",
   unsubscribed: "unsubscribed",
@@ -93,13 +100,22 @@ function collectTags(raw: Record<string, unknown>) {
   const tags: string[] = [];
   const push = (value: unknown) => {
     if (Array.isArray(value)) {
-      for (const item of value) {
-        const text = str(item);
-        if (text) tags.push(text);
+      for (const item of value) push(item);
+      return;
+    }
+    const text = str(value);
+    if (!text) return;
+    if (text.startsWith("[")) {
+      try {
+        push(JSON.parse(text));
+        return;
+      } catch {
+        /* texto plano */
       }
-    } else {
-      const text = str(value);
-      if (text) tags.push(text);
+    }
+    for (const part of text.split(",")) {
+      const item = part.trim();
+      if (item) tags.push(item);
     }
   };
   push(raw.tags);
@@ -120,7 +136,9 @@ function occurredAt(raw: Record<string, unknown>) {
 }
 
 export function parseBrevoEvents(body: unknown): NormalizedBrevoEvent[] {
-  const items = Array.isArray(body) ? body : [body];
+  const wrapped = asRecord(body);
+  const nested = wrapped && Array.isArray(wrapped.events) ? wrapped.events : null;
+  const items = Array.isArray(body) ? body : nested || [body];
   const out: NormalizedBrevoEvent[] = [];
   for (const item of items) {
     const raw = asRecord(item);

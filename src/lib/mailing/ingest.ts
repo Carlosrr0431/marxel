@@ -1,4 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { campaignTagFromId } from "@/lib/mailing/events";
+import { ensureTransactionalWebhook, fetchTransactionalEvents } from "@/lib/mailing/brevo";
 import {
   campaignIdFromTags,
   dedupeKey,
@@ -34,6 +36,7 @@ function patchFromEvent(row: RecipientRow, event: NormalizedBrevoEvent) {
   }
   if (event.event === "proxy_open") {
     next.proxy_opened_at = next.proxy_opened_at || at;
+    next.opened_at = next.opened_at || at;
   }
   if (event.event === "clicked") {
     next.clicked_at = next.clicked_at || at;
@@ -107,7 +110,7 @@ export async function ingestBrevoWebhook(body: unknown) {
       dedupe_key: dedupeKey(event),
       payload: event.raw,
     });
-    if (eventError && !/duplicate|unique/i.test(eventError.message)) {
+    if (eventError && eventError.code !== "23505" && !/duplicate|unique/i.test(eventError.message)) {
       throw new Error(eventError.message);
     }
     if (eventError) continue;
@@ -134,4 +137,40 @@ export async function ingestBrevoWebhook(body: unknown) {
   }
 
   return { ok: true, ingested };
+}
+
+function dayBefore(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+export async function syncCampaignFromBrevo(input: {
+  campaignId: string;
+  tag?: string | null;
+  createdAt?: string | null;
+  emails?: string[];
+  messageIds?: string[];
+}) {
+  await ensureTransactionalWebhook().catch(() => undefined);
+  const startDate = input.createdAt ? dayBefore(input.createdAt) : undefined;
+  const tag = String(input.tag || campaignTagFromId(input.campaignId));
+  const raw: Record<string, unknown>[] = [
+    ...(await fetchTransactionalEvents({ tag, startDate }).catch(() => [])),
+  ];
+  if (!raw.length) {
+    const messageId = (input.messageIds || []).find(Boolean);
+    if (messageId) {
+      raw.push(...(await fetchTransactionalEvents({ messageId, startDate }).catch(() => [])));
+    }
+  }
+  if (!raw.length) {
+    const email = (input.emails || []).find(Boolean);
+    if (email) {
+      raw.push(...(await fetchTransactionalEvents({ email, startDate }).catch(() => [])));
+    }
+  }
+  if (!raw.length) return { ok: true, ingested: 0 };
+  return ingestBrevoWebhook(raw);
 }

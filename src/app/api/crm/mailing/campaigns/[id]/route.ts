@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { emptyStats, statsFromRecipients } from "@/lib/mailing/stats";
+import { syncCampaignFromBrevo } from "@/lib/mailing/ingest";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,33 @@ export async function GET(
 
   const { id } = await context.params;
   const supabase = createServiceClient();
-  const [{ data: campaign, error }, { data: recipients }, { data: events }] = await Promise.all([
-    supabase.from("mailing_campaigns").select("*").eq("id", id).maybeSingle(),
+  const { data: campaign, error } = await supabase
+    .from("mailing_campaigns")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+  }
+  if (!campaign) {
+    return NextResponse.json({ ok: false, error: "Campaña no encontrada" }, { status: 404 });
+  }
+
+  const { data: seedRecipients } = await supabase
+    .from("mailing_recipients")
+    .select("email,message_id")
+    .eq("campaign_id", id);
+
+  await syncCampaignFromBrevo({
+    campaignId: id,
+    tag: campaign.tag,
+    createdAt: campaign.created_at,
+    emails: (seedRecipients || []).map((row) => String(row.email || "")),
+    messageIds: (seedRecipients || []).map((row) => String(row.message_id || "")).filter(Boolean),
+  }).catch(() => undefined);
+
+  const [{ data: recipients }, { data: events }] = await Promise.all([
     supabase
       .from("mailing_recipients")
       .select("*")
@@ -29,13 +55,6 @@ export async function GET(
       .order("occurred_at", { ascending: false })
       .limit(400),
   ]);
-
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-  }
-  if (!campaign) {
-    return NextResponse.json({ ok: false, error: "Campaña no encontrada" }, { status: 404 });
-  }
 
   return NextResponse.json({
     ok: true,

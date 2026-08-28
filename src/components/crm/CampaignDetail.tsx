@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { eventLabel } from "@/lib/mailing/events";
 import type { CampaignStats } from "@/lib/mailing/stats";
+import { createClient } from "@/lib/supabase/client";
 
 type Recipient = {
   id: string;
@@ -93,42 +94,57 @@ export function CampaignDetail({ id }: { id: string }) {
   const [events, setEvents] = useState<MailEvent[]>([]);
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
+  const [live, setLive] = useState(false);
+
+  const load = useCallback(async (first = false) => {
+    if (first) setLoading(true);
+    try {
+      const res = await fetch(`/api/crm/mailing/campaigns/${id}`, { cache: "no-store" });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        campaign?: Campaign;
+        stats?: CampaignStats;
+        recipients?: Recipient[];
+        events?: MailEvent[];
+      };
+      if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo cargar");
+      setCampaign(data.campaign || null);
+      setStats(data.stats || null);
+      setRecipients(data.recipients || []);
+      setEvents(data.events || []);
+      setError("");
+      setLive(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar");
+      setLive(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    let alive = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/crm/mailing/campaigns/${id}`, { cache: "no-store" });
-        const data = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          error?: string;
-          campaign?: Campaign;
-          stats?: CampaignStats;
-          recipients?: Recipient[];
-          events?: MailEvent[];
-        };
-        if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo cargar");
-        if (!alive) return;
-        setCampaign(data.campaign || null);
-        setStats(data.stats || null);
-        setRecipients(data.recipients || []);
-        setEvents(data.events || []);
-        setError("");
-      } catch (err) {
-        if (!alive) return;
-        setError(err instanceof Error ? err.message : "Error al cargar");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    }
-    void load();
-    const timer = window.setInterval(() => void load(), 20000);
+    void load(true);
+    const timer = window.setInterval(() => void load(false), 4000);
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`mailing-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "mailing_recipients", filter: `campaign_id=eq.${id}` },
+        () => void load(false)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "mailing_events", filter: `campaign_id=eq.${id}` },
+        () => void load(false)
+      )
+      .subscribe();
     return () => {
-      alive = false;
       window.clearInterval(timer);
+      void supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, load]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -164,6 +180,7 @@ export function CampaignDetail({ id }: { id: string }) {
           <p className="mt-1 text-sm text-muted">
             {when(campaign.created_at)} · {campaign.status}
             {campaign.error ? ` · ${campaign.error}` : ""}
+            {live ? " · en vivo" : ""}
           </p>
         </div>
       </div>

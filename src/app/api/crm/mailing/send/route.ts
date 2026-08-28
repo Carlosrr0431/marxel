@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { isValidEmail, mergeRecipients, type MailRecipient } from "@/lib/mailing/recipients";
-import { brevoAccountStatus, sendBrevoCampaign } from "@/lib/mailing/brevo";
+import { brevoAccountStatus, ensureTransactionalWebhook, sendBrevoCampaign } from "@/lib/mailing/brevo";
 import { campaignTagFromId } from "@/lib/mailing/events";
 import { buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
   const campaignId = crypto.randomUUID();
   const tag = campaignTagFromId(campaignId);
   const supabase = createServiceClient();
+  await ensureTransactionalWebhook().catch(() => undefined);
 
   const { error: insertError } = await supabase.from("mailing_campaigns").insert({
     id: campaignId,

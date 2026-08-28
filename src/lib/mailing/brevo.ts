@@ -1,5 +1,23 @@
 const BREVO_API = "https://api.brevo.com/v3";
 const VERSION_CHUNK = 80;
+const WEBHOOK_URL = "https://www.marxen.com.ar/webhookMail";
+const WEBHOOK_EVENTS = [
+  "request",
+  "delivered",
+  "hardBounce",
+  "softBounce",
+  "blocked",
+  "spam",
+  "invalid",
+  "deferred",
+  "click",
+  "opened",
+  "uniqueOpened",
+  "unsubscribed",
+  "error",
+];
+
+let webhookPromise: Promise<void> | null = null;
 
 export type BrevoSendInput = {
   subject: string;
@@ -107,4 +125,78 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
   }
 
   return { sent: input.recipients.length, messageIds };
+}
+
+export function mailingWebhookUrl() {
+  const secret = String(process.env.BREVO_WEBHOOK_SECRET || "").trim();
+  if (!secret) return WEBHOOK_URL;
+  return `${WEBHOOK_URL}?secret=${encodeURIComponent(secret)}`;
+}
+
+function webhookList(data: unknown): Array<{ id?: number; url?: string; events?: string[] }> {
+  if (Array.isArray(data)) return data as Array<{ id?: number; url?: string; events?: string[] }>;
+  const rec = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  if (Array.isArray(rec.webhooks)) {
+    return rec.webhooks as Array<{ id?: number; url?: string; events?: string[] }>;
+  }
+  return [];
+}
+
+export async function ensureTransactionalWebhook() {
+  if (webhookPromise) return webhookPromise;
+  webhookPromise = (async () => {
+    const url = mailingWebhookUrl();
+    const listed = await brevoFetch("/webhooks?type=transactional");
+    const current = webhookList(listed.data).find((item) =>
+      String(item.url || "").startsWith(WEBHOOK_URL)
+    );
+    if (current?.id && current.url === url) return;
+    if (current?.id) {
+      await brevoFetch(`/webhooks/${current.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          url,
+          description: "Marxen CRM mailing",
+          events: WEBHOOK_EVENTS,
+        }),
+      });
+      return;
+    }
+    await brevoFetch("/webhooks", {
+      method: "POST",
+      body: JSON.stringify({
+        url,
+        description: "Marxen CRM mailing",
+        events: WEBHOOK_EVENTS,
+        type: "transactional",
+      }),
+    });
+  })().catch((err) => {
+    webhookPromise = null;
+    throw err;
+  });
+  return webhookPromise;
+}
+
+export async function fetchTransactionalEvents(input: {
+  tag?: string;
+  email?: string;
+  messageId?: string;
+  startDate?: string;
+}) {
+  const params = new URLSearchParams();
+  params.set("limit", "100");
+  params.set("sort", "desc");
+  if (input.startDate) {
+    params.set("startDate", input.startDate);
+    params.set("endDate", new Date().toISOString().slice(0, 10));
+  } else {
+    params.set("days", "10");
+  }
+  if (input.email) params.set("email", input.email);
+  if (input.messageId) params.set("messageId", input.messageId);
+  if (input.tag) params.set("tags", JSON.stringify([input.tag]));
+  const result = await brevoFetch(`/smtp/statistics/events?${params.toString()}`);
+  const rec = result.data && typeof result.data === "object" ? (result.data as Record<string, unknown>) : {};
+  return Array.isArray(rec.events) ? (rec.events as Record<string, unknown>[]) : [];
 }
