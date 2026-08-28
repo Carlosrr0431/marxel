@@ -195,7 +195,7 @@ const QUOTE_RESTART =
   /^(quiero\s+)?cotizar\.?$|^(necesito\s+)?(una\s+)?cotizaci[oó]n\.?$|^pasame\s+(un\s+)?precio\.?$|^cu[aá]nto\s+(sale|cuesta)\??$|^(quiero\s+)?asesorarme\.?$/i;
 
 const HEALTH_COVERAGE =
-  /\b(plan(es)?(\s+de\s+salud)?|cobertura|cartilla|prepaga|obra\s+social|aportes|ortodoncia|kinesiolog|psicolog|odontolog|dentista|pr[oó]tesis|afiliar|comparativ)\b/i;
+  /\b(plan(es)?(\s+de\s+salud)?|cobertura|cartilla|prepaga|obra\s+social|aportes|ortodoncia|kinesiolog|psicolog|odontolog|dentista|pr[oó]tesis|afiliar|comparativ|plan\s*a\s*[24]|\ba\s*[24]\b)\b/i;
 
 const SKIP =
   /^(no|nop|ahora\s+no|despu[eé]s|saltar|omitir|pasar|na|nada|prefiero\s+no)\b/i;
@@ -570,7 +570,9 @@ export function inferProductoFromMessage(text: string): ProductoInteres | null {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
   if (
-    /\b(odontolog|dentista|protesis|ortodoncia|cartilla|kinesiolog|psicolog)\b/.test(t)
+    /\b(odontolog|dentista|protesis|ortodoncia|cartilla|kinesiolog|psicolog|plan\s*a\s*[24]|\ba\s*[24]\b)\b/.test(
+      t
+    )
   ) {
     return "salud";
   }
@@ -589,7 +591,7 @@ export function looksLikeExplicitQuote(text: string): boolean {
 }
 
 const HEALTH_QUESTION =
-  /\b(odontolog|dentista|protesis|pr[oó]tesis|implante|ortodoncia|kinesiolog|psicolog|prepaga|obra\s+social|cartilla|afiliad|plan\s+(de\s+)?salud|cobertura\s+(de\s+)?salud|medicina\s+prepaga)\b/i;
+  /\b(odontolog|dentista|protesis|pr[oó]tesis|implante|ortodoncia|kinesiolog|psicolog|prepaga|obra\s+social|cartilla|afiliad|plan\s+(de\s+)?salud|cobertura\s+(de\s+)?salud|medicina\s+prepaga|plan\s*a\s*[24]|\ba\s*[24]\b)\b/i;
 
 const VIAJERO_QUESTION =
   /\b(viajer|asistencia al viaj|seguro de viaje|cubre\s+(en|el)\s+viaje)\b/i;

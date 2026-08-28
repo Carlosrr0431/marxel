@@ -9,6 +9,7 @@ import {
   findPrestadores,
   formatPrestadorAnswer,
 } from "@/lib/chatbot/lookup-prestadores";
+import { answerHealthPlanQuestion } from "@/lib/chatbot/health-plan-answer";
 import {
   inferProductoFromMessage,
   isDeterministicQuoteInput,
@@ -151,6 +152,18 @@ function ruleClassify(
       pauseQuote: true,
       reply: formatPrestadorAnswer(prestadores),
       confidence: 0.98,
+      source: "rule",
+      producto: "salud",
+    };
+  }
+
+  const planReply = answerHealthPlanQuestion(t);
+  if (planReply) {
+    return {
+      intent: "question",
+      pauseQuote: true,
+      reply: planReply,
+      confidence: 0.95,
       source: "rule",
       producto: "salud",
     };

@@ -31,6 +31,7 @@ import {
   isConversationalIntent,
 } from "@/lib/chatbot/message-classifier";
 import { findPrestadores } from "@/lib/chatbot/lookup-prestadores";
+import { answerHealthPlanQuestion } from "@/lib/chatbot/health-plan-answer";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -337,9 +338,21 @@ export async function runChatTurn(input: {
   }
 
   if (coverageOnly) {
+    const planReply = answerHealthPlanQuestion(message);
     return {
       answer:
+        planReply ||
         "Odontología y prótesis entran en los planes de salud, con diferencias entre A2 y A4 y según auditoría odontológica. Un asesor de MARXEN te confirma el detalle de tu caso (387 634-8199).",
+      quoteState: prevState,
+      quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+      mode: "rag",
+    };
+  }
+
+  const planReply = answerHealthPlanQuestion(message);
+  if (planReply) {
+    return {
+      answer: stripMarkdownNoise(planReply),
       quoteState: prevState,
       quickReplies: prevState.active ? [] : menuForChannel(input.channel),
       mode: "rag",
