@@ -82,7 +82,7 @@ export function organizationNode(): JsonLd {
     url: SITE_URL,
     logo: {
       "@type": "ImageObject",
-      url: absoluteUrl("/brand/marxel-logo.svg"),
+      url: absoluteUrl("/brand/marxel-lockup.svg"),
     },
     image: absoluteUrl("/opengraph-image"),
     telephone: site.phone,

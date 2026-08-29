@@ -179,7 +179,7 @@ export function buildMailHtml(input: {
                 <tr>
                   <td valign="middle">
                     <a href="${SITE}" style="text-decoration:none;">
-                      <img src="${ASSET}/logo.png" width="196" height="56" alt="marxen Protección Integral" style="display:block;border:0;width:196px;height:56px;"/>
+                      <img src="${ASSET}/logo-lockup.png" width="220" height="53" alt="marxen Protección Integral" style="display:block;border:0;width:220px;height:auto;"/>
                     </a>
                   </td>
                   <td valign="middle" align="right">

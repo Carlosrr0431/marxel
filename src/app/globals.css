@@ -382,6 +382,15 @@ a {
   backdrop-filter: blur(18px);
 }
 
+.brand-lockup {
+  display: block;
+  flex-shrink: 0;
+  aspect-ratio: 662 / 158;
+  height: auto !important;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .baja-band {
   background: white;
   border-top: 1px solid var(--line);
