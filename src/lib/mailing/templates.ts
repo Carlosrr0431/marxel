@@ -53,12 +53,43 @@ export const MAIL_PRESETS: MailPreset[] = [
 ];
 
 const ASSET = "https://www.marxen.com.ar/mail";
+const SITE = "https://www.marxen.com.ar";
 
-const HERO: Record<string, { src: string; alt: string }> = {
-  institucional: { src: `${ASSET}/hero-institucional.jpg`, alt: "Familia con respaldo MARXEN" },
-  salud: { src: `${ASSET}/hero-salud.jpg`, alt: "Asesoramiento en prepagas" },
-  seguros: { src: `${ASSET}/hero-seguros.jpg`, alt: "Seguro de auto" },
-  viajero: { src: `${ASSET}/hero-viajero.jpg`, alt: "Asistencia al viajero" },
+const C = {
+  navy: "#352872",
+  navyDeep: "#1a1038",
+  sky: "#5fc4e5",
+  teal: "#3ab4d9",
+  aqua: "#e7f6fb",
+  mist: "#f1eef8",
+  cloud: "#f7f8fc",
+  ink: "#2c2a35",
+  muted: "#5c5a68",
+  line: "#dddce6",
+  white: "#ffffff",
+};
+
+const HERO: Record<string, { src: string; alt: string; eyebrow: string }> = {
+  institucional: {
+    src: `${ASSET}/hero-institucional.jpg`,
+    alt: "Familia con respaldo MARXEN",
+    eyebrow: "Productores de seguros en Salta",
+  },
+  salud: {
+    src: `${ASSET}/hero-salud.jpg`,
+    alt: "Asesoramiento en prepagas",
+    eyebrow: "Salud · Prevención Salud",
+  },
+  seguros: {
+    src: `${ASSET}/hero-seguros.jpg`,
+    alt: "Seguro de auto",
+    eyebrow: "Seguros · San Cristóbal",
+  },
+  viajero: {
+    src: `${ASSET}/hero-viajero.jpg`,
+    alt: "Asistencia al viajero",
+    eyebrow: "Viajero · GO Assistance",
+  },
 };
 
 function escapeHtml(value: string) {
@@ -78,18 +109,36 @@ export function textToHtml(text: string) {
   return blocks
     .map((block) => {
       const inner = escapeHtml(block).replace(/\n/g, "<br/>");
-      return `<p style="margin:0 0 16px;font-size:16px;line-height:1.65;color:#3d3a4a;">${inner}</p>`;
+      return `<p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:${C.ink};">${inner}</p>`;
     })
     .join("");
 }
 
-function pillarCell(href: string, img: string, label: string, hint: string) {
-  return `<td width="186" valign="top" style="width:186px;padding:0 6px;">
-  <a href="${escapeHtml(href)}" style="text-decoration:none;color:#1a1038;">
-    <img src="${img}" width="174" alt="${escapeHtml(label)}" style="display:block;width:174px;height:110px;object-fit:cover;border:0;border-radius:12px;"/>
-    <p style="margin:10px 0 0;font-size:15px;font-weight:700;color:#1a1038;">${escapeHtml(label)}</p>
-    <p style="margin:4px 0 0;font-size:13px;line-height:1.4;color:#6b6578;">${escapeHtml(hint)}</p>
-  </a>
+function pillarRow(href: string, img: string, label: string, hint: string, accent: string) {
+  return `<tr>
+  <td style="padding:0 0 10px;">
+    <a href="${escapeHtml(href)}" style="text-decoration:none;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.cloud};border:1px solid ${C.line};border-radius:14px;">
+        <tr>
+          <td width="6" style="width:6px;background:${accent};border-radius:14px 0 0 14px;font-size:0;line-height:0;">&nbsp;</td>
+          <td width="72" valign="middle" style="padding:12px 10px 12px 14px;">
+            <img src="${img}" width="64" height="48" alt="${escapeHtml(label)}" style="display:block;width:64px;height:48px;border:0;border-radius:8px;"/>
+          </td>
+          <td valign="middle" style="padding:12px 16px 12px 0;">
+            <p style="margin:0;font-size:15px;font-weight:700;color:${C.navyDeep};">${escapeHtml(label)}</p>
+            <p style="margin:4px 0 0;font-size:13px;line-height:1.45;color:${C.muted};">${escapeHtml(hint)}</p>
+          </td>
+        </tr>
+      </table>
+    </a>
+  </td>
+</tr>`;
+}
+
+function statCell(value: string, label: string, last = false) {
+  return `<td width="33%" align="center" style="width:33%;padding:4px 8px;${last ? "" : `border-right:1px solid ${C.line};`}">
+  <p style="margin:0;font-size:20px;font-weight:700;color:${C.navyDeep};">${value}</p>
+  <p style="margin:4px 0 0;font-size:11px;letter-spacing:0.04em;color:${C.muted};">${label}</p>
 </td>`;
 }
 
@@ -109,7 +158,7 @@ export function buildMailHtml(input: {
   const theme = HERO[input.theme || ""] ? input.theme! : "institucional";
   const hero = HERO[theme];
   const isWhatsapp = /wa\.me|whatsapp/i.test(ctaUrl);
-  const ctaBg = isWhatsapp ? "#1f9d55" : "#352872";
+  const ctaBg = isWhatsapp ? "#128C7E" : C.navy;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -118,29 +167,32 @@ export function buildMailHtml(input: {
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>${title}</title>
 </head>
-<body style="margin:0;padding:0;background:#ece8f4;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background:${C.cloud};font-family:Arial,Helvetica,sans-serif;color:${C.ink};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ece8f4;padding:28px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.cloud};padding:32px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e4dfee;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.white};border-radius:18px;overflow:hidden;border:1px solid ${C.line};">
           <tr>
-            <td style="background:#1a1038;padding:18px 28px;">
+            <td style="background:${C.navyDeep};padding:20px 28px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td valign="middle" style="width:44px;">
-                    <img src="${ASSET}/mark-light.png" width="36" height="36" alt="MARXEN" style="display:block;border:0;width:36px;height:36px;"/>
+                  <td valign="middle" style="width:40px;">
+                    <img src="${ASSET}/mark-light.png" width="34" height="34" alt="MARXEN" style="display:block;border:0;width:34px;height:34px;"/>
                   </td>
-                  <td valign="middle" style="padding-left:10px;">
-                    <p style="margin:0;font-size:20px;line-height:1;font-weight:700;letter-spacing:0.04em;color:#ffffff;">marxen</p>
-                    <p style="margin:5px 0 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#5fc4e5;">Protección Integral</p>
+                  <td valign="middle" style="padding-left:12px;">
+                    <p style="margin:0;font-size:22px;line-height:1;font-weight:700;letter-spacing:0.02em;color:${C.white};">marxen</p>
+                    <p style="margin:6px 0 0;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:${C.sky};">Protección Integral</p>
                   </td>
                   <td valign="middle" align="right">
-                    <p style="margin:0;font-size:12px;color:rgba(255,255,255,.7);">Salta, Argentina</p>
+                    <p style="margin:0;font-size:12px;color:${C.sky};">Salta, Argentina</p>
                   </td>
                 </tr>
               </table>
             </td>
+          </tr>
+          <tr>
+            <td style="height:3px;background:${C.teal};font-size:0;line-height:0;">&nbsp;</td>
           </tr>
           <tr>
             <td style="font-size:0;line-height:0;">
@@ -148,43 +200,65 @@ export function buildMailHtml(input: {
             </td>
           </tr>
           <tr>
-            <td style="height:4px;background:#3ab4d9;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 10px;font-size:15px;color:#352872;">{{params.greeting}}</p>
-              <h1 style="margin:0 0 16px;font-size:28px;line-height:1.25;color:#1a1038;">${title}</h1>
+            <td style="padding:36px 36px 12px;">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:${C.teal};">${escapeHtml(hero.eyebrow)}</p>
+              <p style="margin:0 0 10px;font-size:15px;color:${C.navy};">{{params.greeting}}</p>
+              <h1 style="margin:0 0 18px;font-size:28px;line-height:1.28;font-weight:700;color:${C.navyDeep};">${title}</h1>
               ${bodyHtml}
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 10px;">
                 <tr>
-                  <td style="border-radius:14px;background:${ctaBg};">
-                    <a href="${ctaUrl}" style="display:inline-block;padding:14px 24px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">${ctaLabel}</a>
+                  <td style="border-radius:12px;background:${ctaBg};">
+                    <a href="${ctaUrl}" style="display:inline-block;padding:14px 26px;font-size:15px;font-weight:700;color:${C.white};text-decoration:none;">${ctaLabel}</a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 26px 28px;">
-              <p style="margin:0 0 14px;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#8a8496;">También podemos ayudarte con</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <td style="padding:8px 36px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.aqua};border-radius:14px;">
                 <tr>
-                  ${pillarCell("https://www.marxen.com.ar/seguros", `${ASSET}/hero-seguros.jpg`, "Seguros", "Auto, moto, hogar y más.")}
-                  ${pillarCell("https://www.marxen.com.ar/salud", `${ASSET}/hero-salud.jpg`, "Salud", "Prepagas y cartilla en Salta.")}
-                  ${pillarCell("https://www.marxen.com.ar/viajero", `${ASSET}/hero-viajero.jpg`, "Viajero", "Cobertura médica para tu viaje.")}
+                  ${statCell("+500", "Clientes activos")}
+                  ${statCell("3", "Especialidades")}
+                  ${statCell("24 hs", "Respuesta", true)}
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 32px 24px;background:#1a1038;">
-              <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#ffffff;">MARXEN · Productores asesores</p>
-              <p style="margin:0;font-size:13px;line-height:1.55;color:rgba(255,255,255,.72);">WhatsApp 387 634-8199 · comercial@marxen.com.ar<br/>Salta, Argentina</p>
+            <td style="padding:4px 36px 32px;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:${C.teal};">Qué hacemos</p>
+              <p style="margin:0 0 16px;font-size:18px;font-weight:700;color:${C.navyDeep};">Todo lo que necesitás, en un solo lugar</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${pillarRow(`${SITE}/seguros`, `${ASSET}/hero-seguros.jpg`, "Seguros", "Auto, moto, hogar y más ramos, comparados en criollo.", "#16a34a")}
+                ${pillarRow(`${SITE}/salud`, `${ASSET}/hero-salud.jpg`, "Salud", "Prepagas A2 / A4 y cartilla local en Salta.", "#dc2626")}
+                ${pillarRow(`${SITE}/viajero`, `${ASSET}/hero-viajero.jpg`, "Viajero", "Cobertura médica para tu viaje, incluso Schengen.", "#2563eb")}
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:14px 32px 20px;background:#f7f5fb;">
-              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8496;">Recibís este mail porque te contactaste con MARXEN o formás parte de nuestra base de asesoramiento. Si no querés más novedades, respondé este correo y lo damos de baja.</p>
+            <td style="padding:28px 36px;background:${C.navyDeep};">
+              <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:${C.white};">MARXEN · Productores asesores</p>
+              <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:${C.sky};">Asesoramiento claro, humano y a tu medida en Salta.</p>
+              <p style="margin:0;font-size:13px;line-height:1.7;color:rgba(255,255,255,.78);">
+                WhatsApp <a href="https://wa.me/5493876348199" style="color:${C.sky};text-decoration:none;">387 634-8199</a><br/>
+                <a href="mailto:comercial@marxen.com.ar" style="color:${C.sky};text-decoration:none;">comercial@marxen.com.ar</a><br/>
+                Salta, Argentina
+              </p>
+              <p style="margin:16px 0 0;font-size:12px;">
+                <a href="${SITE}/seguros" style="color:${C.white};text-decoration:none;">Seguros</a>
+                <span style="color:rgba(255,255,255,.35);"> · </span>
+                <a href="${SITE}/salud" style="color:${C.white};text-decoration:none;">Salud</a>
+                <span style="color:rgba(255,255,255,.35);"> · </span>
+                <a href="${SITE}/viajero" style="color:${C.white};text-decoration:none;">Viajero</a>
+                <span style="color:rgba(255,255,255,.35);"> · </span>
+                <a href="${SITE}/cotizar" style="color:${C.white};text-decoration:none;">Cotizar</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 36px 22px;background:${C.mist};">
+              <p style="margin:0;font-size:12px;line-height:1.55;color:${C.muted};">Recibís este mail porque te contactaste con MARXEN o formás parte de nuestra base de asesoramiento. Si no querés más novedades, respondé este correo y lo damos de baja.</p>
             </td>
           </tr>
         </table>
