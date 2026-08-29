@@ -174,18 +174,16 @@ export function buildMailHtml(input: {
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.white};border-radius:18px;overflow:hidden;border:1px solid ${C.line};">
           <tr>
-            <td style="background:${C.navyDeep};padding:20px 28px;">
+            <td style="background:${C.white};padding:18px 28px 16px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td valign="middle" style="width:40px;">
-                    <img src="${ASSET}/mark-light.png" width="34" height="34" alt="MARXEN" style="display:block;border:0;width:34px;height:34px;"/>
-                  </td>
-                  <td valign="middle" style="padding-left:12px;">
-                    <p style="margin:0;font-size:22px;line-height:1;font-weight:700;letter-spacing:0.02em;color:${C.white};">marxen</p>
-                    <p style="margin:6px 0 0;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:${C.sky};">Protección Integral</p>
+                  <td valign="middle">
+                    <a href="${SITE}" style="text-decoration:none;">
+                      <img src="${ASSET}/logo.png" width="196" height="56" alt="marxen Protección Integral" style="display:block;border:0;width:196px;height:56px;"/>
+                    </a>
                   </td>
                   <td valign="middle" align="right">
-                    <p style="margin:0;font-size:12px;color:${C.sky};">Salta, Argentina</p>
+                    <p style="margin:0;font-size:12px;color:${C.muted};">Salta, Argentina</p>
                   </td>
                 </tr>
               </table>
