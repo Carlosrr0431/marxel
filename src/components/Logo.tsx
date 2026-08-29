@@ -8,8 +8,8 @@ type LogoProps = {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
 };
 
-const LOGO_W = 662;
-const LOGO_H = 158;
+const LOGO_W = 694;
+const LOGO_H = 166;
 
 const widths = {
   xs: 128,

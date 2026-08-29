@@ -385,7 +385,8 @@ a {
 .brand-lockup {
   display: block;
   flex-shrink: 0;
-  aspect-ratio: 662 / 158;
+  overflow: visible;
+  aspect-ratio: 694 / 166;
   height: auto !important;
   object-fit: contain;
   object-position: left center;
