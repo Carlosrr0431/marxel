@@ -1,0 +1,19 @@
+{
+  "id": "/crm",
+  "name": "MARXEN CRM",
+  "short_name": "MARXEN CRM",
+  "description": "Panel de leads, afiliados y seguimientos.",
+  "start_url": "/crm",
+  "scope": "/crm",
+  "display": "standalone",
+  "background_color": "#1a1038",
+  "theme_color": "#352872",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
