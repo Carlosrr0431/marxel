@@ -44,7 +44,7 @@ export function Logo({
   return (
     <Link
       href={href}
-      className="inline-flex items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/40 focus-visible:ring-offset-2"
+      className="inline-flex min-w-0 max-w-[70%] items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/40 focus-visible:ring-offset-2"
       aria-label="marxen Protección Integral"
     >
       {mark}

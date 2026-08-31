@@ -377,9 +377,54 @@ a {
   position: sticky;
   top: 0;
   z-index: 50;
+  overflow: visible;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, white);
   background: color-mix(in srgb, var(--cloud) 88%, white);
   backdrop-filter: blur(18px);
+}
+
+.site-header__bar {
+  display: flex;
+  height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .site-header__bar {
+    height: 4.25rem;
+    gap: 1rem;
+  }
+}
+
+.site-header .brand-lockup {
+  width: min(10.5rem, 58vw) !important;
+  max-width: 100%;
+  min-width: 0;
+  height: auto !important;
+}
+
+@media (min-width: 1024px) {
+  .site-header .brand-lockup {
+    width: 12.25rem !important;
+  }
+}
+
+.site-mobile-nav {
+  position: fixed;
+  inset: 4rem 0 0;
+  z-index: 60;
+  overflow-y: auto;
+  background: var(--cloud);
+  border-top: 1px solid var(--line);
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .site-mobile-nav {
+    top: 4.25rem;
+  }
 }
 
 .brand-lockup {
