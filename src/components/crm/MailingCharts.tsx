@@ -51,7 +51,7 @@ function Gauge({
   );
 }
 
-export function MailingCharts({ totals }: { totals: MailTotals }) {
+export function MailingCharts({ live = false, totals }: { live?: boolean; totals: MailTotals }) {
   const sent = totals.sent;
   const rows = [
     { key: "sent", label: "Enviados", value: totals.sent, tone: "navy" },
@@ -63,7 +63,15 @@ export function MailingCharts({ totals }: { totals: MailTotals }) {
   return (
     <section className="mail-charts">
       <div className="mail-charts__head">
-        <p className="mail-kicker">Resultados</p>
+        <div className="mail-charts__title">
+          <p className="mail-kicker">Resultados</p>
+          {live ? (
+            <span className="mail-charts__live">
+              <i />
+              En vivo
+            </span>
+          ) : null}
+        </div>
         <h2>Todas las campañas</h2>
         <p>
           {totals.campaigns

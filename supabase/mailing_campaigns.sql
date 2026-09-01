@@ -103,6 +103,10 @@ create policy "mailing_events_anon_all" on public.mailing_events
 do $$
 begin
   begin
+    alter publication supabase_realtime add table public.mailing_campaigns;
+  exception when duplicate_object then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.mailing_recipients;
   exception when duplicate_object then null;
   end;

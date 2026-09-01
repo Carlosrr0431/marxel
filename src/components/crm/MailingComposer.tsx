@@ -12,6 +12,7 @@ import {
 } from "@/lib/mailing/recipients";
 import { emptyTotals, type MailTotals } from "@/lib/mailing/stats";
 import { MailingCharts } from "@/components/crm/MailingCharts";
+import { createClient } from "@/lib/supabase/client";
 
 type Campaign = {
   id: string;
@@ -65,6 +66,7 @@ export function MailingComposer() {
   const [senderLabel, setSenderLabel] = useState("Marxen <comercial@marxen.com.ar>");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [totals, setTotals] = useState<MailTotals>(emptyTotals());
+  const [chartsLive, setChartsLive] = useState(false);
   const [takeCount, setTakeCount] = useState(50);
   const [poolTotal, setPoolTotal] = useState(0);
   const [poolRemaining, setPoolRemaining] = useState(0);
@@ -95,10 +97,19 @@ export function MailingComposer() {
     [preheader, title, body, ctaLabel, ctaUrl, recipients, presetId]
   );
 
+  const loadStats = useCallback(async () => {
+    const campRes = await fetch("/api/crm/mailing/campaigns", { cache: "no-store" });
+    const camp = (await campRes.json().catch(() => ({}))) as {
+      campaigns?: Campaign[];
+      totals?: MailTotals;
+    };
+    setCampaigns(camp.campaigns || []);
+    setTotals(camp.totals || emptyTotals());
+  }, []);
+
   const loadMeta = useCallback(async () => {
-    const [statusRes, campRes, poolRes] = await Promise.all([
+    const [statusRes, poolRes] = await Promise.all([
       fetch("/api/crm/mailing/send", { cache: "no-store" }),
-      fetch("/api/crm/mailing/campaigns", { cache: "no-store" }),
       fetch("/api/crm/mailing/pool", { cache: "no-store" }),
     ]);
     const status = (await statusRes.json().catch(() => ({}))) as {
@@ -112,12 +123,6 @@ export function MailingComposer() {
     if (status.senderEmail) {
       setSenderLabel(`${status.senderName || "Marxen"} <${status.senderEmail}>`);
     }
-    const camp = (await campRes.json().catch(() => ({}))) as {
-      campaigns?: Campaign[];
-      totals?: MailTotals;
-    };
-    setCampaigns(camp.campaigns || []);
-    setTotals(camp.totals || emptyTotals());
     const pool = (await poolRes.json().catch(() => ({}))) as {
       total?: number;
       remaining?: number;
@@ -126,11 +131,39 @@ export function MailingComposer() {
     setPoolTotal(Number(pool.total) || 0);
     setPoolRemaining(Number(pool.remaining) || 0);
     setPoolSent(Number(pool.sent) || 0);
-  }, []);
+    await loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let timer = 0;
+    const refresh = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => void loadStats(), 400);
+    };
+    const channel = supabase
+      .channel("mailing-totals")
+      .on("postgres_changes", { event: "*", schema: "public", table: "mailing_campaigns" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mailing_recipients" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "mailing_events" }, refresh)
+      .subscribe((status) => setChartsLive(status === "SUBSCRIBED"));
+    return () => {
+      window.clearTimeout(timer);
+      setChartsLive(false);
+      void supabase.removeChannel(channel);
+    };
+  }, [loadStats]);
+
+  const sendingLive = campaigns.some((item) => item.status === "sending");
+  useEffect(() => {
+    if (!sendingLive) return;
+    const timer = window.setInterval(() => void loadStats(), 1200);
+    return () => window.clearInterval(timer);
+  }, [loadStats, sendingLive]);
 
   useEffect(() => {
     if (!confirm) return;
@@ -464,7 +497,7 @@ export function MailingComposer() {
         </div>
       </section>
 
-      <MailingCharts totals={totals} />
+      <MailingCharts live={chartsLive} totals={totals} />
 
       <div className="mail-workspace">
         <div className="mail-stack">

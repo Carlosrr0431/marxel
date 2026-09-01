@@ -2525,6 +2525,37 @@ body:has(.crm-shell) {
   box-shadow: var(--shadow-soft);
 }
 
+.mail-charts__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.mail-charts__title .mail-kicker {
+  margin: 0;
+}
+
+.mail-charts__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.mail-charts__live i {
+  display: block;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: #0f766e;
+  animation: mail-live-pulse 1.4s ease-out infinite;
+}
+
 .mail-charts__head h2 {
   margin: 0.1rem 0 0.3rem;
   font-size: 1.2rem;
