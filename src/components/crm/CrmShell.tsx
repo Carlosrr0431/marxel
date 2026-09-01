@@ -49,6 +49,7 @@ export function CrmShell({
   }, []);
   const pathname = usePathname();
   const isChatsPage = pathname === "/crm/chats";
+  const isMailingPage = pathname.startsWith("/crm/mailing");
   const exportHref = pathname.startsWith("/crm/afiliados")
     ? "/api/crm/export?type=afiliados"
     : "/api/crm/export?type=leads";
@@ -64,7 +65,7 @@ export function CrmShell({
         onCollapsedChange={onCollapsedChange}
       />
       <div className="crm-main">
-        {!isChatsPage && (
+        {!isChatsPage && !isMailingPage && (
           <header className="crm-topbar">
             <button
               type="button"
@@ -90,6 +91,22 @@ export function CrmShell({
                 <span className="hidden sm:inline">+ Lead</span>
               </Link>
             </div>
+          </header>
+        )}
+        {isMailingPage && (
+          <header className="crm-topbar crm-topbar--mail lg:hidden">
+            <button
+              type="button"
+              className="crm-icon-btn crm-icon-btn--light"
+              aria-label={collapsed ? "Expandir menú" : "Replegar menú"}
+              aria-expanded={!collapsed}
+              aria-controls="crm-sidebar"
+              onClick={() => onCollapsedChange(!collapsed)}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+              </svg>
+            </button>
           </header>
         )}
         {isChatsPage && (
