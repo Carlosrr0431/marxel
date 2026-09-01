@@ -7,7 +7,7 @@ export default function MailingPage() {
       <PageHeader
         eyebrow="Comunicación"
         title="Mailing"
-        description="Cargá un Excel, pegá una lista o usá los mails del CRM. Cada campaña guarda aperturas, clics y rebotes vía webhook de Brevo."
+        description="Tomá contactos de la base Norte, sumá mails extra y enviá. Cada envío queda registrado: no se reenvía al mismo correo."
       />
       <MailingComposer />
     </div>

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { isValidEmail, mergeRecipients, type MailRecipient } from "@/lib/mailing/recipients";
 import { brevoAccountStatus, ensureTransactionalWebhook, sendBrevoCampaign } from "@/lib/mailing/brevo";
 import { campaignTagFromId } from "@/lib/mailing/events";
+import { loadSentEmailSet, splitUnsent } from "@/lib/mailing/pool";
 import { buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 
 export const runtime = "nodejs";
@@ -49,14 +50,30 @@ export async function POST(request: NextRequest) {
 
   const testEmail = String(body.testEmail || "").trim().toLowerCase();
   let recipients = mergeRecipients([body.recipients || []]);
+  const supabase = createServiceClient();
+  let skippedSent = 0;
   if (testEmail) {
     if (!isValidEmail(testEmail)) {
       return NextResponse.json({ ok: false, error: "El mail de prueba no es válido." }, { status: 400 });
     }
     recipients = [{ email: testEmail, name: "Prueba" }];
+  } else {
+    const sent = await loadSentEmailSet(supabase);
+    const split = splitUnsent(recipients, sent);
+    skippedSent = split.skipped.length;
+    recipients = split.kept;
   }
   if (!recipients.length) {
-    return NextResponse.json({ ok: false, error: "Agregá al menos un destinatario." }, { status: 400 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: skippedSent
+          ? "Todos esos mails ya recibieron una campaña. Tomá contactos nuevos de la base Norte."
+          : "Agregá al menos un destinatario.",
+        skippedSent,
+      },
+      { status: 400 }
+    );
   }
   if (recipients.length > MAX_RECIPIENTS) {
     return NextResponse.json(
@@ -76,7 +93,6 @@ export async function POST(request: NextRequest) {
   const greetings = recipients.map((r) => greetingFor(r.name));
   const campaignId = crypto.randomUUID();
   const tag = campaignTagFromId(campaignId);
-  const supabase = createServiceClient();
   await ensureTransactionalWebhook().catch(() => undefined);
 
   const { error: insertError } = await supabase.from("mailing_campaigns").insert({
@@ -152,6 +168,7 @@ export async function POST(request: NextRequest) {
       sent: result.sent,
       test: Boolean(testEmail),
       campaignId,
+      skippedSent,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "No se pudo enviar";

@@ -47,6 +47,10 @@ export function MailingComposer() {
   const [brevoError, setBrevoError] = useState("");
   const [senderLabel, setSenderLabel] = useState("Marxen <comercial@marxen.com.ar>");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [takeCount, setTakeCount] = useState(50);
+  const [poolTotal, setPoolTotal] = useState(0);
+  const [poolRemaining, setPoolRemaining] = useState(0);
+  const [poolSent, setPoolSent] = useState(0);
 
   const applyPreset = useCallback((id: string) => {
     const preset = MAIL_PRESETS.find((p) => p.id === id) || MAIL_PRESETS[0];
@@ -69,9 +73,10 @@ export function MailingComposer() {
   );
 
   const loadMeta = useCallback(async () => {
-    const [statusRes, campRes] = await Promise.all([
+    const [statusRes, campRes, poolRes] = await Promise.all([
       fetch("/api/crm/mailing/send", { cache: "no-store" }),
       fetch("/api/crm/mailing/campaigns", { cache: "no-store" }),
+      fetch("/api/crm/mailing/pool", { cache: "no-store" }),
     ]);
     const status = (await statusRes.json().catch(() => ({}))) as {
       ok?: boolean;
@@ -86,16 +91,101 @@ export function MailingComposer() {
     }
     const camp = (await campRes.json().catch(() => ({}))) as { campaigns?: Campaign[] };
     setCampaigns(camp.campaigns || []);
+    const pool = (await poolRes.json().catch(() => ({}))) as {
+      total?: number;
+      remaining?: number;
+      sent?: number;
+    };
+    setPoolTotal(Number(pool.total) || 0);
+    setPoolRemaining(Number(pool.remaining) || 0);
+    setPoolSent(Number(pool.sent) || 0);
   }, []);
 
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
 
-  function addList(list: MailRecipient[]) {
+  function addList(list: MailRecipient[], skipped = 0) {
     setRecipients((prev) => mergeRecipients([prev, list]));
     setError("");
+    setOkMsg(
+      skipped
+        ? `Se sumaron ${list.length} mails. Se omitieron ${skipped} que ya recibieron una campaña.`
+        : ""
+    );
+  }
+
+  async function keepUnsent(list: MailRecipient[]) {
+    if (!list.length) return { kept: [] as MailRecipient[], skipped: 0 };
+    const res = await fetch("/api/crm/mailing/pool", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "filter", recipients: list }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      recipients?: MailRecipient[];
+      skipped?: number;
+      remaining?: number;
+      total?: number;
+      sent?: number;
+    };
+    if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo validar la lista");
+    if (typeof data.remaining === "number") setPoolRemaining(data.remaining);
+    if (typeof data.total === "number") setPoolTotal(data.total);
+    if (typeof data.sent === "number") setPoolSent(data.sent);
+    return { kept: data.recipients || [], skipped: data.skipped || 0 };
+  }
+
+  async function takeFromPool(addMore: boolean) {
+    const count = Math.max(1, Math.min(2000, Math.floor(takeCount) || 0));
+    if (!count) {
+      setError("Indicá cuántos mails tomar de la base.");
+      return;
+    }
+    setBusy(addMore ? "Sumando mails de la base…" : "Tomando mails de la base Norte…");
+    setError("");
     setOkMsg("");
+    try {
+      const res = await fetch("/api/crm/mailing/pool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          count,
+          exclude: addMore ? recipients.map((row) => row.email) : [],
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        recipients?: MailRecipient[];
+        taken?: number;
+        remaining?: number;
+        total?: number;
+        sent?: number;
+        exhausted?: boolean;
+      };
+      if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo extraer de la base");
+      const list = data.recipients || [];
+      setRecipients((prev) => (addMore ? mergeRecipients([prev, list]) : list));
+      setPoolRemaining(Number(data.remaining) || 0);
+      setPoolTotal(Number(data.total) || 0);
+      setPoolSent(Number(data.sent) || 0);
+      if (!list.length) {
+        setError("No quedan mails nuevos en la base Norte.");
+        return;
+      }
+      setOkMsg(
+        data.exhausted
+          ? `Se tomaron ${list.length} mails (no había ${count} sin enviar). Hasta que envíes la campaña, no se marcan como usados.`
+          : `Se tomaron ${list.length} mails que todavía no recibieron ninguna campaña. Podés sumar más o enviar.`
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al tomar la base Norte");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function onFile(file: File | undefined) {
@@ -112,8 +202,17 @@ export function MailingComposer() {
         recipients?: MailRecipient[];
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo leer el Excel");
-      addList(data.recipients || []);
-      setOkMsg(`Se cargaron ${(data.recipients || []).length} mails del archivo.`);
+      const { kept, skipped } = await keepUnsent(data.recipients || []);
+      addList(kept, skipped);
+      if (kept.length) {
+        setOkMsg(
+          skipped
+            ? `Se cargaron ${kept.length} mails del archivo. Se omitieron ${skipped} ya enviados.`
+            : `Se cargaron ${kept.length} mails del archivo.`
+        );
+      } else if (!skipped) {
+        setError("El archivo no tenía mails válidos.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al leer el archivo");
     } finally {
@@ -121,15 +220,31 @@ export function MailingComposer() {
     }
   }
 
-  function addPasted() {
+  async function addPasted() {
     const list = parseRecipientsFromText(paste);
     if (!list.length) {
       setError("No encontré mails válidos en el texto.");
       return;
     }
-    addList(list);
-    setPaste("");
-    setOkMsg(`Se sumaron ${list.length} mails.`);
+    setBusy("Validando mails…");
+    try {
+      const { kept, skipped } = await keepUnsent(list);
+      if (!kept.length && skipped) {
+        setError("Esos mails ya recibieron una campaña.");
+        return;
+      }
+      if (!kept.length) {
+        setError("No encontré mails válidos en el texto.");
+        return;
+      }
+      addList(kept, skipped);
+      setPaste("");
+      if (!skipped) setOkMsg(`Se sumaron ${kept.length} mails.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo validar la lista");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function addFromCrm() {
@@ -143,8 +258,11 @@ export function MailingComposer() {
         recipients?: MailRecipient[];
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudieron leer contactos");
-      addList(data.recipients || []);
-      setOkMsg(`Se cargaron ${(data.recipients || []).length} mails de leads y afiliados.`);
+      const { kept, skipped } = await keepUnsent(data.recipients || []);
+      addList(kept, skipped);
+      if (kept.length && !skipped) {
+        setOkMsg(`Se cargaron ${kept.length} mails de leads y afiliados.`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el CRM");
     } finally {
@@ -183,13 +301,16 @@ export function MailingComposer() {
         ok?: boolean;
         error?: string;
         sent?: number;
+        skippedSent?: number;
         campaignId?: string;
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo enviar");
       setOkMsg(
         test
           ? `Prueba enviada a ${testEmail}.`
-          : `Campaña enviada a ${data.sent} destinatarios.`
+          : `Campaña enviada a ${data.sent} destinatarios.${
+              data.skippedSent ? ` Se omitieron ${data.skippedSent} ya enviados.` : ""
+            }`
       );
       if (!test && data.campaignId) {
         window.location.href = `/crm/mailing/${data.campaignId}`;
@@ -214,17 +335,48 @@ export function MailingComposer() {
       <section className="crm-card space-y-4 p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Destinatarios</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Base Norte</p>
             <p className="mt-1 text-sm text-muted">
-              Excel/CSV (columnas email y nombre), lista pegada, o mails ya cargados en el CRM.
+              {poolTotal.toLocaleString("es-AR")} contactos · {poolSent.toLocaleString("es-AR")} ya
+              recibieron una campaña · {poolRemaining.toLocaleString("es-AR")} disponibles.
             </p>
           </div>
           <p className="font-display text-2xl font-semibold text-navy">{recipients.length}</p>
         </div>
 
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="block min-w-0 flex-1 text-sm">
+            <span className="mb-1.5 block font-medium text-ink">Mails a tomar</span>
+            <input
+              className="crm-input"
+              type="number"
+              min={1}
+              max={2000}
+              value={takeCount}
+              onChange={(e) => setTakeCount(Number(e.target.value) || 0)}
+            />
+          </label>
+          <button
+            type="button"
+            className="crm-btn crm-btn-primary"
+            disabled={Boolean(busy)}
+            onClick={() => void takeFromPool(false)}
+          >
+            Iniciar campaña
+          </button>
+          <button
+            type="button"
+            className="crm-btn crm-btn-ghost"
+            disabled={Boolean(busy)}
+            onClick={() => void takeFromPool(true)}
+          >
+            Sumar más mails
+          </button>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <label className="crm-btn crm-btn-ghost cursor-pointer">
-            Subir Excel / CSV
+            Sumar Excel / CSV
             <input
               type="file"
               accept=".xlsx,.xls,.csv,.ods"
@@ -236,7 +388,7 @@ export function MailingComposer() {
             />
           </label>
           <button type="button" className="crm-btn crm-btn-ghost" onClick={() => void addFromCrm()}>
-            Cargar mails del CRM
+            Sumar mails del CRM
           </button>
           {recipients.length ? (
             <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setRecipients([])}>
@@ -246,7 +398,7 @@ export function MailingComposer() {
         </div>
 
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-ink">Pegar lista de mails</span>
+          <span className="mb-1.5 block font-medium text-ink">Sumar mails a mano</span>
           <textarea
             className="crm-input min-h-28"
             value={paste}
@@ -254,7 +406,7 @@ export function MailingComposer() {
             placeholder={"uno@mail.com\nMaría, maria@mail.com\nnombre;otro@mail.com"}
           />
         </label>
-        <button type="button" className="crm-btn crm-btn-primary" onClick={addPasted}>
+        <button type="button" className="crm-btn crm-btn-primary" onClick={() => void addPasted()}>
           Sumar mails pegados
         </button>
 
@@ -265,6 +417,7 @@ export function MailingComposer() {
                 <tr className="text-[11px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2">Mail</th>
                   <th className="px-3 py-2">Nombre</th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -272,6 +425,17 @@ export function MailingComposer() {
                   <tr key={row.email} className="border-t border-line/70">
                     <td className="px-3 py-1.5">{row.email}</td>
                     <td className="px-3 py-1.5 text-muted">{row.name || "—"}</td>
+                    <td className="px-3 py-1.5 text-right">
+                      <button
+                        type="button"
+                        className="text-xs text-muted hover:text-navy"
+                        onClick={() =>
+                          setRecipients((prev) => prev.filter((item) => item.email !== row.email))
+                        }
+                      >
+                        Quitar
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -373,7 +537,7 @@ export function MailingComposer() {
             disabled={Boolean(busy) || !recipients.length}
             onClick={() => void send(false)}
           >
-            Enviar a {recipients.length || 0}
+            Enviar campaña ({recipients.length || 0})
           </button>
         </div>
         {busy ? <p className="text-sm text-muted">{busy}</p> : null}
