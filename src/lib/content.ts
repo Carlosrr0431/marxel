@@ -9,6 +9,8 @@ export const site = {
   email: "hola@marxel.com.ar",
   whatsapp: "5493876348199",
   location: "Salta, Salta, Argentina.",
+  instagram: "https://www.instagram.com/marxen.ok/",
+  facebook: "https://www.facebook.com/profile.php?id=61593725283104",
 };
 
 export const navLinks = [

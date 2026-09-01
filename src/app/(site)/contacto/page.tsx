@@ -74,13 +74,39 @@ export default function ContactoPage() {
               href={wa}
               target="_blank"
               rel="noopener noreferrer"
-              className="surface group p-6 transition hover:border-sky/40 sm:col-span-2 lg:col-span-1"
+              className="surface group p-6 transition hover:border-sky/40"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
                 WhatsApp
               </p>
               <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
                 {site.phone}
+              </p>
+            </a>
+            <a
+              href={site.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="surface group p-6 transition hover:border-sky/40"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                Instagram
+              </p>
+              <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                @marxen.ok
+              </p>
+            </a>
+            <a
+              href={site.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="surface group p-6 transition hover:border-sky/40"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                Facebook
+              </p>
+              <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                Marxen Salta
               </p>
             </a>
           </div>

@@ -54,6 +54,8 @@ export const MAIL_PRESETS: MailPreset[] = [
 
 const ASSET = "https://www.marxen.com.ar/mail";
 const SITE = "https://www.marxen.com.ar";
+const INSTAGRAM = "https://www.instagram.com/marxen.ok/";
+const FACEBOOK = "https://www.facebook.com/profile.php?id=61593725283104";
 
 const C = {
   navy: "#352872",
@@ -242,6 +244,12 @@ export function buildMailHtml(input: {
                 WhatsApp <a href="https://wa.me/5493876348199" style="color:${C.sky};text-decoration:none;">387 634-8199</a><br/>
                 <a href="mailto:comercial@marxen.com.ar" style="color:${C.sky};text-decoration:none;">comercial@marxen.com.ar</a><br/>
                 Salta, Argentina
+              </p>
+              <p style="margin:16px 0 0;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:${C.teal};">Seguinos</p>
+              <p style="margin:8px 0 0;font-size:13px;line-height:1.7;">
+                <a href="${INSTAGRAM}" style="color:${C.white};text-decoration:none;">Instagram</a>
+                <span style="color:rgba(255,255,255,.35);"> · </span>
+                <a href="${FACEBOOK}" style="color:${C.white};text-decoration:none;">Facebook</a>
               </p>
               <p style="margin:16px 0 0;font-size:12px;">
                 <a href="${SITE}/seguros" style="color:${C.white};text-decoration:none;">Seguros</a>

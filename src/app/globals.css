@@ -466,6 +466,31 @@ a {
   color: var(--cta-hover);
 }
 
+.footer-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.footer-social {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.footer-social:hover {
+  background: var(--mist);
+}
+
 .quote-card {
   border: 1px solid color-mix(in srgb, var(--line) 80%, white);
   background: white;

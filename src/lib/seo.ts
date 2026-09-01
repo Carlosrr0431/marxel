@@ -133,6 +133,7 @@ export function organizationNode(): JsonLd {
         url: `https://wa.me/${site.whatsapp}`,
       },
     ],
+    sameAs: [site.instagram, site.facebook],
     hasOfferCatalog: {
       "@type": "OfferCatalog",
       name: "Coberturas MARXEN",
