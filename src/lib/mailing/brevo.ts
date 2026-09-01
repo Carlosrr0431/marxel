@@ -1,5 +1,5 @@
 const BREVO_API = "https://api.brevo.com/v3";
-const VERSION_CHUNK = 80;
+export const BREVO_CHUNK = 20;
 const WEBHOOK_URL = "https://www.marxen.com.ar/webhookMail";
 const WEBHOOK_EVENTS = [
   "request",
@@ -25,6 +25,13 @@ export type BrevoSendInput = {
   recipients: { email: string; name: string }[];
   greetings: string[];
   tags?: string[];
+  chunkSize?: number;
+  onChunk?: (info: {
+    sent: number;
+    total: number;
+    slice: { email: string; name: string }[];
+    messageIds: string[];
+  }) => Promise<void> | void;
 };
 
 function getConfig() {
@@ -90,10 +97,12 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
   if (!cfg.apiKey) throw new Error("Falta BREVO_API_KEY en el entorno.");
   if (!input.recipients.length) throw new Error("No hay destinatarios.");
 
+  const chunkSize = Math.max(1, Math.min(80, input.chunkSize || BREVO_CHUNK));
   const messageIds: string[] = [];
-  for (let i = 0; i < input.recipients.length; i += VERSION_CHUNK) {
-    const slice = input.recipients.slice(i, i + VERSION_CHUNK);
-    const greetings = input.greetings.slice(i, i + VERSION_CHUNK);
+  const total = input.recipients.length;
+  for (let i = 0; i < input.recipients.length; i += chunkSize) {
+    const slice = input.recipients.slice(i, i + chunkSize);
+    const greetings = input.greetings.slice(i, i + chunkSize);
     const tags = input.tags?.filter(Boolean).length
       ? input.tags.filter(Boolean)
       : ["crm-mailing"];
@@ -120,8 +129,14 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
       ? (result.data as { messageIds: string[] }).messageIds
       : [];
     const single = String((result.data as { messageId?: string }).messageId || "");
-    if (ids.length) messageIds.push(...ids);
-    else if (single) messageIds.push(single);
+    const chunkIds = ids.length ? ids : single ? [single] : [];
+    messageIds.push(...chunkIds);
+    await input.onChunk?.({
+      sent: Math.min(i + slice.length, total),
+      total,
+      slice,
+      messageIds: chunkIds,
+    });
   }
 
   return { sent: input.recipients.length, messageIds };

@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { isValidEmail, mergeRecipients, type MailRecipient } from "@/lib/mailing/recipients";
+import {
+  isValidEmail,
+  mergeRecipients,
+  normalizeEmail,
+  type MailRecipient,
+} from "@/lib/mailing/recipients";
 import { brevoAccountStatus, ensureTransactionalWebhook, sendBrevoCampaign } from "@/lib/mailing/brevo";
 import { campaignTagFromId } from "@/lib/mailing/events";
 import { loadSentEmailSet, splitUnsent } from "@/lib/mailing/pool";
@@ -9,9 +14,21 @@ import { buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const MAX_RECIPIENTS = 2000;
+
+type SendEvent = {
+  type: "start" | "progress" | "done" | "error";
+  ok?: boolean;
+  sent?: number;
+  total?: number;
+  current?: string;
+  campaignId?: string;
+  test?: boolean;
+  skippedSent?: number;
+  error?: string;
+};
 
 export async function GET() {
   if (!(await requireCrmSession())) {
@@ -36,6 +53,8 @@ export async function POST(request: NextRequest) {
     templateId?: string;
     recipients?: MailRecipient[];
     testEmail?: string;
+    allowRepeat?: string[];
+    stream?: boolean;
   };
 
   const subject = String(body.subject || "").trim();
@@ -59,7 +78,8 @@ export async function POST(request: NextRequest) {
     recipients = [{ email: testEmail, name: "Prueba" }];
   } else {
     const sent = await loadSentEmailSet(supabase);
-    const split = splitUnsent(recipients, sent);
+    const allowRepeat = new Set((body.allowRepeat || []).map(normalizeEmail).filter(isValidEmail));
+    const split = splitUnsent(recipients, sent, allowRepeat);
     skippedSent = split.skipped.length;
     recipients = split.kept;
   }
@@ -68,7 +88,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error: skippedSent
-          ? "Todos esos mails ya recibieron una campaña. Tomá contactos nuevos de la base Norte."
+          ? "Esos mails de la base ya recibieron una campaña. Tomá contactos nuevos o pegá mails para reenviar."
           : "Agregá al menos un destinatario.",
         skippedSent,
       },
@@ -129,29 +149,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: recError.message }, { status: 400 });
   }
 
-  try {
+  const streamProgress = Boolean(body.stream) && !testEmail;
+
+  async function runSend(onProgress?: (event: SendEvent) => void) {
     const result = await sendBrevoCampaign({
       subject,
       html,
       recipients,
       greetings,
       tags: ["crm-mailing", tag],
+      onChunk: async ({ sent, total, slice, messageIds }) => {
+        await Promise.all(
+          slice.map((row, index) =>
+            supabase
+              .from("mailing_recipients")
+              .update({
+                message_id: messageIds[index] || null,
+                last_event: "sent",
+              })
+              .eq("campaign_id", campaignId)
+              .eq("email", row.email)
+          )
+        );
+        await supabase.from("mailing_campaigns").update({ sent_count: sent }).eq("id", campaignId);
+        onProgress?.({
+          type: "progress",
+          sent,
+          total,
+          current: slice[slice.length - 1]?.email || "",
+          campaignId,
+        });
+      },
     });
-
-    const updates = recipients.map((row, index) => ({
-      campaign_id: campaignId,
-      email: row.email,
-      message_id: result.messageIds[index] || null,
-      last_event: "sent",
-    }));
-    for (const item of updates) {
-      if (!item.message_id) continue;
-      await supabase
-        .from("mailing_recipients")
-        .update({ message_id: item.message_id, last_event: "sent" })
-        .eq("campaign_id", campaignId)
-        .eq("email", item.email);
-    }
 
     await supabase
       .from("mailing_campaigns")
@@ -163,16 +192,58 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", campaignId);
 
-    return NextResponse.json({
-      ok: true,
-      sent: result.sent,
-      test: Boolean(testEmail),
-      campaignId,
-      skippedSent,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "No se pudo enviar";
-    await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
-    return NextResponse.json({ ok: false, error: message, campaignId }, { status: 400 });
+    return result;
   }
+
+  if (!streamProgress) {
+    try {
+      const result = await runSend();
+      return NextResponse.json({
+        ok: true,
+        sent: result.sent,
+        test: Boolean(testEmail),
+        campaignId,
+        skippedSent,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo enviar";
+      await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
+      return NextResponse.json({ ok: false, error: message, campaignId }, { status: 400 });
+    }
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = (event: SendEvent) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+      emit({ type: "start", total: recipients.length, campaignId, sent: 0 });
+      try {
+        const result = await runSend((event) => emit(event));
+        emit({
+          type: "done",
+          ok: true,
+          sent: result.sent,
+          total: recipients.length,
+          campaignId,
+          skippedSent,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "No se pudo enviar";
+        await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
+        emit({ type: "error", ok: false, error: message, campaignId });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

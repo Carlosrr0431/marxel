@@ -19,16 +19,32 @@ export function loadNortePool(): NorteRow[] {
 }
 
 export async function loadSentEmailSet(supabase: SupabaseClient) {
+  const statusByCampaign = new Map<string, string>();
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("mailing_campaigns")
+      .select("id,status")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = data || [];
+    for (const row of rows) {
+      statusByCampaign.set(String(row.id), String(row.status || ""));
+    }
+    if (rows.length < PAGE) break;
+  }
+
   const sent = new Set<string>();
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from("mailing_recipients")
-      .select("email,last_event")
+      .select("email,last_event,campaign_id")
       .neq("last_event", "queued")
       .range(from, from + PAGE - 1);
     if (error) throw new Error(error.message);
     const rows = data || [];
     for (const row of rows) {
+      const status = statusByCampaign.get(String(row.campaign_id || ""));
+      if (status === "test" || status === "failed") continue;
       const email = normalizeEmail(String(row.email || ""));
       if (email) sent.add(email);
     }
@@ -64,13 +80,17 @@ export function poolStats(sent: Set<string>) {
   return { total, remaining, sent: sent.size };
 }
 
-export function splitUnsent(list: MailRecipient[], sent: Set<string>) {
+export function splitUnsent(
+  list: MailRecipient[],
+  sent: Set<string>,
+  allowRepeat?: Set<string>
+) {
   const kept: MailRecipient[] = [];
   const skipped: string[] = [];
   for (const row of list) {
     const email = normalizeEmail(row.email);
     if (!isValidEmail(email)) continue;
-    if (sent.has(email)) {
+    if (sent.has(email) && !allowRepeat?.has(email)) {
       skipped.push(email);
       continue;
     }

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MAIL_PRESETS, buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 import {
   mergeRecipients,
+  normalizeEmail,
   parseRecipientsFromText,
   type MailRecipient,
 } from "@/lib/mailing/recipients";
@@ -27,9 +29,33 @@ type Campaign = {
   };
 };
 
+type SendProgress = {
+  open: boolean;
+  phase: "preparing" | "sending" | "done" | "error";
+  sent: number;
+  total: number;
+  current: string;
+  error: string;
+  campaignId: string;
+};
+
 const firstPreset = MAIL_PRESETS[0];
+const emptyProgress: SendProgress = {
+  open: false,
+  phase: "preparing",
+  sent: 0,
+  total: 0,
+  current: "",
+  error: "",
+  campaignId: "",
+};
+
+function fmt(n: number) {
+  return n.toLocaleString("es-AR");
+}
 
 export function MailingComposer() {
+  const { push } = useRouter();
   const [presetId, setPresetId] = useState(firstPreset.id);
   const [subject, setSubject] = useState(firstPreset.subject);
   const [preheader, setPreheader] = useState(firstPreset.preheader);
@@ -39,6 +65,7 @@ export function MailingComposer() {
   const [ctaUrl, setCtaUrl] = useState(firstPreset.ctaUrl);
   const [paste, setPaste] = useState("");
   const [recipients, setRecipients] = useState<MailRecipient[]>([]);
+  const [repeatEmails, setRepeatEmails] = useState<string[]>([]);
   const [testEmail, setTestEmail] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -51,6 +78,10 @@ export function MailingComposer() {
   const [poolTotal, setPoolTotal] = useState(0);
   const [poolRemaining, setPoolRemaining] = useState(0);
   const [poolSent, setPoolSent] = useState(0);
+  const [progress, setProgress] = useState<SendProgress>(emptyProgress);
+
+  const repeatSet = useMemo(() => new Set(repeatEmails), [repeatEmails]);
+  const pastedCount = recipients.filter((row) => repeatSet.has(row.email)).length;
 
   const applyPreset = useCallback((id: string) => {
     const preset = MAIL_PRESETS.find((p) => p.id === id) || MAIL_PRESETS[0];
@@ -105,13 +136,21 @@ export function MailingComposer() {
     void loadMeta();
   }, [loadMeta]);
 
+  function markRepeat(emails: string[]) {
+    setRepeatEmails((prev) => {
+      const next = new Set(prev);
+      for (const email of emails) next.add(normalizeEmail(email));
+      return [...next];
+    });
+  }
+
   function addList(list: MailRecipient[], skipped = 0) {
     setRecipients((prev) => mergeRecipients([prev, list]));
     setError("");
     setOkMsg(
       skipped
-        ? `Se sumaron ${list.length} mails. Se omitieron ${skipped} que ya recibieron una campaña.`
-        : ""
+        ? `Se sumaron ${list.length} mails. Se omitieron ${skipped} de la base que ya recibieron una campaña.`
+        : `Se sumaron ${list.length} mails.`
     );
   }
 
@@ -142,25 +181,27 @@ export function MailingComposer() {
     const count = Math.max(1, Math.min(2000, Math.floor(takeCount) || 0));
     if (!count) {
       setError("Indicá cuántos mails tomar de la base.");
-      return;
+      return [] as MailRecipient[];
     }
     setBusy(addMore ? "Sumando mails de la base…" : "Tomando mails de la base Norte…");
     setError("");
     setOkMsg("");
     try {
+      const keepPasted = addMore
+        ? recipients
+        : recipients.filter((row) => repeatSet.has(row.email));
       const res = await fetch("/api/crm/mailing/pool", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           count,
-          exclude: addMore ? recipients.map((row) => row.email) : [],
+          exclude: keepPasted.map((row) => row.email),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
         recipients?: MailRecipient[];
-        taken?: number;
         remaining?: number;
         total?: number;
         sent?: number;
@@ -168,21 +209,24 @@ export function MailingComposer() {
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo extraer de la base");
       const list = data.recipients || [];
-      setRecipients((prev) => (addMore ? mergeRecipients([prev, list]) : list));
+      const next = mergeRecipients([keepPasted, list]);
+      setRecipients(next);
       setPoolRemaining(Number(data.remaining) || 0);
       setPoolTotal(Number(data.total) || 0);
       setPoolSent(Number(data.sent) || 0);
-      if (!list.length) {
+      if (!list.length && !keepPasted.length) {
         setError("No quedan mails nuevos en la base Norte.");
-        return;
+        return [];
       }
       setOkMsg(
         data.exhausted
-          ? `Se tomaron ${list.length} mails (no había ${count} sin enviar). Hasta que envíes la campaña, no se marcan como usados.`
-          : `Se tomaron ${list.length} mails que todavía no recibieron ninguna campaña. Podés sumar más o enviar.`
+          ? `Se tomaron ${list.length} mails nuevos (no había ${count} sin enviar).`
+          : `Se tomaron ${list.length} mails de la base Norte que todavía no recibieron ninguna campaña.`
       );
+      return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al tomar la base Norte");
+      return [];
     } finally {
       setBusy("");
     }
@@ -203,16 +247,15 @@ export function MailingComposer() {
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo leer el Excel");
       const { kept, skipped } = await keepUnsent(data.recipients || []);
-      addList(kept, skipped);
-      if (kept.length) {
-        setOkMsg(
+      if (!kept.length) {
+        setError(
           skipped
-            ? `Se cargaron ${kept.length} mails del archivo. Se omitieron ${skipped} ya enviados.`
-            : `Se cargaron ${kept.length} mails del archivo.`
+            ? "Todos los mails del archivo ya recibieron una campaña. Pegá a mano los que quieras reenviar."
+            : "El archivo no tenía mails válidos."
         );
-      } else if (!skipped) {
-        setError("El archivo no tenía mails válidos.");
+        return;
       }
+      addList(kept, skipped);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al leer el archivo");
     } finally {
@@ -220,31 +263,27 @@ export function MailingComposer() {
     }
   }
 
-  async function addPasted() {
+  function addPasted() {
     const list = parseRecipientsFromText(paste);
     if (!list.length) {
       setError("No encontré mails válidos en el texto.");
+      setOkMsg("");
       return;
     }
-    setBusy("Validando mails…");
-    try {
-      const { kept, skipped } = await keepUnsent(list);
-      if (!kept.length && skipped) {
-        setError("Esos mails ya recibieron una campaña.");
-        return;
-      }
-      if (!kept.length) {
-        setError("No encontré mails válidos en el texto.");
-        return;
-      }
-      addList(kept, skipped);
-      setPaste("");
-      if (!skipped) setOkMsg(`Se sumaron ${kept.length} mails.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo validar la lista");
-    } finally {
-      setBusy("");
+    const before = recipients.length;
+    const next = mergeRecipients([recipients, list]);
+    const added = next.length - before;
+    markRepeat(list.map((row) => row.email));
+    setRecipients(next);
+    setPaste("");
+    setError("");
+    if (!added) {
+      setOkMsg("Esos mails ya estaban en la lista. Se pueden reenviar en esta y en otras campañas.");
+      return;
     }
+    setOkMsg(
+      `Se sumaron ${added} mails pegados. Estos se pueden repetir en otras campañas.`
+    );
   }
 
   async function addFromCrm() {
@@ -259,10 +298,15 @@ export function MailingComposer() {
       };
       if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudieron leer contactos");
       const { kept, skipped } = await keepUnsent(data.recipients || []);
-      addList(kept, skipped);
-      if (kept.length && !skipped) {
-        setOkMsg(`Se cargaron ${kept.length} mails de leads y afiliados.`);
+      if (!kept.length) {
+        setError(
+          skipped
+            ? "Los mails del CRM ya recibieron una campaña. Pegá a mano los que quieras reenviar."
+            : "No hay mails en el CRM."
+        );
+        return;
       }
+      addList(kept, skipped);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar el CRM");
     } finally {
@@ -270,83 +314,206 @@ export function MailingComposer() {
     }
   }
 
-  async function send(test: boolean) {
-    if (!test && !recipients.length) {
+  async function sendList(list: MailRecipient[], test: boolean) {
+    if (!subject.trim() || !title.trim() || !body.trim()) {
+      setError("Completá asunto, título y cuerpo del mail.");
+      return;
+    }
+    if (!test && !list.length) {
       setError("Cargá destinatarios antes de enviar.");
       return;
     }
-    if (!test && !window.confirm(`¿Enviar “${subject}” a ${recipients.length} destinatarios?`)) {
+
+    const payload = {
+      subject,
+      preheader,
+      title,
+      body,
+      ctaLabel,
+      ctaUrl,
+      templateId: presetId,
+      recipients: list,
+      testEmail: test ? testEmail : "",
+      allowRepeat: test ? [] : repeatEmails,
+      stream: !test,
+    };
+
+    if (test) {
+      setBusy("Enviando prueba…");
+      setError("");
+      setOkMsg("");
+      try {
+        const res = await fetch("/api/crm/mailing/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo enviar");
+        setOkMsg(`Prueba enviada a ${testEmail}.`);
+        await loadMeta();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error de envío");
+      } finally {
+        setBusy("");
+      }
       return;
     }
-    setBusy(test ? "Enviando prueba…" : "Enviando campaña…");
+
+    setBusy("Enviando campaña…");
     setError("");
     setOkMsg("");
+    setProgress({
+      open: true,
+      phase: "preparing",
+      sent: 0,
+      total: list.length,
+      current: "",
+      error: "",
+      campaignId: "",
+    });
+
     try {
       const res = await fetch("/api/crm/mailing/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject,
-          preheader,
-          title,
-          body,
-          ctaLabel,
-          ctaUrl,
-          templateId: presetId,
-          recipients,
-          testEmail: test ? testEmail : "",
-        }),
+        body: JSON.stringify(payload),
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        error?: string;
-        sent?: number;
-        skippedSent?: number;
-        campaignId?: string;
-      };
-      if (!res.ok || data.ok === false) throw new Error(data.error || "No se pudo enviar");
-      setOkMsg(
-        test
-          ? `Prueba enviada a ${testEmail}.`
-          : `Campaña enviada a ${data.sent} destinatarios.${
-              data.skippedSent ? ` Se omitieron ${data.skippedSent} ya enviados.` : ""
-            }`
-      );
-      if (!test && data.campaignId) {
-        window.location.href = `/crm/mailing/${data.campaignId}`;
-        return;
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("ndjson")) {
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        throw new Error(data.error || "No se pudo enviar");
       }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No se pudo leer el progreso del envío.");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let last: { type?: string; sent?: number; total?: number; campaignId?: string; error?: string; current?: string } =
+        {};
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as typeof last;
+          last = event;
+          if (event.type === "start" || event.type === "progress") {
+            setProgress((prev) => ({
+              ...prev,
+              phase: "sending",
+              sent: Number(event.sent) || prev.sent,
+              total: Number(event.total) || prev.total,
+              current: String(event.current || prev.current),
+              campaignId: String(event.campaignId || prev.campaignId),
+            }));
+          } else if (event.type === "done") {
+            setProgress((prev) => ({
+              ...prev,
+              phase: "done",
+              sent: Number(event.sent) || prev.sent,
+              total: Number(event.total) || prev.total,
+              campaignId: String(event.campaignId || prev.campaignId),
+            }));
+          } else if (event.type === "error") {
+            throw new Error(event.error || "No se pudo enviar");
+          }
+        }
+      }
+
+      if (last.type === "error") throw new Error(last.error || "No se pudo enviar");
+      const campaignId = String(last.campaignId || "");
+      setOkMsg(`Campaña enviada a ${last.sent || list.length} destinatarios.`);
       await loadMeta();
+      if (campaignId) {
+        window.setTimeout(() => {
+          push(`/crm/mailing/${campaignId}`);
+        }, 1200);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de envío");
+      const message = err instanceof Error ? err.message : "Error de envío";
+      setError(message);
+      setProgress((prev) => ({ ...prev, phase: "error", error: message }));
     } finally {
       setBusy("");
     }
   }
 
+  async function startCampaign() {
+    if (!subject.trim() || !title.trim() || !body.trim()) {
+      setError("Completá asunto, título y cuerpo del mail.");
+      return;
+    }
+    const count = Math.max(1, Math.min(2000, Math.floor(takeCount) || 0));
+    let list = recipients;
+    if (!list.length) {
+      if (!window.confirm(`¿Tomar ${count} mails nuevos de la base Norte y enviar ahora?`)) {
+        return;
+      }
+      list = await takeFromPool(false);
+      if (!list.length) return;
+    } else if (!window.confirm(`¿Enviar ahora a ${list.length} destinatarios?`)) {
+      return;
+    }
+    await sendList(list, false);
+  }
+
+  function sendCurrent() {
+    if (!recipients.length) {
+      setError("Cargá destinatarios antes de enviar.");
+      return;
+    }
+    if (!window.confirm(`¿Enviar “${subject}” a ${recipients.length} destinatarios?`)) return;
+    void sendList(recipients, false);
+  }
+
+  const percent = progress.total ? Math.min(100, Math.round((progress.sent / progress.total) * 100)) : 0;
+  const sending = Boolean(busy) || progress.open;
+
   return (
-    <div className="space-y-6">
+    <div className="mail-studio">
       {brevoOk === false ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          {brevoError}
-        </div>
+        <div className="mail-alert mail-alert--warn">{brevoError}</div>
       ) : null}
 
-      <section className="crm-card space-y-4 p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <section className="mail-hero">
+        <div className="mail-stat">
+          <span>Base Norte</span>
+          <strong>{fmt(poolTotal)}</strong>
+        </div>
+        <div className="mail-stat">
+          <span>Ya recibieron</span>
+          <strong>{fmt(poolSent)}</strong>
+        </div>
+        <div className="mail-stat mail-stat--ok">
+          <span>Disponibles</span>
+          <strong>{fmt(poolRemaining)}</strong>
+        </div>
+        <div className="mail-stat mail-stat--now">
+          <span>En esta campaña</span>
+          <strong>{fmt(recipients.length)}</strong>
+        </div>
+      </section>
+
+      <section className="mail-card">
+        <div className="mail-card__head">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Base Norte</p>
-            <p className="mt-1 text-sm text-muted">
-              {poolTotal.toLocaleString("es-AR")} contactos · {poolSent.toLocaleString("es-AR")} ya
-              recibieron una campaña · {poolRemaining.toLocaleString("es-AR")} disponibles.
+            <p className="mail-kicker">Audiencia</p>
+            <h2>Armá el lote y envialo</h2>
+            <p>
+              La base Norte saltea a quienes ya recibieron una campaña real. Los mails pegados a mano
+              se pueden repetir.
             </p>
           </div>
-          <p className="font-display text-2xl font-semibold text-navy">{recipients.length}</p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="block min-w-0 flex-1 text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Mails a tomar</span>
+        <div className="mail-take">
+          <label>
+            <span>Mails a tomar de Norte</span>
             <input
               className="crm-input"
               type="number"
@@ -358,23 +525,23 @@ export function MailingComposer() {
           </label>
           <button
             type="button"
-            className="crm-btn crm-btn-primary"
-            disabled={Boolean(busy)}
-            onClick={() => void takeFromPool(false)}
+            className="crm-btn crm-btn-primary mail-btn-lg"
+            disabled={sending}
+            onClick={() => void startCampaign()}
           >
             Iniciar campaña
           </button>
           <button
             type="button"
             className="crm-btn crm-btn-ghost"
-            disabled={Boolean(busy)}
+            disabled={sending}
             onClick={() => void takeFromPool(true)}
           >
             Sumar más mails
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="mail-tools">
           <label className="crm-btn crm-btn-ghost cursor-pointer">
             Sumar Excel / CSV
             <input
@@ -387,51 +554,68 @@ export function MailingComposer() {
               }}
             />
           </label>
-          <button type="button" className="crm-btn crm-btn-ghost" onClick={() => void addFromCrm()}>
+          <button type="button" className="crm-btn crm-btn-ghost" disabled={sending} onClick={() => void addFromCrm()}>
             Sumar mails del CRM
           </button>
           {recipients.length ? (
-            <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setRecipients([])}>
+            <button
+              type="button"
+              className="crm-btn crm-btn-ghost"
+              onClick={() => {
+                setRecipients([]);
+                setRepeatEmails([]);
+                setOkMsg("Lista vacía.");
+              }}
+            >
               Vaciar lista
             </button>
           ) : null}
         </div>
 
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-ink">Sumar mails a mano</span>
+        <label className="mail-paste">
+          <span>Sumar mails a mano</span>
           <textarea
-            className="crm-input min-h-28"
+            className="crm-input"
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
-            placeholder={"uno@mail.com\nMaría, maria@mail.com\nnombre;otro@mail.com"}
+            placeholder={"uno@mail.com\nMaría, maria@mail.com"}
           />
         </label>
-        <button type="button" className="crm-btn crm-btn-primary" onClick={() => void addPasted()}>
+        <button type="button" className="crm-btn crm-btn-primary" disabled={sending} onClick={addPasted}>
           Sumar mails pegados
         </button>
+        {pastedCount ? (
+          <p className="mail-hint">
+            {pastedCount} {pastedCount === 1 ? "mail pegado" : "mails pegados"} se pueden reenviar en
+            otra campaña.
+          </p>
+        ) : null}
 
         {recipients.length ? (
-          <div className="max-h-40 overflow-auto rounded-xl border border-line bg-cloud/60">
-            <table className="w-full text-left text-sm">
+          <div className="mail-table-wrap">
+            <table className="mail-table">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-muted">
-                  <th className="px-3 py-2">Mail</th>
-                  <th className="px-3 py-2">Nombre</th>
-                  <th className="px-3 py-2" />
+                <tr>
+                  <th>Mail</th>
+                  <th>Nombre</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {recipients.slice(0, 80).map((row) => (
-                  <tr key={row.email} className="border-t border-line/70">
-                    <td className="px-3 py-1.5">{row.email}</td>
-                    <td className="px-3 py-1.5 text-muted">{row.name || "—"}</td>
-                    <td className="px-3 py-1.5 text-right">
+                  <tr key={row.email}>
+                    <td>
+                      {row.email}
+                      {repeatSet.has(row.email) ? <em>pegado</em> : null}
+                    </td>
+                    <td>{row.name || "—"}</td>
+                    <td>
                       <button
                         type="button"
-                        className="text-xs text-muted hover:text-navy"
-                        onClick={() =>
-                          setRecipients((prev) => prev.filter((item) => item.email !== row.email))
-                        }
+                        onClick={() => {
+                          setRecipients((prev) => prev.filter((item) => item.email !== row.email));
+                          setRepeatEmails((prev) => prev.filter((email) => email !== row.email));
+                        }}
                       >
                         Quitar
                       </button>
@@ -441,80 +625,69 @@ export function MailingComposer() {
               </tbody>
             </table>
             {recipients.length > 80 ? (
-              <p className="px-3 py-2 text-xs text-muted">…y {recipients.length - 80} más</p>
+              <p className="mail-hint">…y {recipients.length - 80} más</p>
             ) : null}
           </div>
         ) : null}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        <section className="crm-card space-y-4 p-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Plantilla</p>
-          <div className="flex flex-wrap gap-2">
+      <div className="mail-grid">
+        <section className="mail-card">
+          <p className="mail-kicker">Plantilla</p>
+          <div className="mail-presets">
             {MAIL_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => applyPreset(preset.id)}
-                className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                  presetId === preset.id ? "bg-navy text-white" : "border border-line bg-white text-navy"
-                }`}
+                className={presetId === preset.id ? "is-on" : ""}
               >
                 {preset.label}
               </button>
             ))}
           </div>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Asunto</span>
+          <label className="mail-field">
+            <span>Asunto</span>
             <input className="crm-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Preheader</span>
+          <label className="mail-field">
+            <span>Preheader</span>
             <input className="crm-input" value={preheader} onChange={(e) => setPreheader(e.target.value)} />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Título</span>
+          <label className="mail-field">
+            <span>Título</span>
             <input className="crm-input" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Cuerpo</span>
-            <textarea
-              className="crm-input min-h-40"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-            />
+          <label className="mail-field">
+            <span>Cuerpo</span>
+            <textarea className="crm-input min-h-40" value={body} onChange={(e) => setBody(e.target.value)} />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-ink">Botón</span>
+          <div className="mail-cta-row">
+            <label className="mail-field">
+              <span>Botón</span>
               <input className="crm-input" value={ctaLabel} onChange={(e) => setCtaLabel(e.target.value)} />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-ink">Link del botón</span>
+            <label className="mail-field">
+              <span>Link del botón</span>
               <input className="crm-input" value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} />
             </label>
           </div>
         </section>
 
-        <section className="space-y-4">
-          <div className="crm-card overflow-hidden">
-            <p className="px-4 py-3 text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Vista previa</p>
-            <iframe
-              title="Vista previa del mail"
-              className="h-130 w-full border-t border-line bg-white"
-              sandbox="allow-same-origin"
-              srcDoc={previewHtml}
-            />
-          </div>
+        <section className="mail-card mail-preview">
+          <p className="mail-kicker">Vista previa</p>
+          <iframe title="Vista previa del mail" sandbox="allow-same-origin" srcDoc={previewHtml} />
         </section>
       </div>
 
-      <section className="crm-card space-y-4 p-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Envío con Brevo</p>
-        <p className="text-sm text-muted">Remitente: {senderLabel}</p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="block min-w-0 flex-1 text-sm">
-            <span className="mb-1.5 block font-medium text-ink">Mail de prueba</span>
+      <section className="mail-card mail-send">
+        <div>
+          <p className="mail-kicker">Envío con Brevo</p>
+          <p className="mail-sender">Remitente: {senderLabel}</p>
+        </div>
+        <div className="mail-take">
+          <label>
+            <span>Mail de prueba</span>
             <input
               className="crm-input"
               type="email"
@@ -526,44 +699,39 @@ export function MailingComposer() {
           <button
             type="button"
             className="crm-btn crm-btn-ghost"
-            disabled={Boolean(busy) || !testEmail}
-            onClick={() => void send(true)}
+            disabled={sending || !testEmail}
+            onClick={() => void sendList(recipients, true)}
           >
             Enviar prueba
           </button>
           <button
             type="button"
-            className="crm-btn crm-btn-primary"
-            disabled={Boolean(busy) || !recipients.length}
-            onClick={() => void send(false)}
+            className="crm-btn crm-btn-primary mail-btn-lg"
+            disabled={sending || !recipients.length}
+            onClick={sendCurrent}
           >
             Enviar campaña ({recipients.length || 0})
           </button>
         </div>
-        {busy ? <p className="text-sm text-muted">{busy}</p> : null}
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        {okMsg ? <p className="text-sm text-teal">{okMsg}</p> : null}
+        {busy && !progress.open ? <p className="mail-hint">{busy}</p> : null}
+        {error ? <p className="mail-alert mail-alert--error">{error}</p> : null}
+        {okMsg ? <p className="mail-alert mail-alert--ok">{okMsg}</p> : null}
       </section>
 
       {campaigns.length ? (
-        <section className="crm-card p-5">
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Historial de campañas</p>
-          <ul className="space-y-3">
+        <section className="mail-card">
+          <p className="mail-kicker">Historial</p>
+          <ul className="mail-history">
             {campaigns.map((item) => (
               <li key={item.id}>
-                <Link
-                  href={`/crm/mailing/${item.id}`}
-                  className="crm-card-hover block rounded-2xl border border-line px-4 py-3"
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="font-medium text-navy">{item.subject}</p>
-                    <p className="text-xs text-muted">
-                      {new Date(item.created_at).toLocaleString("es-AR")}
-                    </p>
+                <Link href={`/crm/mailing/${item.id}`}>
+                  <div>
+                    <p>{item.subject}</p>
+                    <span>{new Date(item.created_at).toLocaleString("es-AR")}</span>
                   </div>
-                  <p className="mt-2 text-sm text-muted">
-                    {item.stats?.sent ?? item.sent_count} enviados · {item.stats?.delivered ?? 0} entregados ·{" "}
-                    {item.stats?.opened ?? 0} abrieron · {item.stats?.clicked ?? 0} clics
+                  <p>
+                    {item.stats?.sent ?? item.sent_count} enviados · {item.stats?.delivered ?? 0} entregados
+                    · {item.stats?.opened ?? 0} abrieron · {item.stats?.clicked ?? 0} clics
                     {item.stats?.bounced ? ` · ${item.stats.bounced} rebotes` : ""}
                   </p>
                 </Link>
@@ -571,6 +739,53 @@ export function MailingComposer() {
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {progress.open ? (
+        <div className="mail-overlay" role="alertdialog" aria-live="polite" aria-label="Progreso de envío">
+          <div className="mail-overlay__card">
+            <p className="mail-kicker mail-kicker--light">
+              {progress.phase === "preparing"
+                ? "Preparando"
+                : progress.phase === "sending"
+                  ? "Enviando"
+                  : progress.phase === "done"
+                    ? "Listo"
+                    : "Error"}
+            </p>
+            <div
+              className="mail-ring"
+              style={{ background: `conic-gradient(#5fc4e5 ${percent}%, rgba(255,255,255,0.12) 0)` }}
+            >
+              <div>
+                <strong>
+                  {progress.sent}
+                  <small>/{progress.total || 0}</small>
+                </strong>
+                <span>mails enviados</span>
+              </div>
+            </div>
+            <div className="mail-overlay__bar">
+              <span style={{ width: `${percent}%` }} />
+            </div>
+            <p className="mail-overlay__status">
+              {progress.phase === "preparing"
+                ? "Armando la campaña en Brevo…"
+                : progress.phase === "sending"
+                  ? progress.current
+                    ? `Enviando a ${progress.current}`
+                    : "Enviando lotes…"
+                  : progress.phase === "done"
+                    ? "Campaña enviada. Abriendo el detalle…"
+                    : progress.error}
+            </p>
+            {progress.phase === "error" ? (
+              <button type="button" className="crm-btn crm-btn-primary" onClick={() => setProgress(emptyProgress)}>
+                Cerrar
+              </button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );
