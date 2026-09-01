@@ -41,6 +41,13 @@ type ConfirmAsk = {
 
 const firstPreset = MAIL_PRESETS[0];
 
+const CAMP_STATUS: Record<string, string> = {
+  sending: "Enviando",
+  sent: "Enviada",
+  test: "Prueba",
+  failed: "Falló",
+};
+
 function fmt(n: number) {
   return n.toLocaleString("es-AR");
 }
@@ -471,6 +478,7 @@ export function MailingComposer() {
   }
 
   const sending = Boolean(busy);
+  const usedPct = poolTotal ? Math.min(100, (poolSent / poolTotal) * 100) : 0;
 
   return (
     <div className="mail-studio">
@@ -478,33 +486,37 @@ export function MailingComposer() {
         <div className="mail-alert mail-alert--warn">{brevoError}</div>
       ) : null}
 
-      <section className="mail-hero">
-        <div className="mail-stat">
-          <span>Base Norte</span>
-          <strong>{fmt(poolTotal)}</strong>
-        </div>
-        <div className="mail-stat">
-          <span>Ya recibieron</span>
-          <strong>{fmt(poolSent)}</strong>
-        </div>
-        <div className="mail-stat mail-stat--ok">
-          <span>Disponibles</span>
+      <div className="mail-overview">
+        <section className="mail-pool">
+          <p className="mail-kicker mail-kicker--light">Base Norte</p>
           <strong>{fmt(poolRemaining)}</strong>
-        </div>
-        <div className="mail-stat mail-stat--now">
-          <span>Lote actual</span>
-          <strong>{fmt(recipients.length)}</strong>
-        </div>
-      </section>
-
-      <MailingCharts live={chartsLive} totals={totals} />
+          <span>disponibles de {fmt(poolTotal)}</span>
+          <div className="mail-pool__bar" aria-hidden="true">
+            <i style={{ width: `${usedPct}%` }} />
+          </div>
+          <div className="mail-pool__meta">
+            <p>
+              Ya recibieron
+              <b>{fmt(poolSent)}</b>
+            </p>
+            <p>
+              Lote actual
+              <b>{fmt(recipients.length)}</b>
+            </p>
+          </div>
+        </section>
+        <MailingCharts live={chartsLive} totals={totals} />
+      </div>
 
       <div className="mail-workspace">
         <div className="mail-stack">
           <section className="mail-card">
             <div className="mail-card__head">
               <p className="mail-kicker">Audiencia</p>
-              <h2>Armá el lote</h2>
+              <h2>
+                Armá el lote
+                {recipients.length ? <em>{fmt(recipients.length)}</em> : null}
+              </h2>
               <p>Norte no se reenvía. Los mails pegados sí se pueden repetir.</p>
             </div>
             <div className="mail-take">
@@ -666,7 +678,7 @@ export function MailingComposer() {
           </section>
 
           <section className="mail-sendbar">
-            <div>
+            <div className="mail-sendbar__info">
               <p className="mail-kicker">Envío</p>
               <p className="mail-sender">{senderLabel}</p>
             </div>
@@ -705,31 +717,68 @@ export function MailingComposer() {
         </div>
 
         <section className="mail-card mail-preview">
-          <p className="mail-kicker">Vista previa</p>
+          <div className="mail-preview__chrome">
+            <span className="mail-preview__dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <p>Vista previa</p>
+          </div>
+          <dl className="mail-preview__meta">
+            <div>
+              <dt>De</dt>
+              <dd>{senderLabel}</dd>
+            </div>
+            <div>
+              <dt>Asunto</dt>
+              <dd>{subject || "Sin asunto"}</dd>
+            </div>
+            <div>
+              <dt>Para</dt>
+              <dd>{recipients.length ? `${fmt(recipients.length)} destinatarios` : "Todavía no hay lote"}</dd>
+            </div>
+          </dl>
           <iframe title="Vista previa del mail" sandbox="allow-same-origin" srcDoc={previewHtml} />
         </section>
       </div>
 
       {campaigns.length ? (
         <section className="mail-card">
-          <p className="mail-kicker">Historial</p>
+          <div className="mail-card__head">
+            <p className="mail-kicker">Historial</p>
+            <h2>Campañas recientes</h2>
+          </div>
           <ul className="mail-history">
-            {campaigns.map((item) => (
-              <li key={item.id}>
-                <Link href={`/crm/mailing/${item.id}`}>
-                  <div>
-                    <p>{item.subject}</p>
-                    <span>{new Date(item.created_at).toLocaleString("es-AR")}</span>
-                  </div>
-                  <p>
-                    {item.status === "sending" ? "Enviando · " : ""}
-                    {item.stats?.sent ?? item.sent_count} enviados · {item.stats?.delivered ?? 0} entregados
-                    · {item.stats?.opened ?? 0} abrieron · {item.stats?.clicked ?? 0} clics
-                    {item.stats?.bounced ? ` · ${item.stats.bounced} rebotes` : ""}
-                  </p>
-                </Link>
-              </li>
-            ))}
+            {campaigns.map((item) => {
+              const sent = item.stats?.sent ?? item.sent_count;
+              const opened = item.stats?.opened ?? 0;
+              const clicked = item.stats?.clicked ?? 0;
+              const openPct = sent ? Math.min(100, (opened / sent) * 100) : 0;
+              const clickPct = sent ? Math.min(100, (clicked / sent) * 100) : 0;
+              return (
+                <li key={item.id}>
+                  <Link href={`/crm/mailing/${item.id}`}>
+                    <div className="mail-history__top">
+                      <p>{item.subject}</p>
+                      <span className={`mail-chip is-${item.status}`}>
+                        {CAMP_STATUS[item.status] || item.status}
+                      </span>
+                    </div>
+                    <div className="mail-history__track" aria-hidden="true">
+                      <i className="is-open" style={{ width: `${openPct}%` }} />
+                      <b className="is-click" style={{ width: `${clickPct}%` }} />
+                    </div>
+                    <p className="mail-history__meta">
+                      {new Date(item.created_at).toLocaleString("es-AR")}
+                      {" · "}
+                      {sent} enviados · {item.stats?.delivered ?? 0} entregados · {opened} abrieron · {clicked} clics
+                      {item.stats?.bounced ? ` · ${item.stats.bounced} rebotes` : ""}
+                    </p>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}

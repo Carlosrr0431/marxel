@@ -51,8 +51,24 @@ function Gauge({
   );
 }
 
-export function MailingCharts({ live = false, totals }: { live?: boolean; totals: MailTotals }) {
+export function MailingCharts({
+  live = false,
+  totals,
+  kicker = "Resultados",
+  title = "Todas las campañas",
+  copy,
+}: {
+  live?: boolean;
+  totals: MailTotals;
+  kicker?: string;
+  title?: string;
+  copy?: string;
+}) {
   const sent = totals.sent;
+  const clicked = Math.min(totals.clicked, totals.opened, totals.delivered, totals.sent);
+  const openedOnly = Math.max(0, Math.min(totals.opened, totals.delivered, totals.sent) - clicked);
+  const deliveredOnly = Math.max(0, Math.min(totals.delivered, totals.sent) - clicked - openedOnly);
+  const rest = Math.max(0, totals.sent - clicked - openedOnly - deliveredOnly);
   const rows = [
     { key: "sent", label: "Enviados", value: totals.sent, tone: "navy" },
     { key: "delivered", label: "Entregados", value: totals.delivered, tone: "teal" },
@@ -64,7 +80,7 @@ export function MailingCharts({ live = false, totals }: { live?: boolean; totals
     <section className="mail-charts">
       <div className="mail-charts__head">
         <div className="mail-charts__title">
-          <p className="mail-kicker">Resultados</p>
+          <p className="mail-kicker">{kicker}</p>
           {live ? (
             <span className="mail-charts__live">
               <i />
@@ -72,12 +88,28 @@ export function MailingCharts({ live = false, totals }: { live?: boolean; totals
             </span>
           ) : null}
         </div>
-        <h2>Todas las campañas</h2>
+        <h2>{title}</h2>
         <p>
-          {totals.campaigns
-            ? `${fmt(totals.campaigns)} campaña${totals.campaigns === 1 ? "" : "s"} real${totals.campaigns === 1 ? "" : "es"}. Pruebas y fallidas no entran.`
-            : "Cuando arranques una campaña, acá se arma el embudo del total."}
+          {copy ||
+            (totals.campaigns
+              ? `${fmt(totals.campaigns)} campaña${totals.campaigns === 1 ? "" : "s"} real${totals.campaigns === 1 ? "" : "es"}. Pruebas y fallidas no entran.`
+              : "Cuando arranques una campaña, acá se arma el embudo del total.")}
         </p>
+      </div>
+
+      <div className="mail-mix" aria-hidden={sent === 0}>
+        <div className="mail-mix__bar">
+          <span className="is-click" style={{ flexGrow: clicked || 0 }} />
+          <span className="is-open" style={{ flexGrow: openedOnly || 0 }} />
+          <span className="is-in" style={{ flexGrow: deliveredOnly || 0 }} />
+          <span className="is-out" style={{ flexGrow: rest || (sent ? 0 : 1) }} />
+        </div>
+        <div className="mail-mix__legend">
+          <span>Clics</span>
+          <span>Abrieron</span>
+          <span>Entregados</span>
+          <span>Sin entrega</span>
+        </div>
       </div>
 
       <div className="mail-charts__grid">

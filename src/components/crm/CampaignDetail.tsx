@@ -5,6 +5,7 @@ import Link from "next/link";
 import { eventLabel } from "@/lib/mailing/events";
 import type { CampaignStats } from "@/lib/mailing/stats";
 import { createClient } from "@/lib/supabase/client";
+import { MailingCharts } from "@/components/crm/MailingCharts";
 
 type Recipient = {
   id: string;
@@ -63,11 +64,6 @@ const STATUS: Record<string, string> = {
   test: "Prueba",
   failed: "Falló",
 };
-
-function pct(part: number, total: number) {
-  if (!total) return "0%";
-  return `${Math.round((part / total) * 100)}%`;
-}
 
 function fmt(n: number) {
   return n.toLocaleString("es-AR");
@@ -186,7 +182,12 @@ export function CampaignDetail({ id }: { id: string }) {
           <p>
             <span className={`mail-chip is-${campaign.status}`}>{STATUS[campaign.status] || campaign.status}</span>
             <span>{when(campaign.created_at)}</span>
-            {live ? <span>en vivo</span> : null}
+            {live ? (
+              <span className="mail-charts__live">
+                <i />
+                En vivo
+              </span>
+            ) : null}
           </p>
         </div>
       </div>
@@ -216,43 +217,28 @@ export function CampaignDetail({ id }: { id: string }) {
         <p className="mail-alert mail-alert--error">{campaign.error}</p>
       ) : null}
 
-      <section className="mail-hero">
-        <div className="mail-stat">
-          <span>Enviados</span>
-          <strong>{fmt(stats.sent)}</strong>
-        </div>
-        <div className="mail-stat">
-          <span>Entregados</span>
-          <strong>{fmt(stats.delivered)}</strong>
-          <em>{pct(stats.delivered, total)}</em>
-        </div>
-        <div className="mail-stat mail-stat--ok">
-          <span>Abrieron</span>
-          <strong>{fmt(stats.opened)}</strong>
-          <em>{pct(stats.opened, total)}</em>
-        </div>
-        <div className="mail-stat">
-          <span>Clics</span>
-          <strong>{fmt(stats.clicked)}</strong>
-          <em>{pct(stats.clicked, total)}</em>
-        </div>
-        <div className="mail-stat">
-          <span>Rebotes</span>
-          <strong>{fmt(stats.bounced)}</strong>
-        </div>
-        <div className="mail-stat">
-          <span>Quejas</span>
-          <strong>{fmt(stats.complained)}</strong>
-        </div>
-        <div className="mail-stat">
-          <span>Bajas</span>
-          <strong>{fmt(stats.unsubscribed)}</strong>
-        </div>
-        <div className="mail-stat">
-          <span>Proxy</span>
-          <strong>{fmt(stats.proxy)}</strong>
-        </div>
-      </section>
+      <MailingCharts
+        live={live}
+        totals={{ ...stats, campaigns: 1 }}
+        kicker="Rendimiento"
+        title="Esta campaña"
+        copy="Aperturas, clics y entregas de este envío, en vivo."
+      />
+
+      <div className="mail-pills">
+        <span>
+          Rebotes <b>{fmt(stats.bounced)}</b>
+        </span>
+        <span>
+          Quejas <b>{fmt(stats.complained)}</b>
+        </span>
+        <span>
+          Bajas <b>{fmt(stats.unsubscribed)}</b>
+        </span>
+        <span>
+          Proxy <b>{fmt(stats.proxy)}</b>
+        </span>
+      </div>
 
       <section className="mail-card">
         <div className="mail-toolbar">
@@ -293,7 +279,9 @@ export function CampaignDetail({ id }: { id: string }) {
                     <strong>{row.email}</strong>
                     <span className="mail-sub">{row.name || "—"}</span>
                   </td>
-                  <td>{eventLabel(row.last_event)}</td>
+                  <td>
+                    <span className={`mail-chip is-${row.last_event}`}>{eventLabel(row.last_event)}</span>
+                  </td>
                   <td>{row.opened_at ? `${when(row.opened_at)} · ${row.open_count}x` : "—"}</td>
                   <td>{row.clicked_at ? `${when(row.clicked_at)} · ${row.click_count}x` : "—"}</td>
                   <td>{row.last_link || row.bounce_type || (row.proxy_opened_at ? "proxy" : "—")}</td>
@@ -310,6 +298,7 @@ export function CampaignDetail({ id }: { id: string }) {
         <ul className="mail-activity">
           {events.slice(0, 80).map((item) => (
             <li key={item.id}>
+              <i className={`is-${item.event}`} aria-hidden="true" />
               <p>
                 <strong>{eventLabel(item.event)}</strong>
                 {` · ${item.email}`}

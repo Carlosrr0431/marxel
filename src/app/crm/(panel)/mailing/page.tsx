@@ -7,7 +7,7 @@ export default function MailingPage() {
       <PageHeader
         eyebrow="Comunicación"
         title="Mailing"
-        description="Armá el lote, enviá y seguí el avance en la ficha de cada campaña."
+        description="Estudio de campañas: armá el lote, mirá el mail y seguí el embudo en vivo."
       />
       <MailingComposer />
     </div>
