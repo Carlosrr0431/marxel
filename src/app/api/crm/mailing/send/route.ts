@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
@@ -17,18 +17,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const MAX_RECIPIENTS = 2000;
-
-type SendEvent = {
-  type: "start" | "progress" | "done" | "error";
-  ok?: boolean;
-  sent?: number;
-  total?: number;
-  current?: string;
-  campaignId?: string;
-  test?: boolean;
-  skippedSent?: number;
-  error?: string;
-};
 
 export async function GET() {
   if (!(await requireCrmSession())) {
@@ -54,7 +42,6 @@ export async function POST(request: NextRequest) {
     recipients?: MailRecipient[];
     testEmail?: string;
     allowRepeat?: string[];
-    stream?: boolean;
   };
 
   const subject = String(body.subject || "").trim();
@@ -149,16 +136,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: recError.message }, { status: 400 });
   }
 
-  const streamProgress = Boolean(body.stream) && !testEmail;
-
-  async function runSend(onProgress?: (event: SendEvent) => void) {
+  async function runSend() {
     const result = await sendBrevoCampaign({
       subject,
       html,
       recipients,
       greetings,
       tags: ["crm-mailing", tag],
-      onChunk: async ({ sent, total, slice, messageIds }) => {
+      onChunk: async ({ sent, slice, messageIds }) => {
         await Promise.all(
           slice.map((row, index) =>
             supabase
@@ -172,13 +157,6 @@ export async function POST(request: NextRequest) {
           )
         );
         await supabase.from("mailing_campaigns").update({ sent_count: sent }).eq("id", campaignId);
-        onProgress?.({
-          type: "progress",
-          sent,
-          total,
-          current: slice[slice.length - 1]?.email || "",
-          campaignId,
-        });
       },
     });
 
@@ -195,13 +173,13 @@ export async function POST(request: NextRequest) {
     return result;
   }
 
-  if (!streamProgress) {
+  if (testEmail) {
     try {
       const result = await runSend();
       return NextResponse.json({
         ok: true,
         sent: result.sent,
-        test: Boolean(testEmail),
+        test: true,
         campaignId,
         skippedSent,
       });
@@ -212,38 +190,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit = (event: SendEvent) => {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-      };
-      emit({ type: "start", total: recipients.length, campaignId, sent: 0 });
-      try {
-        const result = await runSend((event) => emit(event));
-        emit({
-          type: "done",
-          ok: true,
-          sent: result.sent,
-          total: recipients.length,
-          campaignId,
-          skippedSent,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "No se pudo enviar";
-        await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
-        emit({ type: "error", ok: false, error: message, campaignId });
-      } finally {
-        controller.close();
-      }
-    },
+  after(async () => {
+    try {
+      await runSend();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo enviar";
+      await supabase.from("mailing_campaigns").update({ status: "failed", error: message }).eq("id", campaignId);
+    }
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Accel-Buffering": "no",
-    },
+  return NextResponse.json({
+    ok: true,
+    campaignId,
+    total: recipients.length,
+    skippedSent,
+    status: "sending",
   });
 }

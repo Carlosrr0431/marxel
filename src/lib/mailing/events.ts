@@ -1,4 +1,5 @@
 export const EVENT_LABELS: Record<string, string> = {
+  queued: "En cola",
   sent: "Enviado",
   delivered: "Entregado",
   opened: "Abierto",

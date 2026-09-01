@@ -7,7 +7,7 @@ export default function MailingPage() {
       <PageHeader
         eyebrow="Comunicación"
         title="Mailing"
-        description="La base Norte no se reenvía. Los mails pegados a mano sí se pueden repetir en otra campaña."
+        description="Armá el lote, enviá y seguí el avance en la ficha de cada campaña."
       />
       <MailingComposer />
     </div>

@@ -34,13 +34,15 @@ export async function GET(
     .select("email,message_id")
     .eq("campaign_id", id);
 
-  await syncCampaignFromBrevo({
-    campaignId: id,
-    tag: campaign.tag,
-    createdAt: campaign.created_at,
-    emails: (seedRecipients || []).map((row) => String(row.email || "")),
-    messageIds: (seedRecipients || []).map((row) => String(row.message_id || "")).filter(Boolean),
-  }).catch(() => undefined);
+  if (campaign.status !== "sending") {
+    await syncCampaignFromBrevo({
+      campaignId: id,
+      tag: campaign.tag,
+      createdAt: campaign.created_at,
+      emails: (seedRecipients || []).map((row) => String(row.email || "")),
+      messageIds: (seedRecipients || []).map((row) => String(row.message_id || "")).filter(Boolean),
+    }).catch(() => undefined);
+  }
 
   const [{ data: recipients }, { data: events }] = await Promise.all([
     supabase

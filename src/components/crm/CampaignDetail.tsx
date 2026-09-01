@@ -57,32 +57,25 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "unsubscribed", label: "Bajas" },
 ];
 
+const STATUS: Record<string, string> = {
+  sending: "Enviando",
+  sent: "Enviada",
+  test: "Prueba",
+  failed: "Falló",
+};
+
 function pct(part: number, total: number) {
   if (!total) return "0%";
   return `${Math.round((part / total) * 100)}%`;
 }
 
+function fmt(n: number) {
+  return n.toLocaleString("es-AR");
+}
+
 function when(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleString("es-AR");
-}
-
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-line bg-cloud/70 px-4 py-3">
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-1 font-display text-2xl font-semibold text-navy">{value}</p>
-      {hint ? <p className="text-xs text-muted">{hint}</p> : null}
-    </div>
-  );
 }
 
 export function CampaignDetail({ id }: { id: string }) {
@@ -95,6 +88,8 @@ export function CampaignDetail({ id }: { id: string }) {
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [live, setLive] = useState(false);
+
+  const sending = campaign?.status === "sending";
 
   const load = useCallback(async (first = false) => {
     if (first) setLoading(true);
@@ -125,13 +120,22 @@ export function CampaignDetail({ id }: { id: string }) {
 
   useEffect(() => {
     void load(true);
-    const timer = window.setInterval(() => void load(false), 4000);
+  }, [load]);
+
+  useEffect(() => {
+    const ms = sending ? 900 : 4000;
+    const timer = window.setInterval(() => void load(false), ms);
     const supabase = createClient();
     const channel = supabase
       .channel(`mailing-${id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "mailing_recipients", filter: `campaign_id=eq.${id}` },
+        () => void load(false)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "mailing_campaigns", filter: `id=eq.${id}` },
         () => void load(false)
       )
       .on(
@@ -144,7 +148,7 @@ export function CampaignDetail({ id }: { id: string }) {
       window.clearInterval(timer);
       void supabase.removeChannel(channel);
     };
-  }, [id, load]);
+  }, [id, load, sending]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -159,121 +163,168 @@ export function CampaignDetail({ id }: { id: string }) {
     });
   }, [recipients, tab, query]);
 
+  const sentNow = recipients.filter((row) => row.last_event !== "queued").length;
+  const total = campaign?.recipient_count || recipients.length || 1;
+  const progressPct = Math.min(100, Math.round((sentNow / total) * 100));
+
   if (loading && !campaign) {
-    return <p className="text-sm text-muted">Cargando campaña…</p>;
+    return <p className="mail-hint">Cargando campaña…</p>;
   }
-  if (error) {
-    return <p className="text-sm text-red-700">{error}</p>;
+  if (error && !campaign) {
+    return <p className="mail-alert mail-alert--error">{error}</p>;
   }
   if (!campaign || !stats) return null;
 
-  const total = campaign.sent_count || campaign.recipient_count || 1;
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link href="/crm/mailing" className="text-sm text-teal hover:underline">
-            ← Volver a mailing
-          </Link>
-          <h1 className="mt-2 font-display text-3xl font-semibold text-navy">{campaign.subject}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {when(campaign.created_at)} · {campaign.status}
-            {campaign.error ? ` · ${campaign.error}` : ""}
-            {live ? " · en vivo" : ""}
+    <div className="mail-studio">
+      <div className="mail-detail-head">
+        <Link href="/crm/mailing" className="mail-back">
+          ← Mailing
+        </Link>
+        <div className="mail-detail-title">
+          <h1>{campaign.subject}</h1>
+          <p>
+            <span className={`mail-chip is-${campaign.status}`}>{STATUS[campaign.status] || campaign.status}</span>
+            <span>{when(campaign.created_at)}</span>
+            {live ? <span>en vivo</span> : null}
           </p>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Enviados" value={stats.sent} />
-        <Stat label="Entregados" value={stats.delivered} hint={pct(stats.delivered, total)} />
-        <Stat label="Abrieron" value={stats.opened} hint={pct(stats.opened, total)} />
-        <Stat label="Clics" value={stats.clicked} hint={pct(stats.clicked, total)} />
-        <Stat label="Rebotes" value={stats.bounced} />
-        <Stat label="Quejas" value={stats.complained} />
-        <Stat label="Bajas" value={stats.unsubscribed} />
-        <Stat label="Proxy" value={stats.proxy} hint="Aperturas de Apple/proxy" />
-      </div>
+      {sending ? (
+        <section className="mail-live" aria-live="polite">
+          <div className="mail-live__top">
+            <span className="mail-live__pulse" />
+            <p>Enviando campaña</p>
+            <strong>
+              {fmt(sentNow)}
+              <small> / {fmt(total)}</small>
+            </strong>
+          </div>
+          <div className="mail-live__bar">
+            <span style={{ width: `${progressPct}%` }} />
+          </div>
+          <p className="mail-live__copy">
+            {sentNow < total
+              ? `Ya salieron ${fmt(sentNow)} mails. El resto sigue en cola.`
+              : "Cerrando el envío…"}
+          </p>
+        </section>
+      ) : null}
 
-      <section className="crm-card p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
+      {campaign.status === "failed" && campaign.error ? (
+        <p className="mail-alert mail-alert--error">{campaign.error}</p>
+      ) : null}
+
+      <section className="mail-hero">
+        <div className="mail-stat">
+          <span>Enviados</span>
+          <strong>{fmt(stats.sent)}</strong>
+        </div>
+        <div className="mail-stat">
+          <span>Entregados</span>
+          <strong>{fmt(stats.delivered)}</strong>
+          <em>{pct(stats.delivered, total)}</em>
+        </div>
+        <div className="mail-stat mail-stat--ok">
+          <span>Abrieron</span>
+          <strong>{fmt(stats.opened)}</strong>
+          <em>{pct(stats.opened, total)}</em>
+        </div>
+        <div className="mail-stat">
+          <span>Clics</span>
+          <strong>{fmt(stats.clicked)}</strong>
+          <em>{pct(stats.clicked, total)}</em>
+        </div>
+        <div className="mail-stat">
+          <span>Rebotes</span>
+          <strong>{fmt(stats.bounced)}</strong>
+        </div>
+        <div className="mail-stat">
+          <span>Quejas</span>
+          <strong>{fmt(stats.complained)}</strong>
+        </div>
+        <div className="mail-stat">
+          <span>Bajas</span>
+          <strong>{fmt(stats.unsubscribed)}</strong>
+        </div>
+        <div className="mail-stat">
+          <span>Proxy</span>
+          <strong>{fmt(stats.proxy)}</strong>
+        </div>
+      </section>
+
+      <section className="mail-card">
+        <div className="mail-toolbar">
+          <div className="mail-presets">
             {TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setTab(item.id)}
-                className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                  tab === item.id ? "bg-navy text-white" : "border border-line bg-white text-navy"
-                }`}
+                className={tab === item.id ? "is-on" : ""}
               >
                 {item.label}
               </button>
             ))}
           </div>
           <input
-            className="crm-input max-w-xs"
+            className="crm-input mail-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar mail o nombre"
           />
         </div>
-        <div className="overflow-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+        <div className="mail-table-wrap mail-table-wrap--tall">
+          <table className="mail-table">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted">
-                <th className="px-2 py-2">Destinatario</th>
-                <th className="px-2 py-2">Estado</th>
-                <th className="px-2 py-2">Abrió</th>
-                <th className="px-2 py-2">Clic</th>
-                <th className="px-2 py-2">Detalle</th>
+              <tr>
+                <th>Destinatario</th>
+                <th>Estado</th>
+                <th>Abrió</th>
+                <th>Clic</th>
+                <th>Detalle</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row) => (
-                <tr key={row.id} className="border-t border-line/70 align-top">
-                  <td className="px-2 py-2">
-                    <p className="font-medium text-navy">{row.email}</p>
-                    <p className="text-xs text-muted">{row.name || "—"}</p>
+                <tr key={row.id}>
+                  <td>
+                    <strong>{row.email}</strong>
+                    <span className="mail-sub">{row.name || "—"}</span>
                   </td>
-                  <td className="px-2 py-2">{eventLabel(row.last_event)}</td>
-                  <td className="px-2 py-2">
-                    {row.opened_at ? `${when(row.opened_at)} · ${row.open_count}x` : "—"}
-                  </td>
-                  <td className="px-2 py-2">
-                    {row.clicked_at ? `${when(row.clicked_at)} · ${row.click_count}x` : "—"}
-                  </td>
-                  <td className="px-2 py-2 text-xs text-muted">
-                    {row.last_link || row.bounce_type || (row.proxy_opened_at ? "proxy" : "—")}
-                  </td>
+                  <td>{eventLabel(row.last_event)}</td>
+                  <td>{row.opened_at ? `${when(row.opened_at)} · ${row.open_count}x` : "—"}</td>
+                  <td>{row.clicked_at ? `${when(row.clicked_at)} · ${row.click_count}x` : "—"}</td>
+                  <td>{row.last_link || row.bounce_type || (row.proxy_opened_at ? "proxy" : "—")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {!filtered.length ? (
-            <p className="px-2 py-6 text-sm text-muted">Nadie en este filtro todavía.</p>
-          ) : null}
+          {!filtered.length ? <p className="mail-hint">Nadie en este filtro todavía.</p> : null}
         </div>
       </section>
 
-      <section className="crm-card p-5">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Actividad</p>
-        <ul className="space-y-2 text-sm">
+      <section className="mail-card">
+        <p className="mail-kicker">Actividad</p>
+        <ul className="mail-activity">
           {events.slice(0, 80).map((item) => (
-            <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line/70 py-2 last:border-0">
-              <span>
-                <span className="font-medium text-navy">{eventLabel(item.event)}</span>
-                {" · "}
-                {item.email}
+            <li key={item.id}>
+              <p>
+                <strong>{eventLabel(item.event)}</strong>
+                {` · ${item.email}`}
                 {item.link ? ` · ${item.link}` : ""}
                 {item.reason ? ` · ${item.reason}` : ""}
-              </span>
-              <span className="text-muted">{when(item.occurred_at)}</span>
+              </p>
+              <span>{when(item.occurred_at)}</span>
             </li>
           ))}
         </ul>
-        {!events.length ? <p className="text-sm text-muted">Todavía no llegaron eventos del webhook.</p> : null}
+        {!events.length ? (
+          <p className="mail-hint">
+            {sending ? "Los eventos aparecen a medida que Brevo entrega los mails." : "Todavía no llegaron eventos."}
+          </p>
+        ) : null}
       </section>
     </div>
   );
