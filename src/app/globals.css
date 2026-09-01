@@ -2821,6 +2821,70 @@ body:has(.crm-shell) {
   overflow-wrap: anywhere;
 }
 
+.mail-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(17, 10, 38, 0.52);
+  backdrop-filter: blur(14px);
+}
+
+.mail-dialog__card {
+  width: min(24.5rem, 100%);
+  padding: 1.35rem 1.3rem 1.2rem;
+  border-radius: 1.45rem;
+  background: white;
+  box-shadow: 0 28px 70px rgba(17, 10, 38, 0.28);
+}
+
+.mail-dialog__card h2 {
+  margin: 0.1rem 0 0.45rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+}
+
+.mail-dialog__copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.mail-dialog__count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1.1rem 0 1.15rem;
+  padding: 0.85rem 0.7rem;
+  border-radius: 1.1rem;
+  background: var(--mist);
+  color: var(--navy);
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.mail-dialog__count span {
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mail-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
 @media (min-width: 760px) {
   .mail-hero {
     grid-template-columns: repeat(4, minmax(0, 1fr));

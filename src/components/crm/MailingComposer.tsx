@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MAIL_PRESETS, buildMailHtml, greetingFor } from "@/lib/mailing/templates";
 import {
   mergeRecipients,
@@ -27,6 +27,13 @@ type Campaign = {
     clicked: number;
     bounced: number;
   };
+};
+
+type ConfirmAsk = {
+  takeFromPool: boolean;
+  count: number;
+  title: string;
+  description: string;
 };
 
 type SendProgress = {
@@ -79,6 +86,8 @@ export function MailingComposer() {
   const [poolRemaining, setPoolRemaining] = useState(0);
   const [poolSent, setPoolSent] = useState(0);
   const [progress, setProgress] = useState<SendProgress>(emptyProgress);
+  const [confirm, setConfirm] = useState<ConfirmAsk | null>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
   const repeatSet = useMemo(() => new Set(repeatEmails), [repeatEmails]);
   const pastedCount = recipients.filter((row) => repeatSet.has(row.email)).length;
@@ -135,6 +144,16 @@ export function MailingComposer() {
   useEffect(() => {
     void loadMeta();
   }, [loadMeta]);
+
+  useEffect(() => {
+    if (!confirm) return;
+    confirmBtnRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setConfirm(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirm]);
 
   function markRepeat(emails: string[]) {
     setRepeatEmails((prev) => {
@@ -443,23 +462,27 @@ export function MailingComposer() {
     }
   }
 
-  async function startCampaign() {
+  function startCampaign() {
     if (!subject.trim() || !title.trim() || !body.trim()) {
       setError("Completá asunto, título y cuerpo del mail.");
       return;
     }
     const count = Math.max(1, Math.min(2000, Math.floor(takeCount) || 0));
-    let list = recipients;
-    if (!list.length) {
-      if (!window.confirm(`¿Tomar ${count} mails nuevos de la base Norte y enviar ahora?`)) {
-        return;
-      }
-      list = await takeFromPool(false);
-      if (!list.length) return;
-    } else if (!window.confirm(`¿Enviar ahora a ${list.length} destinatarios?`)) {
+    if (!recipients.length) {
+      setConfirm({
+        takeFromPool: true,
+        count,
+        title: "Iniciar campaña",
+        description: `Se toman ${fmt(count)} mails nuevos de la base Norte y se envían ahora.`,
+      });
       return;
     }
-    await sendList(list, false);
+    setConfirm({
+      takeFromPool: false,
+      count: recipients.length,
+      title: "Enviar campaña",
+      description: `Se envía “${subject}” a ${fmt(recipients.length)} destinatarios.`,
+    });
   }
 
   function sendCurrent() {
@@ -467,8 +490,25 @@ export function MailingComposer() {
       setError("Cargá destinatarios antes de enviar.");
       return;
     }
-    if (!window.confirm(`¿Enviar “${subject}” a ${recipients.length} destinatarios?`)) return;
-    void sendList(recipients, false);
+    setConfirm({
+      takeFromPool: false,
+      count: recipients.length,
+      title: "Enviar campaña",
+      description: `Se envía “${subject}” a ${fmt(recipients.length)} destinatarios.`,
+    });
+  }
+
+  async function acceptConfirm() {
+    if (!confirm) return;
+    const take = confirm.takeFromPool;
+    setConfirm(null);
+    if (take) {
+      const list = await takeFromPool(false);
+      if (!list.length) return;
+      await sendList(list, false);
+      return;
+    }
+    await sendList(recipients, false);
   }
 
   const percent = progress.total ? Math.min(100, Math.round((progress.sent / progress.total) * 100)) : 0;
@@ -527,7 +567,7 @@ export function MailingComposer() {
             type="button"
             className="crm-btn crm-btn-primary mail-btn-lg"
             disabled={sending}
-            onClick={() => void startCampaign()}
+            onClick={startCampaign}
           >
             Iniciar campaña
           </button>
@@ -739,6 +779,40 @@ export function MailingComposer() {
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {confirm ? (
+        <div className="mail-dialog" role="presentation" onClick={() => setConfirm(null)}>
+          <div
+            className="mail-dialog__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mail-confirm-title"
+            aria-describedby="mail-confirm-copy"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mail-kicker">Confirmar envío</p>
+            <h2 id="mail-confirm-title">{confirm.title}</h2>
+            <p id="mail-confirm-copy" className="mail-dialog__copy">{confirm.description}</p>
+            <p className="mail-dialog__count">
+              {fmt(confirm.count)}
+              <span>{confirm.takeFromPool ? "mails a tomar" : "destinatarios"}</span>
+            </p>
+            <div className="mail-dialog__actions">
+              <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setConfirm(null)}>
+                Cancelar
+              </button>
+              <button
+                ref={confirmBtnRef}
+                type="button"
+                className="crm-btn crm-btn-primary"
+                onClick={() => void acceptConfirm()}
+              >
+                Enviar ahora
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {progress.open ? (
