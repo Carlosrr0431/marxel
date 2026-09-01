@@ -9,6 +9,8 @@ export type CampaignStats = {
   proxy: number;
 };
 
+export type MailTotals = CampaignStats & { campaigns: number };
+
 type RecipientStatRow = {
   campaign_id: string;
   delivered_at: string | null;
@@ -30,6 +32,24 @@ export function emptyStats(sent = 0): CampaignStats {
     complained: 0,
     unsubscribed: 0,
     proxy: 0,
+  };
+}
+
+export function emptyTotals(): MailTotals {
+  return { ...emptyStats(0), campaigns: 0 };
+}
+
+export function addStats(base: MailTotals, row: CampaignStats, campaigns = 0): MailTotals {
+  return {
+    sent: base.sent + row.sent,
+    delivered: base.delivered + row.delivered,
+    opened: base.opened + row.opened,
+    clicked: base.clicked + row.clicked,
+    bounced: base.bounced + row.bounced,
+    complained: base.complained + row.complained,
+    unsubscribed: base.unsubscribed + row.unsubscribed,
+    proxy: base.proxy + row.proxy,
+    campaigns: base.campaigns + campaigns,
   };
 }
 

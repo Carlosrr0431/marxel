@@ -10,6 +10,8 @@ import {
   parseRecipientsFromText,
   type MailRecipient,
 } from "@/lib/mailing/recipients";
+import { emptyTotals, type MailTotals } from "@/lib/mailing/stats";
+import { MailingCharts } from "@/components/crm/MailingCharts";
 
 type Campaign = {
   id: string;
@@ -62,6 +64,7 @@ export function MailingComposer() {
   const [brevoError, setBrevoError] = useState("");
   const [senderLabel, setSenderLabel] = useState("Marxen <comercial@marxen.com.ar>");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [totals, setTotals] = useState<MailTotals>(emptyTotals());
   const [takeCount, setTakeCount] = useState(50);
   const [poolTotal, setPoolTotal] = useState(0);
   const [poolRemaining, setPoolRemaining] = useState(0);
@@ -109,8 +112,12 @@ export function MailingComposer() {
     if (status.senderEmail) {
       setSenderLabel(`${status.senderName || "Marxen"} <${status.senderEmail}>`);
     }
-    const camp = (await campRes.json().catch(() => ({}))) as { campaigns?: Campaign[] };
+    const camp = (await campRes.json().catch(() => ({}))) as {
+      campaigns?: Campaign[];
+      totals?: MailTotals;
+    };
     setCampaigns(camp.campaigns || []);
+    setTotals(camp.totals || emptyTotals());
     const pool = (await poolRes.json().catch(() => ({}))) as {
       total?: number;
       remaining?: number;
@@ -456,6 +463,8 @@ export function MailingComposer() {
           <strong>{fmt(recipients.length)}</strong>
         </div>
       </section>
+
+      <MailingCharts totals={totals} />
 
       <div className="mail-workspace">
         <div className="mail-stack">

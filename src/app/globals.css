@@ -2517,6 +2517,186 @@ body:has(.crm-shell) {
   color: white;
 }
 
+.mail-charts {
+  padding: 1.2rem 1.15rem 1.15rem;
+  border-radius: 1.35rem;
+  background: white;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, white);
+  box-shadow: var(--shadow-soft);
+}
+
+.mail-charts__head h2 {
+  margin: 0.1rem 0 0.3rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.mail-charts__head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.mail-charts__grid {
+  display: grid;
+  gap: 1.35rem;
+  margin-top: 1.15rem;
+}
+
+.mail-funnel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mail-funnel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  margin-bottom: 0.38rem;
+}
+
+.mail-funnel__meta span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mail-funnel__meta strong {
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+}
+
+.mail-funnel__meta em {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-style: normal;
+  color: var(--muted);
+}
+
+.mail-funnel__track {
+  overflow: hidden;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: var(--mist);
+}
+
+.mail-funnel__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left center;
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mail-funnel__fill--navy {
+  background: linear-gradient(90deg, var(--navy-deep), var(--navy));
+}
+
+.mail-funnel__fill--teal {
+  background: linear-gradient(90deg, #2a8fb3, var(--teal));
+}
+
+.mail-funnel__fill--sky {
+  background: linear-gradient(90deg, #4aa8d4, var(--sky));
+}
+
+.mail-funnel__fill--green {
+  background: linear-gradient(90deg, #0f766e, #34b89a);
+}
+
+.mail-gauges {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.mail-gauge {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  text-align: center;
+}
+
+.mail-gauge__ring {
+  position: relative;
+  width: 5.7rem;
+  height: 5.7rem;
+}
+
+.mail-gauge svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  transform: rotate(-90deg);
+}
+
+.mail-gauge circle {
+  fill: none;
+  stroke-width: 8;
+}
+
+.mail-gauge__track {
+  stroke: var(--mist);
+}
+
+.mail-gauge__value {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mail-gauge--navy .mail-gauge__value {
+  stroke: var(--navy);
+}
+
+.mail-gauge--teal .mail-gauge__value {
+  stroke: var(--teal);
+}
+
+.mail-gauge--green .mail-gauge__value {
+  stroke: #0f766e;
+}
+
+.mail-gauge strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+  line-height: 1;
+}
+
+.mail-gauge span {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mail-charts__foot {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mail-funnel__fill,
+  .mail-gauge__value {
+    transition: none;
+  }
+}
+
 .mail-card {
   padding: 1.2rem 1.15rem 1.3rem;
   border-radius: 1.25rem;
@@ -3047,6 +3227,11 @@ body:has(.crm-shell) {
 @media (min-width: 760px) {
   .mail-hero {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mail-charts__grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.9fr);
+    align-items: center;
   }
 
   .mail-take {
