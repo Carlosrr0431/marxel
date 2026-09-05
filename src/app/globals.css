@@ -5312,7 +5312,7 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll-icon {
-  color: rgba(255, 255, 255, 0.6);
+  color: #54656f;
 }
 
 .crm-wa-poll__icon {
@@ -5328,7 +5328,7 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll__title {
-  color: rgba(255, 255, 255, 0.95);
+  color: #111b21;
 }
 
 .crm-wa-poll__opts {
@@ -5343,7 +5343,7 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll__opts {
-  border-top-color: rgba(255, 255, 255, 0.15);
+  border-top-color: rgba(17, 27, 33, 0.1);
 }
 
 .crm-wa-poll-opt {
@@ -5359,8 +5359,8 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll-opt {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(17, 27, 33, 0.06);
+  color: #111b21;
 }
 
 .crm-wa-poll-opt__circle {
@@ -5373,7 +5373,7 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll-opt__circle {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: #54656f;
 }
 
 .crm-wa-poll__label {
@@ -5387,7 +5387,7 @@ button.crm-wa-file {
 }
 
 .crm-wa-bubble.is-mine .crm-wa-poll__label {
-  color: rgba(255, 255, 255, 0.55);
+  color: #3b4a54;
 }
 
 /* Voto de usuario */
