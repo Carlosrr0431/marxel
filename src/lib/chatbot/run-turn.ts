@@ -233,7 +233,11 @@ export async function runChatTurn(input: {
     }
   }
 
-  if (lines.length > 1 && !pauseQuote && !looksLikePrestadorQuery(message)) {
+  if (
+    lines.length > 1 &&
+    !pauseQuote &&
+    !looksLikePrestadorQuery(message, quoteBase.data.producto)
+  ) {
     const batch = await processQuoteFlowBatch(
       lines,
       quoteBase,

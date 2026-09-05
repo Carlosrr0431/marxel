@@ -77,7 +77,11 @@ function sourceBoost(query: string, sourceId: string): number {
     return 2.5;
   if (/(viajero|europa|brasil|ee\.?uu|estados unidos|nomads|adventure)/.test(q) && sourceId.includes("goassistance"))
     return 2.2;
-  if (/plan|cobertura|reintegro|odont|kine|fono|optica/.test(q) && sourceId.startsWith("plan-"))
+  if (
+    sourceId.startsWith("plan-") &&
+    /prepaga|prevencion|\ba2\b|\ba4\b|odont|reintegro|kine|fono|optica|cartilla/.test(q) &&
+    !/\b(auto|moto|terceros|viajero|hogar)\b/.test(q)
+  )
     return 1.8;
   return 1;
 }
@@ -97,6 +101,12 @@ export function retrieveChunks(query: string, limit = 8): KnowledgeChunk[] {
       score += Math.min(occurrences, 4) * (term.length > 4 ? 1.4 : 1);
     }
     score *= sourceBoost(query, chunk.sourceId);
+    if (
+      chunk.sourceId.includes("cartilla") &&
+      !/cartilla|clinica|sanatorio|hospital|prestador|jaraba|prepaga|\ba2\b|\ba4\b/i.test(query)
+    ) {
+      score *= 0.1;
+    }
     if (/\ba2\b/i.test(query) && /\ba2\b/i.test(chunk.content)) score += 1.5;
     if (/\ba4\b/i.test(query) && /\ba4\b/i.test(chunk.content)) score += 1.5;
     return { chunk, score };

@@ -3,6 +3,7 @@ import { formatContext, retrieveChunks } from "@/lib/chatbot/retrieve";
 import {
   findPrestadores,
   formatPrestadorAnswer,
+  isPrevencionSaludCartillaAsk,
 } from "@/lib/chatbot/lookup-prestadores";
 import {
   listAutoBrands,
@@ -149,10 +150,7 @@ export async function runQuoteIntentTool(
 
   if (name === "search_knowledge") {
     const query = String(args.query || "").trim();
-    const isProviderQuery =
-      /prestador|cl[ií]nica|sanatorio|hospital|farmacia|cartilla|m[eé]dico|especialidad|guardia|laboratorio|radiolog|imagenes?|atiend|atend|atent|instituto/i.test(
-        query
-      );
+    const isProviderQuery = isPrevencionSaludCartillaAsk(query);
     const limit = isProviderQuery ? 12 : 6;
     const chunks = retrieveChunks(query, limit);
     const prestadores = isProviderQuery ? findPrestadores(query, 4) : [];
@@ -169,6 +167,15 @@ export async function runQuoteIntentTool(
 
   if (name === "lookup_prestadores") {
     const query = String(args.query || "").trim();
+    if (!isPrevencionSaludCartillaAsk(query)) {
+      return {
+        query,
+        found: false,
+        answer: null,
+        matches: [],
+        note: "Esta tool es solo para la cartilla de Prevención Salud (A2/A4). Si el cliente habla de auto, moto, hogar o viajero, no listes prestadores médicos.",
+      };
+    }
     const matches = findPrestadores(query, 5);
     return {
       query,

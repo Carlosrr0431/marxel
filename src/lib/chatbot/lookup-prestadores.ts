@@ -40,8 +40,24 @@ const GENERIC = new Set([
   "localidad",
 ]);
 
-const PROVIDER_INTENT =
-  /\b(atiend|atend|atent|trabajan|cubren|aceptan|instituto|imagenes|diagnostico|prestador|cartilla|clinica|sanatorio|hospital|farmacia|laboratorio)\b/;
+const CARTILLA_ASK =
+  /\b(cartilla|prestador|clinica|sanatorio|hospital|farmacia|laboratorio|prevencion|prepaga|plan\s*a\s*[24]|\ba2\b|\ba4\b|atiend|atend|atent|jaraba|berg|pasteur|inesa|diagnostico)\b/;
+
+export function isPrevencionSaludCartillaAsk(
+  text: string,
+  producto?: string | null
+): boolean {
+  const q = fold(String(text || ""));
+  if (!q) return false;
+  const explicit = CARTILLA_ASK.test(q);
+  if (!explicit) return false;
+  if (producto && producto !== "salud") {
+    return /\b(cartilla|prestador|clinica|sanatorio|hospital|prepaga|prevencion|plan\s*a\s*[24]|\ba2\b|\ba4\b)\b/.test(
+      q
+    );
+  }
+  return true;
+}
 
 export type PrestadorHit = {
   kind: "prestador" | "farmacia";
@@ -86,10 +102,10 @@ function scoreAgainst(query: string, nombre: string): number {
   return score;
 }
 
-export function looksLikePrestadorQuery(message: string): boolean {
+export function looksLikePrestadorQuery(message: string, producto?: string | null): boolean {
+  if (!isPrevencionSaludCartillaAsk(message, producto)) return false;
   const q = fold(message);
-  if (PROVIDER_INTENT.test(q)) return true;
-  return findPrestadores(message).length > 0;
+  return CARTILLA_ASK.test(q) || findPrestadores(message).length > 0;
 }
 
 export function findPrestadores(query: string, limit = 3): PrestadorHit[] {

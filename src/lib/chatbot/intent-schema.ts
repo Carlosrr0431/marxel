@@ -148,7 +148,7 @@ export const QUOTE_INTENT_TOOLS = [
     type: "function",
     name: "lookup_prestadores",
     description:
-      "Busca clínicas, sanatorios, institutos y centros de la cartilla A2/A4 en Salta por nombre (Jaraba, Tres Cerritos, Berg, etc.). Usalo SIEMPRE si preguntan si atienden, cubren o trabajan con un lugar.",
+      "SOLO cartilla de Prevención Salud (planes A2/A4) en Salta. Buscá un prestador por nombre (Jaraba, Berg, Pasteur). NO la uses para seguros de auto, moto, hogar, ni asistencia al viajero, aunque pregunten qué cubre un plan.",
     strict: false,
     parameters: {
       type: "object",
