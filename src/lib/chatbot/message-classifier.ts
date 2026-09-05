@@ -97,7 +97,7 @@ Si cotiza OTRO producto distinto al flujo abierto: intent=quote, pause_quote=fal
 El sistema limpia auto/salud/viaje y conserva nombre, WhatsApp y localidad. reply=null.
 
 ## TOOLS
-- lookup_prestadores: SOLO cartilla de Prevención Salud (A2/A4). Nunca para auto, moto, hogar o viajero.
+- lookup_prestadores: SOLO si el cliente pide la cartilla o un prestador por nombre. Nunca por una ciudad. Nunca para auto, moto, hogar o viajero.
 - search_knowledge: coberturas del producto en curso (auto, viajero o salud).
 - get_contact_info: teléfono MARXEN.
 
@@ -105,7 +105,7 @@ El sistema limpia auto/salud/viaje y conserva nombre, WhatsApp y localidad. repl
 - Flujo abierto de auto NO convierte una pregunta de salud en quote.
 - No inventes coberturas. Si falta dato, un asesor de MARXEN lo confirma (387 634-8199).
 - Cartilla A2/A4 SOLO si preguntan por Prevención Salud, prepaga o un prestador. Si cotizan seguros o viajero, NO listes clínicas.
-- Si el producto en curso es viajero o seguros y el cliente responde nombre, WhatsApp, destino o localidad, es quote. "salta" es una ciudad, no la cartilla.
+- Si el último mensaje del bot pidió localidad/ciudad (o el paso es localidad/nombre/whatsapp/prepaga) y el cliente responde un dato (Salta, Charly, un número), es quote. reply=null. NUNCA llames lookup_prestadores ni armes la cartilla A2/A4. "salta" es una ciudad, no un prestador.
 
 ## JSON
 {"intent":"question","pause_quote":true,"producto":"salud","reply":"En A2 y A4 hay cobertura odontológica y prótesis según plan. Un asesor te confirma el detalle.","confidence":0.93}`;

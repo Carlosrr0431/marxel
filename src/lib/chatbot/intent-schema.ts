@@ -148,7 +148,7 @@ export const QUOTE_INTENT_TOOLS = [
     type: "function",
     name: "lookup_prestadores",
     description:
-      "SOLO cartilla de Prevención Salud (planes A2/A4) en Salta. Buscá un prestador por nombre (Jaraba, Berg, Pasteur). NO la uses para seguros de auto, moto, hogar, ni asistencia al viajero, aunque pregunten qué cubre un plan.",
+      "SOLO si el cliente pide la cartilla de Prevención Salud o un prestador por nombre (Jaraba, Berg, Pasteur, INESA). NUNCA la uses porque dijo una ciudad o localidad (Salta, Cafayate, Tartagal). NO la uses para auto, moto, hogar ni viajero.",
     strict: false,
     parameters: {
       type: "object",

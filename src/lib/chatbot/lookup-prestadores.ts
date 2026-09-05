@@ -108,7 +108,40 @@ export function looksLikePrestadorQuery(message: string, producto?: string | nul
   return CARTILLA_ASK.test(q) || findPrestadores(message).length > 0;
 }
 
+const ASK_NOISE = new Set([
+  "cartilla",
+  "prestador",
+  "prestadores",
+  "clinica",
+  "sanatorio",
+  "hospital",
+  "farmacia",
+  "laboratorio",
+  "laboratorios",
+  "prevencion",
+  "prepaga",
+  "plan",
+  "a2",
+  "a4",
+  "atiende",
+  "atienden",
+  "atencion",
+  "cobertura",
+  "donde",
+  "queda",
+  "cerca",
+  "zona",
+]);
+
+function isPlaceOnlyQuery(query: string) {
+  const tokens = fold(query)
+    .split(" ")
+    .filter((token) => token.length >= 2 && !GENERIC.has(token) && !ASK_NOISE.has(token));
+  return tokens.length === 0;
+}
+
 export function findPrestadores(query: string, limit = 3): PrestadorHit[] {
+  if (isPlaceOnlyQuery(query)) return [];
   const hits: PrestadorHit[] = [];
   for (const p of PRESTADORES) {
     const score = scoreAgainst(query, p.nombre);

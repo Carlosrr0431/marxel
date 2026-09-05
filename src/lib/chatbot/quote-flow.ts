@@ -681,6 +681,27 @@ const FREE_TEXT_QUOTE_STEPS = new Set<QuoteStep>([
 const PROVIDER_INTENT_RE =
   /\b(prestador|cartilla|cl[ií]nica|sanatorio|hospital|farmacia|atiend|atend|atent)\b/i;
 
+export function inferStepFromAssistant(text: string): QuoteStep | null {
+  const t = String(text || "");
+  if (/de qu[eé] localidad|qu[eé] ciudad|ciudad o localidad/i.test(t)) return "localidad";
+  if (/c[oó]mo te llam|dec[ií]s tu nombre|me dec[ií]s tu nombre/i.test(t)) return "nombre";
+  if (/whatsapp|c[oó]digo de [aá]rea/i.test(t)) return "whatsapp";
+  if (/destino y las fechas|fechas aproximadas de viaje/i.test(t)) return "viajero_destino";
+  if (/est[aá]s buscando principalmente|ortodoncia, kinesiolog/i.test(t)) return "uso";
+  if (/prepaga o cobertura ahora/i.test(t)) return "prepaga";
+  return null;
+}
+
+export function alignQuoteStateWithAssistant(
+  state: QuoteState,
+  lastBot?: string | null
+): QuoteState {
+  const inferred = inferStepFromAssistant(lastBot || "");
+  if (!inferred) return state;
+  if (state.step === inferred && state.active) return state;
+  return { ...state, active: true, step: inferred };
+}
+
 export function isDeterministicQuoteInput(text: string, state?: QuoteState | null): boolean {
   const t = text.trim();
   if (!t) return false;

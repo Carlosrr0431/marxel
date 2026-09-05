@@ -1,4 +1,5 @@
 import {
+  alignQuoteStateWithAssistant,
   detectQuoteProductSwitch,
   detectsHealthCoverageIntent,
   detectsQuoteIntent,
@@ -30,8 +31,20 @@ import {
   classifyWhatsappMessage,
   isConversationalIntent,
 } from "@/lib/chatbot/message-classifier";
-import { looksLikePrestadorQuery } from "@/lib/chatbot/lookup-prestadores";
+import {
+  isPrevencionSaludCartillaAsk,
+  looksLikePrestadorQuery,
+} from "@/lib/chatbot/lookup-prestadores";
 import { answerHealthPlanQuestion } from "@/lib/chatbot/health-plan-answer";
+
+function isUnsolicitedCartillaReply(
+  reply: string,
+  userMessage: string,
+  producto?: string | null
+) {
+  if (isPrevencionSaludCartillaAsk(userMessage, producto)) return false;
+  return /cartilla A2 y A4|cartilla-medica|Encontré estos prestadores/i.test(reply);
+}
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -134,10 +147,6 @@ export async function runChatTurn(input: {
     };
   }
 
-  const prevState = withChannel(
-    input.quoteState || emptyQuoteState(),
-    input.channel
-  );
   const history = (input.history || [])
     .filter(
       (m) =>
@@ -146,6 +155,12 @@ export async function runChatTurn(input: {
         m.content.trim().length > 0
     )
     .slice(-12);
+  const lastBot =
+    [...history].reverse().find((m) => m.role === "assistant")?.content || "";
+  const prevState = alignQuoteStateWithAssistant(
+    withChannel(input.quoteState || emptyQuoteState(), input.channel),
+    lastBot
+  );
 
   if (input.channel === "whatsapp" && !prevState.active && isGreeting(message)) {
     return {
@@ -159,6 +174,16 @@ export async function runChatTurn(input: {
   const lines = message.includes("\n")
     ? message.split("\n").map((s) => s.trim()).filter(Boolean)
     : [message];
+
+  const answeringQuoteField =
+    isDeterministicQuoteInput(message, prevState) &&
+    !isPrevencionSaludCartillaAsk(message, prevState.data.producto);
+  if (answeringQuoteField) {
+    const quote = await processQuoteFlow(message, prevState, input.channel);
+    if (quote.handled && quote.answer) {
+      return finishQuoteResult(quote, input.channel, input.knownPhone);
+    }
+  }
 
   const routed = await classifyWhatsappMessage({
     message,
@@ -196,12 +221,23 @@ export async function runChatTurn(input: {
     routed?.reply &&
     (isConversationalIntent(routed.intent) || routed.intent === "greeting")
   ) {
-    return {
-      answer: stripMarkdownNoise(routed.reply),
-      quoteState: prevState,
-      quickReplies: prevState.active ? [] : menuForChannel(input.channel),
-      mode: "rag",
-    };
+    const unsolicitedCartilla = isUnsolicitedCartillaReply(
+      routed.reply,
+      message,
+      prevState.data.producto
+    );
+    if (!unsolicitedCartilla) {
+      return {
+        answer: stripMarkdownNoise(routed.reply),
+        quoteState: prevState,
+        quickReplies: prevState.active ? [] : menuForChannel(input.channel),
+        mode: "rag",
+      };
+    }
+    const quote = await processQuoteFlow(message, prevState, input.channel);
+    if (quote.handled && quote.answer) {
+      return finishQuoteResult(quote, input.channel, input.knownPhone);
+    }
   }
 
   const coverageOnly =
@@ -294,7 +330,10 @@ export async function runChatTurn(input: {
         !intentAdvancesQuote(classified));
 
     if (questionOnly) {
-      if (classified.reply) {
+      if (
+        classified.reply &&
+        !isUnsolicitedCartillaReply(classified.reply, message, prevState.data.producto)
+      ) {
         return {
           answer: stripMarkdownNoise(classified.reply),
           quoteState: prevState,
@@ -311,7 +350,10 @@ export async function runChatTurn(input: {
       }
     }
 
-    if (classified.reply) {
+    if (
+      classified.reply &&
+      !isUnsolicitedCartillaReply(classified.reply, message, prevState.data.producto)
+    ) {
       return {
         answer: stripMarkdownNoise(classified.reply),
         quoteState: pauseQuote ? prevState : merged,
