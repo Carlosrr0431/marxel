@@ -1,4 +1,4 @@
-import { scB2bConfig, scB2bPost } from "./client";
+import { ScB2bError, scB2bConfig, scB2bPost } from "./client";
 
 export type Ca7QuoteInput = {
   taxId: string;
@@ -14,6 +14,9 @@ export type Ca7QuoteInput = {
   hasGnc?: boolean;
   hasGps?: boolean;
   statedAmount?: number;
+  fuelType?: string;
+  category?: string;
+  isNational?: boolean;
   usage?: string;
   productCodes?: string[];
   product?: string;
@@ -58,12 +61,32 @@ function formatTaxId(raw: string) {
   return raw.trim();
 }
 
+function officialIdOf(taxId: string, fallback?: string) {
+  if (fallback) return fallback;
+  const digits = taxId.replace(/\D/g, "");
+  if (digits.length >= 7 && digits.length <= 8) return "Ext_DNI96";
+  return "Ext_CUIL86";
+}
+
+function fuelTypeOf(value?: string) {
+  const key = String(value || "")
+    .trim()
+    .toUpperCase();
+  if (!key) return "NAF";
+  if (key.includes("DIE") || key.includes("GASOIL")) return "DIE";
+  if (key.includes("GNC")) return "GNC";
+  if (key.includes("ELE")) return "ELE";
+  if (key.includes("HIB")) return "HIB";
+  return key.length <= 4 ? key : "NAF";
+}
+
 export function buildCa7Quote(input: Ca7QuoteInput) {
   const producerCode = scB2bConfig().producerCode;
-  const productCodes = input.productCodes?.length ? input.productCodes : ["CA7_A", "CA7_CM", "CA7_D"];
+  const productCodes = input.productCodes?.length ? input.productCodes : ["CA7_A", "CA7_CM"];
+  const statedAmount = Number(input.statedAmount);
   return {
     InsuredData: {
-      OfficialIDType: input.officialIdType || "Ext_CUIL86",
+      OfficialIDType: officialIdOf(input.taxId, input.officialIdType),
       TaxID: formatTaxId(input.taxId),
       Gender: input.gender || "M",
       Subtype: input.subtype || "person",
@@ -79,21 +102,22 @@ export function buildCa7Quote(input: Ca7QuoteInput) {
       PaymentFees: input.paymentFees || "Monthly",
       Product: input.product || "CA7CommAuto",
       PolicyType: input.policyType || "CA7_Car",
-      LocationPostalCode: input.postalCode,
-      LocationState: input.locationState,
+      LocationPostalCode: Number(input.postalCode),
+      LocationState: input.locationState || "AR_01",
     },
     VehicleData: {
       Vehicle: {
         InfoautoCode: String(input.infoautoCode),
-        Year: input.year,
+        Year: Number(input.year),
         Is0Km: Boolean(input.is0Km),
         HasGNC: Boolean(input.hasGnc),
-        HasGPS: Boolean(input.hasGps),
         Usage: input.usage || "Personal",
-        Category: "Car",
-        StatedAmount: input.statedAmount,
-        RiskLocationPostalCode: input.postalCode,
-        RiskLocationState: input.locationState,
+        Category: input.category || "Car",
+        FuelType: fuelTypeOf(input.fuelType),
+        IsNational: input.isNational !== false,
+        ...(statedAmount > 0 ? { StatedAmount: statedAmount } : {}),
+        RiskLocationPostalCode: Number(input.postalCode),
+        RiskLocationState: input.locationState || "AR_01",
       },
       Product: productCodes.map((ProductCode) => ({ ProductCode })),
     },
@@ -128,8 +152,40 @@ export function buildCp7Quote(input: Cp7QuoteInput) {
   };
 }
 
+function firstCatalogVersion(data: unknown) {
+  const root = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const list = Array.isArray(root.Versiones) ? root.Versiones : [];
+  const row = list[0];
+  return row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+}
+
 export async function quoteCa7(input: Ca7QuoteInput) {
-  return scB2bPost("/api/Quoted/QuoteCA7", buildCa7Quote(input));
+  const { vehicleVersion } = await import("./ops");
+  let fuelType = input.fuelType;
+  let statedAmount = input.statedAmount;
+  let category = input.category;
+  let isNational = input.isNational;
+  try {
+    const version = firstCatalogVersion(await vehicleVersion(String(input.infoautoCode), String(input.year)));
+    if (!fuelType && version.CombustibleCodigo) fuelType = String(version.CombustibleCodigo);
+    if (!(Number(statedAmount) > 0) && Number(version.Precio) > 0) statedAmount = Number(version.Precio);
+    if (!category && version.Categoria) category = String(version.Categoria);
+    if (isNational == null && typeof version.Importado === "boolean") isNational = !version.Importado;
+  } catch {
+    // Guidewire UAT a veces no responde el catálogo; cotizamos igual con el payload del swagger.
+  }
+  try {
+    return await scB2bPost("/api/Quoted/QuoteCA7", buildCa7Quote({ ...input, fuelType, statedAmount, category, isNational }));
+  } catch (err) {
+    if (err instanceof ScB2bError && /Object reference not set/i.test(err.message)) {
+      throw new ScB2bError(
+        "San Cristóbal UAT no pudo cotizar este auto: QuoteCA7 falló porque el catálogo Infoauto no devolvió el vehículo.",
+        err.status,
+        err.body
+      );
+    }
+    throw err;
+  }
 }
 
 export async function quoteCp7(input: Cp7QuoteInput) {

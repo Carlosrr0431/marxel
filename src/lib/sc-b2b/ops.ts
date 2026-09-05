@@ -1,4 +1,6 @@
-import { scB2bConfig, scB2bDownload, scB2bGet, scB2bPost, withQuery, type ScB2bBinary } from "./client";
+import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+import { fetchClasificVehicle } from "@/lib/clasific";
+import { ScB2bError, scB2bConfig, scB2bDownload, scB2bGet, scB2bPost, withQuery, type ScB2bBinary } from "./client";
 
 export const REPORT_PATHS = {
   "frente-poliza": "/api/Reportes/FrentePoliza",
@@ -241,12 +243,52 @@ export async function claimsNews(newsDate: string) {
 }
 
 export async function vehicleVersion(codigoInfoauto: string, anio: string) {
-  return scB2bGet(
-    withQuery("/api/CatalogoVehiculos/AutosVersionPorCodigoInfoauto", {
-      codigoInfoauto,
-      anio,
-    })
-  );
+  try {
+    return await scB2bGet(
+      withQuery("/api/Versiones/GetVersionByCodInfoAuto", {
+        codInfoAuto: Number(codigoInfoauto),
+        anio: Number(anio),
+      })
+    );
+  } catch {
+    return scB2bGet(
+      withQuery("/api/CatalogoVehiculos/AutosVersionPorCodigoInfoauto", {
+        codigoInfoauto,
+        anio,
+      })
+    );
+  }
+}
+
+export async function vehicleByPlate(rawPlate: string) {
+  const plate = normalizeArPlate(rawPlate);
+  const kind = classifyArPlate(plate);
+  if (kind !== "auto") {
+    throw new ScB2bError(
+      kind === "moto" ? "Esta patente es de moto." : "Ingresá una patente de auto válida",
+      400
+    );
+  }
+  let vehicle;
+  try {
+    vehicle = await fetchClasificVehicle(plate);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "No se pudo consultar la patente";
+    throw new ScB2bError(
+      /CLASIFICAR_API_KEY/.test(message) ? "Falta configurar la consulta de patente." : message,
+      502
+    );
+  }
+  if (!vehicle) {
+    throw new ScB2bError("No encontramos ese auto. Completá año, marca, modelo y versión.", 404);
+  }
+  return {
+    plate,
+    year: vehicle.year,
+    brand: vehicle.make,
+    model: vehicle.model,
+    description: `${vehicle.make} ${vehicle.model} ${vehicle.year}`.trim(),
+  };
 }
 
 export async function motoVersion(codigoInfomoto: string, anio: string) {

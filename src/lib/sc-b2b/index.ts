@@ -59,6 +59,7 @@ export {
   searchPolicy,
   taxIdFromProducerPayload,
   typeList,
+  vehicleByPlate,
   vehicleVersion,
   type AgriCatalogKind,
   type ReportKind,

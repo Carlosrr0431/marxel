@@ -43,6 +43,7 @@ import {
   searchPolicy,
   taxIdFromProducerPayload,
   typeList,
+  vehicleByPlate,
   vehicleVersion,
   type AgriCatalogKind,
   type ReportKind,
@@ -312,6 +313,11 @@ async function handleGet(request: NextRequest) {
     const newsDate = q(request, "newsDate") || new Date().toISOString();
     return NextResponse.json({ ok: true, data: await claimsNews(newsDate) });
   }
+  if (action === "vehicle-by-plate") {
+    const plate = q(request, "plate");
+    if (!plate) return NextResponse.json({ ok: false, error: "Falta la patente" }, { status: 400 });
+    return NextResponse.json({ ok: true, data: await vehicleByPlate(plate) });
+  }
   if (action === "vehicle-version") {
     const codigo = q(request, "codigoInfoauto");
     const anio = q(request, "anio");
@@ -379,6 +385,8 @@ async function handlePost(request: NextRequest) {
         hasGnc: Boolean(payload.hasGnc),
         hasGps: Boolean(payload.hasGps),
         statedAmount: payload.statedAmount ? Number(payload.statedAmount) : undefined,
+        fuelType: payload.fuelType ? String(payload.fuelType) : undefined,
+        category: payload.category ? String(payload.category) : undefined,
         productCodes: Array.isArray(payload.productCodes)
           ? payload.productCodes.map((code) => String(code))
           : undefined,

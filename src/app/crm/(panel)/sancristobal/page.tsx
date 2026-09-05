@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { EmptyState, PageHeader } from "@/components/crm/ui";
+import { EmptyState } from "@/components/crm/ui";
+import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
 import {
   asDict,
   asList,
@@ -27,7 +28,25 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "agro", label: "Agro" },
 ];
 
-const YEARS = Array.from({ length: 16 }, (_, i) => String(new Date().getFullYear() - i));
+const YEARS = Array.from({ length: 31 }, (_, i) => String(new Date().getFullYear() - i));
+
+function foldKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function pickNamed<T extends { description: string }>(items: T[], name: string) {
+  const needle = foldKey(name);
+  if (!needle) return undefined;
+  return (
+    items.find((item) => foldKey(item.description) === needle) ||
+    items.find((item) => foldKey(item.description).includes(needle)) ||
+    items.find((item) => needle.includes(foldKey(item.description)))
+  );
+}
 
 function currentMonthValue() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -99,11 +118,20 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function statusTone(value: string) {
+  const key = value.toLowerCase();
+  if (/ganado|emitid|vigente|pagad/.test(key)) return "ok";
+  if (/nuevo|pendiente/.test(key)) return "new";
+  if (/interes|contact|cotiz|document/.test(key)) return "warm";
+  if (/perdido|cancel|rechaz/.test(key)) return "bad";
+  return "neutral";
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="crm-card p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-1 font-display text-lg font-semibold text-pretty text-navy">{value || "—"}</p>
+    <div className="sc-stat">
+      <p className="sc-stat__label">{label}</p>
+      <p className="sc-stat__value">{value || "—"}</p>
     </div>
   );
 }
@@ -123,23 +151,33 @@ function Table({
 }) {
   if (loading) {
     return (
-      <div className="crm-card px-5 py-12 text-center text-sm text-muted">
-        Consultando San Cristóbal…
+      <div className="crm-card sc-empty" aria-live="polite">
+        <span className="sc-empty__mark" aria-hidden="true">
+          ●
+        </span>
+        <strong>Consultando San Cristóbal…</strong>
+        <p>Traemos cartera, consultas y el mes elegido.</p>
       </div>
     );
   }
   if (!rows.length) {
-    return <EmptyState title="Sin resultados" description={empty} />;
+    return (
+      <div className="crm-card sc-empty">
+        <span className="sc-empty__mark" aria-hidden="true">
+          ○
+        </span>
+        <strong>Sin resultados</strong>
+        <p>{empty}</p>
+      </div>
+    );
   }
   return (
-    <div className="crm-card overflow-x-auto">
-      <table className="w-full min-w-160 text-left text-sm">
+    <div className="crm-card sc-table overflow-x-auto">
+      <table>
         <thead>
-          <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+          <tr>
             {columns.map((col) => (
-              <th key={col.key} className="px-4 py-3 font-semibold">
-                {col.label}
-              </th>
+              <th key={col.key}>{col.label}</th>
             ))}
           </tr>
         </thead>
@@ -147,16 +185,27 @@ function Table({
           {rows.map((row, index) => (
             <tr
               key={row.id || `${row.Póliza || row.Nombre || index}`}
-              className={
-                onRow
-                  ? "cursor-pointer border-b border-line last:border-0 hover:bg-mist"
-                  : "border-b border-line last:border-0"
-              }
+              className={onRow ? "is-click" : undefined}
+              tabIndex={onRow ? 0 : undefined}
               onClick={onRow ? () => onRow(row) : undefined}
+              onKeyDown={
+                onRow
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRow(row);
+                      }
+                    }
+                  : undefined
+              }
             >
-              {columns.map((col) => (
-                <td key={col.key} className="px-4 py-3 text-navy">
-                  {row[col.key] || "—"}
+              {columns.map((col, colIndex) => (
+                <td key={col.key} className={colIndex === 0 ? "is-name" : undefined}>
+                  {col.key === "Estado" && row[col.key] ? (
+                    <span className={`sc-pill sc-pill--${statusTone(row[col.key])}`}>{row[col.key]}</span>
+                  ) : (
+                    row[col.key] || "—"
+                  )}
                 </td>
               ))}
             </tr>
@@ -266,6 +315,10 @@ export default function SanCristobalPage() {
   const [versionId, setVersionId] = useState("");
   const [is0Km, setIs0Km] = useState(false);
   const [hasGnc, setHasGnc] = useState(false);
+  const [plate, setPlate] = useState("");
+  const [lookupKey, setLookupKey] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupHint, setLookupHint] = useState("");
 
   const producer = useMemo(() => pickProducer(boot), [boot]);
   const warnings = useMemo(
@@ -350,19 +403,13 @@ export default function SanCristobalPage() {
   }, []);
 
   useEffect(() => {
+    if (lookupKey) return;
     let ignore = false;
     (async () => {
       try {
         const res = await fetch(`/api/sc-auto?kind=brands&year=${encodeURIComponent(year)}`);
         const data = await res.json();
-        if (!ignore) {
-          setBrands(catalogItems(data, "brands"));
-          setBrandId("");
-          setModels([]);
-          setVersions([]);
-          setModelId("");
-          setVersionId("");
-        }
+        if (!ignore) setBrands(catalogItems(data, "brands"));
       } catch {
         if (!ignore) setBrands([]);
       }
@@ -370,43 +417,133 @@ export default function SanCristobalPage() {
     return () => {
       ignore = true;
     };
-  }, [year]);
+  }, [year, lookupKey]);
 
   useEffect(() => {
-    if (!brandId) return;
+    if (!brandId || lookupKey) return;
     let ignore = false;
     (async () => {
       const params = new URLSearchParams({ kind: "models", year, brandId });
       const res = await fetch(`/api/sc-auto?${params}`);
       const data = await res.json();
-      if (!ignore) {
-        setModels(catalogItems(data, "models"));
-        setVersions([]);
-        setModelId("");
-        setVersionId("");
-      }
+      if (!ignore) setModels(catalogItems(data, "models"));
     })();
     return () => {
       ignore = true;
     };
-  }, [brandId, year]);
+  }, [brandId, year, lookupKey]);
 
   useEffect(() => {
-    if (!brandId || !modelId) return;
+    if (!brandId || !modelId || lookupKey) return;
     let ignore = false;
     (async () => {
       const params = new URLSearchParams({ kind: "versions", year, brandId, modelId });
       const res = await fetch(`/api/sc-auto?${params}`);
       const data = await res.json();
-      if (!ignore) {
-        setVersions(catalogItems(data, "versions"));
-        setVersionId("");
-      }
+      if (!ignore) setVersions(catalogItems(data, "versions"));
     })();
     return () => {
       ignore = true;
     };
-  }, [brandId, modelId, year]);
+  }, [brandId, modelId, year, lookupKey]);
+
+  useEffect(() => {
+    const normalized = normalizeArPlate(plate);
+    const kind = classifyArPlate(normalized);
+    if (is0Km || kind !== "auto") {
+      setLookingUp(false);
+      if (kind === "moto") setLookupHint("Esta patente es de moto.");
+      return;
+    }
+    let ignore = false;
+    setLookingUp(true);
+    setLookupHint("");
+    const timer = window.setTimeout(() => {
+      void b2bGet("vehicle-by-plate", { plate: normalized })
+        .then(async (payload) => {
+          if (ignore) return;
+          const found = asDict(payload.data);
+          const nextYear = textOf(found.year);
+          const brandName = textOf(found.brand);
+          const modelName = textOf(found.model);
+          if (!nextYear) {
+            setLookupKey("");
+            setLookupHint(textOf(found.description) || "Encontramos la patente. Completá el auto a mano.");
+            return;
+          }
+          const brandsRes = await fetch(`/api/sc-auto?kind=brands&year=${encodeURIComponent(nextYear)}`);
+          const brandsData = await brandsRes.json();
+          const nextBrands = catalogItems(brandsData, "brands");
+          const brand = pickNamed(nextBrands, brandName);
+          if (!brand) {
+            setLookupKey("");
+            setYear(nextYear);
+            setBrands(nextBrands);
+            setBrandId("");
+            setModels([]);
+            setVersions([]);
+            setModelId("");
+            setVersionId("");
+            setLookupHint(`${textOf(found.description)}. Elegí marca, modelo y versión.`);
+            return;
+          }
+          const modelsRes = await fetch(
+            `/api/sc-auto?${new URLSearchParams({ kind: "models", year: nextYear, brandId: String(brand.id) })}`
+          );
+          const modelsData = await modelsRes.json();
+          const nextModels = catalogItems(modelsData, "models");
+          const model = pickNamed(nextModels, modelName);
+          if (!model) {
+            setLookupKey("");
+            setYear(nextYear);
+            setBrands(nextBrands);
+            setBrandId(String(brand.id));
+            setModels(nextModels);
+            setVersions([]);
+            setModelId("");
+            setVersionId("");
+            setLookupHint(`${textOf(found.description)}. Elegí modelo y versión.`);
+            return;
+          }
+          const versionsRes = await fetch(
+            `/api/sc-auto?${new URLSearchParams({
+              kind: "versions",
+              year: nextYear,
+              brandId: String(brand.id),
+              modelId: String(model.id),
+            })}`
+          );
+          const versionsData = await versionsRes.json();
+          const nextVersions = catalogItems(versionsData, "versions");
+          setLookupKey(normalized);
+          setYear(nextYear);
+          setBrands(nextBrands);
+          setBrandId(String(brand.id));
+          setModels(nextModels);
+          setModelId(String(model.id));
+          setVersions(nextVersions);
+          setVersionId(nextVersions.length === 1 ? String(nextVersions[0].id) : "");
+          setLookupHint(
+            nextVersions.length === 1
+              ? textOf(found.description)
+              : `${textOf(found.description)}. Elegí la versión.`
+          );
+        })
+        .catch((err) => {
+          if (!ignore) {
+            setLookupKey("");
+            setLookupHint(err instanceof Error ? err.message : "No pudimos buscar esa patente.");
+          }
+        })
+        .finally(() => {
+          if (!ignore) setLookingUp(false);
+        });
+    }, 400);
+    return () => {
+      ignore = true;
+      window.clearTimeout(timer);
+    };
+  }, [is0Km, plate]);
 
   useEffect(() => {
     if (tab !== "agro") return;
@@ -480,39 +617,50 @@ export default function SanCristobalPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Operaciones PAS"
-        title="San Cristóbal B2B"
-        description={`${producer.name} · ${producer.code} · ambiente ${producer.env}. El cotizador público de la web sigue en marketing.`}
-        actions={
-          <span className={`crm-badge ${boot ? "bg-emerald-100 text-emerald-800" : "bg-mist text-muted"}`}>
-            {boot ? `${producer.env} conectado` : "Cargando…"}
+    <div className="sc-ops">
+      <section className="sc-hero">
+        <span className="sc-hero__glow" aria-hidden="true" />
+        <div className="sc-hero__top">
+          <p className="sc-kicker">Operaciones PAS</p>
+          <span className={`sc-live ${boot ? "" : "is-wait"}`}>
+            {boot ? `${producer.env} conectado` : "Conectando…"}
           </span>
-        }
-      />
+        </div>
+        <h1>San Cristóbal B2B</h1>
+        <p className="sc-hero__producer">{producer.name}</p>
+        <div className="sc-hero__meta">
+          <span className="sc-chip" translate="no">
+            {producer.code}
+          </span>
+          <span className="sc-chip">CUIT {producer.taxId}</span>
+          <span className="sc-chip">{producer.organizer}</span>
+        </div>
+      </section>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="sc-toolbar">
+        <nav className="sc-tabs" aria-label="Secciones de San Cristóbal">
           {TABS.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={`crm-btn ${tab === item.id ? "crm-btn-primary" : "crm-btn-ghost"}`}
+              className={`sc-tab ${tab === item.id ? "is-on" : ""}`}
+              aria-pressed={tab === item.id}
               onClick={() => setTab(item.id)}
             >
               {item.label}
             </button>
           ))}
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="font-medium text-ink">Mes</span>
+        </nav>
+        <label className="sc-month">
+          Mes
           <input
             type="month"
-            className="crm-input w-44"
+            name="periodo"
+            autoComplete="off"
             max={currentMonthValue()}
             value={month}
             disabled={booting || busy}
+            aria-label="Mes histórico"
             onChange={(e) => {
               const value = e.target.value;
               if (!value) return;
@@ -524,31 +672,32 @@ export default function SanCristobalPage() {
       </div>
 
       {tab === "conexion" ? (
-        <div className="space-y-4">
-          <section className="crm-card p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-teal">Productor asesor</p>
-            <h2 className="mt-1 font-display text-2xl font-semibold text-navy">{producer.name}</h2>
-            <p className="mt-1 text-sm text-muted">
+        <div className="sc-panel">
+          <section className="crm-card p-6">
+            <p className="sc-kicker" style={{ color: "var(--teal)" }}>
+              Productor asesor
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-pretty text-navy">{producer.name}</h2>
+            <p className="mt-2 text-sm text-muted">
               {producer.code} · CUIT {producer.taxId} · organizador {producer.organizer}
             </p>
           </section>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="sc-stats">
             <Stat label="Canal" value={producer.channel} />
             <Stat label="Ambiente" value={producer.env} />
             <Stat label="Pólizas en cartera" value={String(policies.length)} />
             <Stat label="Campañas" value={String(affinity.length)} />
-            <Stat label={`Movimientos · ${monthLabel(month)}`} value={String(movements.length)} />
-            <Stat label={`Siniestros · ${monthLabel(month)}`} value={String(claims.length)} />
-            <Stat label={`Consultas de cotizadores · ${monthLabel(month)}`} value={String(leads.length)} />
-            <Stat label="Productos" value={String(products.length)} />
-            <Stat label="Localidad CP 4400" value={textOf(city.Nombre) || "Salta"} />
+            <Stat label="Movimientos" value={String(movements.length)} />
+            <Stat label="Siniestros" value={String(claims.length)} />
+            <Stat label="Consultas de cotizadores" value={String(leads.length)} />
+            <Stat label="Localidad" value={textOf(city.Nombre) || "Salta"} />
           </div>
         </div>
       ) : null}
 
       {tab === "cartera" ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="sc-panel">
+          <div className="sc-tabs" aria-label="Vistas de cartera">
             {(
               [
                 ["policies", "Pólizas", policies.length],
@@ -561,16 +710,17 @@ export default function SanCristobalPage() {
               <button
                 key={id}
                 type="button"
-                className={`crm-btn ${carteraView === id ? "crm-btn-teal" : "crm-btn-ghost"}`}
+                className={`sc-tab ${carteraView === id ? "is-on" : ""}`}
+                aria-pressed={carteraView === id}
                 onClick={() => setCarteraView(id)}
               >
                 {label}
-                <span className="crm-badge bg-white/70 text-navy">{count}</span>
+                <span className="sc-pill sc-pill--neutral">{count}</span>
               </button>
             ))}
             <button
               type="button"
-              className="crm-btn crm-btn-ghost"
+              className="sc-tab"
               disabled={busy || booting}
               onClick={() =>
                 void run(() => b2bGet("bootstrap", periodQuery()), (data) => applyBoot(data))
@@ -585,7 +735,7 @@ export default function SanCristobalPage() {
                 className="crm-input max-w-md"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar póliza, asegurado o documento"
+                placeholder="Buscar póliza, asegurado o documento…"
               />
               <Table
                 loading={booting}
@@ -658,7 +808,7 @@ export default function SanCristobalPage() {
       ) : null}
 
       {tab === "poliza" ? (
-        <div className="space-y-4">
+        <div className="sc-panel">
           <section className="crm-card grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Número de póliza">
               <input className="crm-input" value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} />
@@ -748,8 +898,26 @@ export default function SanCristobalPage() {
       ) : null}
 
       {tab === "auto" ? (
-        <div className="space-y-4">
+        <div className="sc-panel">
           <section className="crm-card grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+            {is0Km ? (
+              <p className="self-end text-sm text-muted sm:col-span-2 lg:col-span-3">Es 0 km: no hace falta patente.</p>
+            ) : (
+              <Field label="Patente">
+                <input
+                  className="crm-input"
+                  value={plate}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="AB123CD"
+                  onChange={(e) => {
+                    setLookupKey("");
+                    setLookupHint("");
+                    setPlate(normalizeArPlate(e.target.value));
+                  }}
+                />
+              </Field>
+            )}
             <Field label="CUIL del asegurado">
               <input
                 className="crm-input"
@@ -765,7 +933,19 @@ export default function SanCristobalPage() {
               <input className="crm-input" value={postal} onChange={(e) => setPostal(e.target.value)} />
             </Field>
             <Field label="Año">
-              <select className="crm-input" value={year} onChange={(e) => setYear(e.target.value)}>
+              <select
+                className="crm-input"
+                value={year}
+                onChange={(e) => {
+                  setLookupKey("");
+                  setYear(e.target.value);
+                  setBrandId("");
+                  setModelId("");
+                  setVersionId("");
+                  setModels([]);
+                  setVersions([]);
+                }}
+              >
                 {YEARS.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -774,7 +954,17 @@ export default function SanCristobalPage() {
               </select>
             </Field>
             <Field label="Marca">
-              <select className="crm-input" value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+              <select
+                className="crm-input"
+                value={brandId}
+                onChange={(e) => {
+                  setLookupKey("");
+                  setBrandId(e.target.value);
+                  setModelId("");
+                  setVersionId("");
+                  setVersions([]);
+                }}
+              >
                 <option value="">Elegí marca</option>
                 {brands.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -784,7 +974,16 @@ export default function SanCristobalPage() {
               </select>
             </Field>
             <Field label="Modelo">
-              <select className="crm-input" value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={!brandId}>
+              <select
+                className="crm-input"
+                value={modelId}
+                onChange={(e) => {
+                  setLookupKey("");
+                  setModelId(e.target.value);
+                  setVersionId("");
+                }}
+                disabled={!brandId}
+              >
                 <option value="">Elegí modelo</option>
                 {models.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -816,7 +1015,11 @@ export default function SanCristobalPage() {
               <input type="checkbox" checked={hasGnc} onChange={(e) => setHasGnc(e.target.checked)} />
               GNC
             </label>
-            {selectedVersion?.statedAmount ? (
+            {lookingUp ? (
+              <p className="self-end text-sm text-muted">Buscando el auto por patente…</p>
+            ) : lookupHint ? (
+              <p className="self-end text-sm text-muted">{lookupHint}</p>
+            ) : selectedVersion?.statedAmount ? (
               <p className="self-end text-sm text-muted">Suma {moneyOf(selectedVersion.statedAmount)}</p>
             ) : null}
             <button
@@ -864,14 +1067,14 @@ export default function SanCristobalPage() {
           ) : (
             <EmptyState
               title="Todavía no hay cotización"
-              description="Elegí marca, modelo y versión. En UAT Guidewire a veces falla el motor CA7; si pasa, el aviso queda arriba."
+              description="Ingresá la patente o elegí año, marca, modelo y versión. La cotización sale por QuoteCA7 de San Cristóbal."
             />
           )}
         </div>
       ) : null}
 
       {tab === "hogar" ? (
-        <div className="space-y-4">
+        <div className="sc-panel">
           <section className="crm-card grid gap-3 p-5 sm:grid-cols-2">
             <Field label="CUIL">
               <input
@@ -931,22 +1134,31 @@ export default function SanCristobalPage() {
       ) : null}
 
       {tab === "consultas" ? (
-        <div className="space-y-4">
-          <section className="crm-card p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-teal">Período</p>
-            <h2 className="mt-1 font-display text-2xl font-semibold text-navy">{monthLabel(month)}</h2>
-            <p className="mt-1 text-sm text-muted">
+        <div className="sc-panel">
+          <section className="crm-card p-6">
+            <p className="sc-kicker" style={{ color: "var(--teal)" }}>
+              Período
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-pretty text-navy capitalize">
+              {monthLabel(month)}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted">
               Leads que completaron un cotizador San Cristóbal (auto, moto, hogar, AP o comercio) en el mes elegido.
             </p>
           </section>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="sc-stats">
             <Stat label="Consultas de cotizadores" value={String(leads.length)} />
             <Stat label="Movimientos" value={String(movements.length)} />
             <Stat label="Siniestros" value={String(claims.length)} />
             <Stat label="Comisiones" value={String(commissions.length)} />
           </div>
-          <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-navy">Consultas de cotizadores San Cristóbal</h2>
+          <section className="sc-panel">
+            <div className="sc-panel__head">
+              <div>
+                <h2>Consultas de cotizadores</h2>
+                <p>Tocá una fila para abrir la ficha del lead.</p>
+              </div>
+            </div>
             <Table
               loading={booting}
               columns={[
@@ -964,8 +1176,13 @@ export default function SanCristobalPage() {
               }}
             />
           </section>
-          <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-navy">Comisiones ganadas</h2>
+          <section className="sc-panel">
+            <div className="sc-panel__head">
+              <div>
+                <h2>Comisiones ganadas</h2>
+                <p>Según el mes seleccionado arriba.</p>
+              </div>
+            </div>
             <Table
               loading={booting}
               columns={[
@@ -1068,8 +1285,8 @@ export default function SanCristobalPage() {
               empty="Sin CUIL para ese DNI."
             />
           ) : null}
-          <section className="crm-card p-5">
-            <h2 className="mb-3 font-display text-lg font-semibold text-navy">Productos</h2>
+          <section className="crm-card p-6">
+            <h2 className="mb-4 font-display text-lg font-semibold text-navy">Productos</h2>
             <div className="flex flex-wrap gap-2">
               {products.map((row) => (
                 <span key={textOf(row.Code)} className="crm-badge bg-mist text-navy">
@@ -1082,7 +1299,7 @@ export default function SanCristobalPage() {
       ) : null}
 
       {tab === "agro" ? (
-        <div className="space-y-4">
+        <div className="sc-panel">
           <section className="crm-card flex flex-col gap-3 p-5 sm:flex-row sm:items-end">
             <Field label="Catálogo">
               <select
@@ -1130,12 +1347,14 @@ export default function SanCristobalPage() {
         </div>
       ) : null}
 
-      {busy && !booting ? <p className="text-sm text-muted">Consultando San Cristóbal…</p> : null}
-      {notice ? <p className="crm-card bg-mist p-4 text-sm text-navy">{notice}</p> : null}
-      {error ? <p className="crm-card border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
-      {warnings.length ? (
-        <p className="crm-card bg-amber-50 p-4 text-sm text-amber-900">{warnings.join(" · ")}</p>
+      {busy && !booting ? (
+        <p className="sc-alert sc-alert--ok" aria-live="polite">
+          Consultando San Cristóbal…
+        </p>
       ) : null}
+      {notice ? <p className="sc-alert sc-alert--ok">{notice}</p> : null}
+      {error ? <p className="sc-alert sc-alert--err">{error}</p> : null}
+      {warnings.length ? <p className="sc-alert sc-alert--warn">{warnings.join(" · ")}</p> : null}
     </div>
   );
 }
