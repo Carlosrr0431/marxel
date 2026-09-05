@@ -24,8 +24,27 @@ export function producerCode() {
   return scB2bConfig().producerCode;
 }
 
+export const SC_AUTO_PRODUCT = "CA7CommAuto";
+export const SC_AUTO_POLICY_TYPE = "CA7_Car";
+
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+export function previousDayIso(date = new Date(), timeZone = "America/Argentina/Salta") {
+  const today = date.toLocaleDateString("en-CA", { timeZone });
+  const [year, month, day] = today.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day) - 24 * 60 * 60 * 1000).toISOString();
+}
+
+export function movementQueryDate(raw?: string) {
+  if (!raw) return previousDayIso();
+  const requested = new Date(raw);
+  if (Number.isNaN(requested.getTime())) return previousDayIso();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Salta" });
+  const requestedDay = requested.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Salta" });
+  if (requestedDay >= today) return previousDayIso();
+  return requested.toISOString();
 }
 
 export function taxIdFromProducerPayload(producers: unknown, info?: unknown) {
@@ -55,9 +74,9 @@ export async function producerPortfolio(code = producerCode()) {
   return scB2bGet(withQuery("/api/Producer/portfolio-by-producer-code", { producerCode: code }));
 }
 
-export async function producerAffinity(productCode: string, policyTypeCode?: string) {
-  if (!productCode) {
-    throw new Error("Falta el código de producto para campañas");
+export async function producerAffinity(productCode: string, policyTypeCode: string) {
+  if (!productCode || !policyTypeCode) {
+    throw new Error("Faltan producto y tipo de póliza para campañas");
   }
   return scB2bGet(
     withQuery("/api/Producer/GetAffinityGroupsByProducerCode", {
@@ -76,7 +95,7 @@ export async function producerMovements(date: string, taxId: string) {
     withQuery("/api/Producer/movements-by-date", {
       producerCode: producerCode(),
       taxId,
-      date,
+      date: movementQueryDate(date),
     })
   );
 }

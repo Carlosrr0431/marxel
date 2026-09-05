@@ -473,7 +473,7 @@ export default function SanCristobalPage() {
             <Stat label="Ambiente" value={producer.env} />
             <Stat label="Pólizas en cartera" value={String(policies.length)} />
             <Stat label="Campañas" value={String(affinity.length)} />
-            <Stat label="Movimientos de hoy" value={String(movements.length)} />
+            <Stat label="Movimientos de ayer" value={String(movements.length)} />
             <Stat label="Siniestros (30 días)" value={String(claims.length)} />
             <Stat label="Productos" value={String(products.length)} />
             <Stat label="Localidad CP 4400" value={textOf(city.Nombre) || "Salta"} />
@@ -557,7 +557,7 @@ export default function SanCristobalPage() {
                 { key: "Casa", label: "Casa" },
               ]}
               rows={movementRows}
-              empty="No hay movimientos en el día."
+              empty="No hay movimientos de ayer. San Cristóbal no deja consultar el día en curso."
               onRow={(row) => void openPolicy(row.Póliza)}
             />
           ) : null}

@@ -18,6 +18,7 @@ import {
   issueAtm,
   issueCa7,
   issueCp7,
+  movementQueryDate,
   motoVersion,
   paymentHistory,
   policyByNumber,
@@ -27,11 +28,14 @@ import {
   producerInfo,
   producerMovements,
   producerPortfolio,
+  previousDayIso,
   quoteAtm,
   quoteCa7,
   quoteCp7,
   quoteLife,
   REPORT_PATHS,
+  SC_AUTO_POLICY_TYPE,
+  SC_AUTO_PRODUCT,
   scB2bConfig,
   scB2bLoginProbe,
   searchPolicy,
@@ -89,9 +93,9 @@ async function handleGet(request: NextRequest) {
     ]);
     const taxId = taxIdFromProducerPayload(producers.ok ? producers.data : null, info.ok ? info.data : null);
     const [affinity, movements] = await Promise.all([
-      settle(() => producerAffinity("CA7CommAuto")),
+      settle(() => producerAffinity(SC_AUTO_PRODUCT, SC_AUTO_POLICY_TYPE)),
       taxId
-        ? settle(() => producerMovements(now.toISOString(), taxId))
+        ? settle(() => producerMovements(previousDayIso(), taxId))
         : Promise.resolve({ ok: true as const, data: { Policies: [] } }),
     ]);
     return NextResponse.json({
@@ -138,13 +142,13 @@ async function handleGet(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       data: await producerAffinity(
-        q(request, "productCode") || "CA7CommAuto",
-        q(request, "policyTypeCode") || undefined
+        q(request, "productCode") || SC_AUTO_PRODUCT,
+        q(request, "policyTypeCode") || SC_AUTO_POLICY_TYPE
       ),
     });
   }
   if (action === "movements") {
-    const date = q(request, "date") || new Date().toISOString();
+    const date = movementQueryDate(q(request, "date") || undefined);
     const taxId = q(request, "taxId") || taxIdFromProducerPayload(await currentProducers());
     if (!taxId) {
       return NextResponse.json({ ok: false, error: "No se pudo obtener el CUIT del productor" }, { status: 400 });
