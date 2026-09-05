@@ -3944,6 +3944,14 @@ body:has(.crm-shell) {
   text-decoration: line-through;
 }
 
+.go-quote__cuotas-after {
+  margin-top: 0.4rem;
+  text-align: center;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
 .go-quote__cover {
   margin-top: 1rem;
   display: flex;

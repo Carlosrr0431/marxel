@@ -261,23 +261,19 @@ export function GoAssistanceQuote() {
                   {item.discountPct > 0 ? (
                     <p className="go-quote__off">{item.discountPct}% OFF</p>
                   ) : null}
-                  {item.installments > 1 ? (
-                    <p className="go-quote__cuotas">
-                      {item.installments} cuotas sin interés de
-                    </p>
-                  ) : (
-                    <p className="go-quote__cuotas">Precio total</p>
-                  )}
-                  <p className="go-quote__price">
-                    {money(item.installments > 1 ? item.installmentArs : item.totalArs)}
-                  </p>
+                  <p className="go-quote__cuotas">Total del viaje</p>
+                  <p className="go-quote__price">{money(item.totalArs)}</p>
                   {item.originalArs ? (
                     <p className="go-quote__before">{money(item.originalArs)}</p>
+                  ) : null}
+                  {item.installments > 1 ? (
+                    <p className="go-quote__cuotas-after">
+                      {item.installments} cuotas sin interés de {money(item.installmentArs)}
+                    </p>
                   ) : null}
                   <ul className="go-quote__cover">
                     {item.coverageMedical ? <li>Asistencia médica {item.coverageMedical}</li> : null}
                     {item.coverageLuggage ? <li>Equipaje {item.coverageLuggage}</li> : null}
-                    <li>Total del viaje {money(item.totalArs)}</li>
                   </ul>
                   <button
                     type="button"
