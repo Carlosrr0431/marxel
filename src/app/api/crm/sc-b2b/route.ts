@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
+import { createServiceClient } from "@/lib/supabase/server";
 import {
   ScB2bError,
   agriCatalog,
@@ -10,6 +11,7 @@ import {
   claimByNumber,
   claimsByProducer,
   claimsNews,
+  currentYearMonth,
   cuilsByDni,
   currentProducers,
   downloadReport,
@@ -18,6 +20,8 @@ import {
   issueAtm,
   issueCa7,
   issueCp7,
+  jobMovements,
+  monthPeriod,
   movementQueryDate,
   motoVersion,
   paymentHistory,
@@ -28,7 +32,6 @@ import {
   producerInfo,
   producerMovements,
   producerPortfolio,
-  previousDayIso,
   quoteAtm,
   quoteCa7,
   quoteCp7,
@@ -63,6 +66,47 @@ function asRecord(value: unknown) {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+async function settle<T>(fn: () => Promise<T>) {
+  try {
+    return { ok: true as const, data: await fn() };
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : "Error" };
+  }
+}
+
+async function digitalLeads(start: string, end: string) {
+  try {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("leads")
+      .select("id, created_at, nombre, celular, email, producto, origen, origen_detalle, estado, plan_interes")
+      .gte("created_at", start)
+      .lte("created_at", end)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadMonthPack(month: string, taxId: string) {
+  const period = monthPeriod(month);
+  const emptyMove = { ok: true as const, data: { Policies: [] } };
+  const emptyJobs = { ok: true as const, data: { ListJobSummary: [] } };
+  const emptyComm = { ok: true as const, data: { EarnedCommissions: [] } };
+  const [movements, claims, commissions, jobs, leads] = await Promise.all([
+    taxId ? settle(() => producerMovements(period.movementDate, taxId)) : Promise.resolve(emptyMove),
+    settle(() => claimsByProducer(period.start, period.end)),
+    taxId
+      ? settle(() => earnedCommissions({ taxId, yearMonth: period.yearMonth, currencyCode: "ars" }))
+      : Promise.resolve(emptyComm),
+    taxId ? settle(() => jobMovements({ taxId, start: period.start, end: period.end })) : Promise.resolve(emptyJobs),
+    digitalLeads(period.start, period.end),
+  ]);
+  return { period, movements, claims, commissions, jobs, leads };
+}
+
 async function handleGet(request: NextRequest) {
   const action = q(request, "action") || "ping";
 
@@ -73,34 +117,22 @@ async function handleGet(request: NextRequest) {
         { status: 503 }
       );
     }
-    async function settle<T>(fn: () => Promise<T>) {
-      try {
-        return { ok: true as const, data: await fn() };
-      } catch (err) {
-        return { ok: false as const, error: err instanceof Error ? err.message : "Error" };
-      }
-    }
     const login = await scB2bLoginProbe();
-    const now = new Date();
-    const monthAgo = new Date(now.getTime() - 30 * 86400000);
-    const [producers, info, portfolio, products, postal, claims] = await Promise.all([
+    const month = q(request, "month") || currentYearMonth();
+    const [producers, info, portfolio, products, postal, affinity] = await Promise.all([
       settle(currentProducers),
       settle(() => producerInfo()),
       settle(producerPortfolio),
       settle(() => typeList("Product")),
       settle(() => citiesByPostalCode("4400")),
-      settle(() => claimsByProducer(monthAgo.toISOString(), now.toISOString())),
+      settle(() => producerAffinity(SC_AUTO_PRODUCT, SC_AUTO_POLICY_TYPE)),
     ]);
     const taxId = taxIdFromProducerPayload(producers.ok ? producers.data : null, info.ok ? info.data : null);
-    const [affinity, movements] = await Promise.all([
-      settle(() => producerAffinity(SC_AUTO_PRODUCT, SC_AUTO_POLICY_TYPE)),
-      taxId
-        ? settle(() => producerMovements(previousDayIso(), taxId))
-        : Promise.resolve({ ok: true as const, data: { Policies: [] } }),
-    ]);
+    const pack = await loadMonthPack(month, taxId);
     return NextResponse.json({
       ok: true,
       login,
+      month: pack.period.input,
       producers: producers.ok ? producers.data : [],
       info: info.ok ? info.data : null,
       producerCode: producerCode(),
@@ -109,9 +141,40 @@ async function handleGet(request: NextRequest) {
       affinity: affinity.ok ? affinity.data : { AffinityGroups: [] },
       products: products.ok ? products.data : { Values: [] },
       postal: postal.ok ? postal.data : { ciudadDTO: [] },
-      movements: movements.ok ? movements.data : { Policies: [] },
-      claims: claims.ok ? claims.data : { Claims: [] },
-      warnings: [producers, info, portfolio, affinity, products, postal, movements, claims]
+      movements: pack.movements.ok ? pack.movements.data : { Policies: [] },
+      claims: pack.claims.ok ? pack.claims.data : { Claims: [] },
+      commissions: pack.commissions.ok ? pack.commissions.data : { EarnedCommissions: [] },
+      jobs: pack.jobs.ok ? pack.jobs.data : { ListJobSummary: [] },
+      leads: pack.leads,
+      warnings: [producers, info, portfolio, affinity, products, postal, pack.movements, pack.claims, pack.commissions, pack.jobs]
+        .filter((row) => !row.ok)
+        .map((row) => ("error" in row ? row.error : "")),
+    });
+  }
+
+  if (action === "period") {
+    if (!isScB2bConfigured()) {
+      return NextResponse.json(
+        { ok: false, error: "Faltan credenciales B2B de San Cristóbal en el servidor." },
+        { status: 503 }
+      );
+    }
+    const month = q(request, "month") || currentYearMonth();
+    let taxId = q(request, "taxId");
+    if (!taxId) {
+      const [producers, info] = await Promise.all([currentProducers(), producerInfo()]);
+      taxId = taxIdFromProducerPayload(producers, info);
+    }
+    const pack = await loadMonthPack(month, taxId);
+    return NextResponse.json({
+      ok: true,
+      month: pack.period.input,
+      movements: pack.movements.ok ? pack.movements.data : { Policies: [] },
+      claims: pack.claims.ok ? pack.claims.data : { Claims: [] },
+      commissions: pack.commissions.ok ? pack.commissions.data : { EarnedCommissions: [] },
+      jobs: pack.jobs.ok ? pack.jobs.data : { ListJobSummary: [] },
+      leads: pack.leads,
+      warnings: [pack.movements, pack.claims, pack.commissions, pack.jobs]
         .filter((row) => !row.ok)
         .map((row) => ("error" in row ? row.error : "")),
     });

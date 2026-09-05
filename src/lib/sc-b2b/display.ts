@@ -23,6 +23,8 @@ export function asList(value: unknown): Dict[] {
     "Versiones",
     "Items",
     "Cuils",
+    "EarnedCommissions",
+    "ListJobSummary",
     "coverages",
     "cropRisksCatalog",
     "tillageTypes",

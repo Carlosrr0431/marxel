@@ -1,4 +1,4 @@
-import { scB2bConfig, scB2bDownload, scB2bGet, withQuery, type ScB2bBinary } from "./client";
+import { scB2bConfig, scB2bDownload, scB2bGet, scB2bPost, withQuery, type ScB2bBinary } from "./client";
 
 export const REPORT_PATHS = {
   "frente-poliza": "/api/Reportes/FrentePoliza",
@@ -45,6 +45,33 @@ export function movementQueryDate(raw?: string) {
   const requestedDay = requested.toLocaleDateString("en-CA", { timeZone: "America/Argentina/Salta" });
   if (requestedDay >= today) return previousDayIso();
   return requested.toISOString();
+}
+
+export function currentYearMonth(timeZone = "America/Argentina/Salta") {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit" }).formatToParts(
+    new Date()
+  );
+  return `${parts.find((part) => part.type === "year")?.value || "2026"}-${parts.find((part) => part.type === "month")?.value || "01"}`;
+}
+
+export function monthPeriod(yearMonth = currentYearMonth()) {
+  const match = /^(\d{4})-(\d{2})$/.exec(yearMonth.trim());
+  const value = match ? `${match[1]}-${match[2]}` : currentYearMonth();
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const start = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0));
+  const end = new Date(Date.UTC(year, month - 1, lastDay, 26, 59, 59));
+  const now = new Date();
+  return {
+    input: value,
+    yearMonth: `${value.slice(0, 4)}${value.slice(5, 7)}`,
+    start: start.toISOString(),
+    end: end > now ? now.toISOString() : end.toISOString(),
+    movementDate: movementQueryDate(
+      `${value.slice(0, 4)}-${value.slice(5, 7)}-${String(lastDay).padStart(2, "0")}T12:00:00-03:00`
+    ),
+  };
 }
 
 export function taxIdFromProducerPayload(producers: unknown, info?: unknown) {
@@ -98,6 +125,18 @@ export async function producerMovements(date: string, taxId: string) {
       date: movementQueryDate(date),
     })
   );
+}
+
+export async function jobMovements(input: { taxId: string; start: string; end: string }) {
+  if (!input.taxId) {
+    throw new Error("Falta el CUIT del productor para consultas digitales");
+  }
+  return scB2bPost("/api/Job/GetMovements", {
+    TaxID: input.taxId,
+    StartDate: input.start,
+    EndDate: input.end,
+    ProducerCode: producerCode(),
+  });
 }
 
 export async function earnedCommissions(input: {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { EmptyState, PageHeader } from "@/components/crm/ui";
 import {
   asDict,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/sc-b2b/display";
 
 type Tab = "conexion" | "cartera" | "poliza" | "auto" | "hogar" | "consultas" | "agro";
-type CarteraView = "policies" | "affinity" | "movements" | "claims";
+type CarteraView = "policies" | "affinity" | "movements" | "claims" | "commissions";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "conexion", label: "Conexión" },
@@ -27,6 +28,24 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const YEARS = Array.from({ length: 16 }, (_, i) => String(new Date().getFullYear() - i));
+
+function currentMonthValue() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Salta",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  return `${parts.find((part) => part.type === "year")?.value || "2026"}-${parts.find((part) => part.type === "month")?.value || "01"}`;
+}
+
+function monthLabel(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return value;
+  return new Date(Number(match[1]), Number(match[2]) - 1, 1).toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 const REPORTS = [
   ["frente-poliza", "Frente de póliza"],
@@ -197,7 +216,8 @@ function agriRowsFrom(kind: string, data: unknown): Record<string, string>[] {
 }
 
 export default function SanCristobalPage() {
-  const [tab, setTab] = useState<Tab>("cartera");
+  const { push } = useRouter();
+  const [tab, setTab] = useState<Tab>("consultas");
   const [carteraView, setCarteraView] = useState<CarteraView>("policies");
   const [boot, setBoot] = useState<Record<string, unknown> | null>(null);
   const [booting, setBooting] = useState(true);
@@ -205,11 +225,14 @@ export default function SanCristobalPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [query, setQuery] = useState("");
+  const [month, setMonth] = useState(currentMonthValue);
 
   const [policies, setPolicies] = useState<Record<string, unknown>[]>([]);
   const [affinity, setAffinity] = useState<Record<string, unknown>[]>([]);
   const [movements, setMovements] = useState<Record<string, unknown>[]>([]);
   const [claims, setClaims] = useState<Record<string, unknown>[]>([]);
+  const [jobs, setJobs] = useState<Record<string, unknown>[]>([]);
+  const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [products, setProducts] = useState<Record<string, unknown>[]>([]);
   const [cities, setCities] = useState<Record<string, unknown>[]>([]);
   const [policyDetail, setPolicyDetail] = useState<Record<string, unknown> | null>(null);
@@ -233,10 +256,6 @@ export default function SanCristobalPage() {
   const [inciso, setInciso] = useState("1");
   const [reportKind, setReportKind] = useState("frente-poliza");
   const [agriKind, setAgriKind] = useState("payment-methods");
-  const [yearMonth, setYearMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
   const [year, setYear] = useState(String(new Date().getFullYear() - 5));
   const [brands, setBrands] = useState<{ id: number; description: string }[]>([]);
   const [models, setModels] = useState<{ id: number; description: string }[]>([]);
@@ -255,6 +274,8 @@ export default function SanCristobalPage() {
     [boot]
   );
   const city = cities[0] || {};
+  const yearMonth = month.replace("-", "");
+  const producerTaxId = producer.taxId && producer.taxId !== "—" ? producer.taxId : "";
 
   async function run<T>(fn: () => Promise<T>, after?: (data: T) => void) {
     setBusy(true);
@@ -272,14 +293,29 @@ export default function SanCristobalPage() {
     }
   }
 
+  function applyPeriod(data: Record<string, unknown>) {
+    setMovements(asList(data.movements));
+    setClaims(asList(data.claims));
+    setCommissions(asList(data.commissions));
+    setJobs(asList(data.jobs));
+    setLeads(asList(data.leads));
+    if (typeof data.month === "string" && data.month) setMonth(data.month);
+    setBoot((prev) => (prev ? { ...prev, ...data } : data));
+  }
+
   function applyBoot(data: Record<string, unknown>) {
     setBoot(data);
     setPolicies(asList(data.portfolio));
     setAffinity(asList(data.affinity));
-    setMovements(asList(data.movements));
-    setClaims(asList(data.claims));
     setProducts(asList(data.products));
     setCities(asList(data.postal));
+    applyPeriod(data);
+  }
+
+  function periodQuery(nextMonth = month) {
+    const extra: Record<string, string> = { month: nextMonth };
+    if (taxId || producerTaxId) extra.taxId = taxId || producerTaxId;
+    return extra;
   }
 
   async function openPolicy(number: string) {
@@ -299,7 +335,7 @@ export default function SanCristobalPage() {
       setBooting(true);
       setError("");
       try {
-        const data = await b2bGet("bootstrap");
+        const data = await b2bGet("bootstrap", { month: currentMonthValue() });
         if (!ignore) applyBoot(data);
       } catch (err) {
         if (!ignore) setError(err instanceof Error ? err.message : "Error");
@@ -413,6 +449,25 @@ export default function SanCristobalPage() {
     Hecho: dateOf(row.LossDate),
     Estado: textOf(asDict(row.State).Description) || textOf(asDict(row.State).Code),
   }));
+  const jobRows = jobs.map((row, index) => ({
+    id: textOf(row.PolicyPeriodID) || `${textOf(row.PolicyNumber)}-${index}`,
+    Fecha: dateOf(row.StartDate || row.EffectiveDate),
+    Producto: textOf(row.Product),
+    Ramo: textOf(row.PolicyType),
+    Cobertura: textOf(row.Offering) || textOf(row.OfferingPlan),
+    Tipo: textOf(row.TransactionJob) || textOf(row.Subtype),
+    Estado: textOf(row.Status),
+    Póliza: textOf(row.PolicyNumber),
+  }));
+  const leadRows = leads.map((row, index) => ({
+    id: textOf(row.id) || String(index),
+    Fecha: dateOf(row.created_at),
+    Nombre: textOf(row.nombre),
+    Celular: textOf(row.celular),
+    Origen: [textOf(row.origen), textOf(row.origen_detalle)].filter(Boolean).join(" · "),
+    Producto: textOf(row.producto) || textOf(row.plan_interes),
+    Estado: textOf(row.estado),
+  }));
   const paymentRows = payments.map((row, index) => ({
     id: textOf(row.InstallmentNumber) || String(index),
     Cuota: textOf(row.InstallmentNumber),
@@ -446,17 +501,35 @@ export default function SanCristobalPage() {
         }
       />
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`crm-btn ${tab === item.id ? "crm-btn-primary" : "crm-btn-ghost"}`}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`crm-btn ${tab === item.id ? "crm-btn-primary" : "crm-btn-ghost"}`}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="font-medium text-ink">Mes</span>
+          <input
+            type="month"
+            className="crm-input w-44"
+            max={currentMonthValue()}
+            value={month}
+            disabled={booting || busy}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) return;
+              setMonth(value);
+              void run(() => b2bGet("period", periodQuery(value)), applyPeriod);
+            }}
+          />
+        </label>
       </div>
 
       {tab === "conexion" ? (
@@ -473,8 +546,10 @@ export default function SanCristobalPage() {
             <Stat label="Ambiente" value={producer.env} />
             <Stat label="Pólizas en cartera" value={String(policies.length)} />
             <Stat label="Campañas" value={String(affinity.length)} />
-            <Stat label="Movimientos de ayer" value={String(movements.length)} />
-            <Stat label="Siniestros (30 días)" value={String(claims.length)} />
+            <Stat label={`Movimientos · ${monthLabel(month)}`} value={String(movements.length)} />
+            <Stat label={`Siniestros · ${monthLabel(month)}`} value={String(claims.length)} />
+            <Stat label={`Consultas digitales · ${monthLabel(month)}`} value={String(jobs.length)} />
+            <Stat label="Leads del mes" value={String(leads.length)} />
             <Stat label="Productos" value={String(products.length)} />
             <Stat label="Localidad CP 4400" value={textOf(city.Nombre) || "Salta"} />
           </div>
@@ -490,6 +565,7 @@ export default function SanCristobalPage() {
                 ["affinity", "Campañas", affinity.length],
                 ["movements", "Movimientos", movements.length],
                 ["claims", "Siniestros", claims.length],
+                ["commissions", "Comisiones", commissions.length],
               ] as const
             ).map(([id, label, count]) => (
               <button
@@ -507,7 +583,7 @@ export default function SanCristobalPage() {
               className="crm-btn crm-btn-ghost"
               disabled={busy || booting}
               onClick={() =>
-                void run(() => b2bGet("bootstrap"), (data) => applyBoot(data))
+                void run(() => b2bGet("bootstrap", periodQuery()), (data) => applyBoot(data))
               }
             >
               Actualizar
@@ -557,7 +633,7 @@ export default function SanCristobalPage() {
                 { key: "Casa", label: "Casa" },
               ]}
               rows={movementRows}
-              empty="No hay movimientos de ayer. San Cristóbal no deja consultar el día en curso."
+              empty={`No hay movimientos en el último día consultable de ${monthLabel(month)}. San Cristóbal no deja consultar el día en curso.`}
               onRow={(row) => void openPolicy(row.Póliza)}
             />
           ) : null}
@@ -572,7 +648,20 @@ export default function SanCristobalPage() {
                 { key: "Estado", label: "Estado" },
               ]}
               rows={claimRows}
-              empty="No hay siniestros en los últimos 30 días."
+              empty={`No hay siniestros en ${monthLabel(month)}.`}
+            />
+          ) : null}
+          {carteraView === "commissions" ? (
+            <Table
+              loading={booting}
+              columns={[
+                { key: "Póliza", label: "Póliza" },
+                { key: "Comisión", label: "Comisión" },
+                { key: "Período", label: "Período" },
+              ]}
+              rows={commissionRows}
+              empty={`No hay comisiones ganadas en ${monthLabel(month)}.`}
+              onRow={(row) => void openPolicy(row.Póliza)}
             />
           ) : null}
         </div>
@@ -853,6 +942,72 @@ export default function SanCristobalPage() {
 
       {tab === "consultas" ? (
         <div className="space-y-4">
+          <section className="crm-card p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-teal">Período</p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-navy">{monthLabel(month)}</h2>
+            <p className="mt-1 text-sm text-muted">
+              Consultas digitales de San Cristóbal y leads recibidos en MARXEN durante el mes elegido.
+            </p>
+          </section>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Stat label="Consultas digitales" value={String(jobs.length)} />
+            <Stat label="Leads recibidos" value={String(leads.length)} />
+            <Stat label="Movimientos" value={String(movements.length)} />
+            <Stat label="Siniestros" value={String(claims.length)} />
+          </div>
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold text-navy">Consultas digitales</h2>
+            <Table
+              loading={booting}
+              columns={[
+                { key: "Fecha", label: "Fecha" },
+                { key: "Producto", label: "Producto" },
+                { key: "Ramo", label: "Ramo" },
+                { key: "Cobertura", label: "Cobertura" },
+                { key: "Tipo", label: "Tipo" },
+                { key: "Estado", label: "Estado" },
+                { key: "Póliza", label: "Póliza" },
+              ]}
+              rows={jobRows}
+              empty={`No hay consultas digitales en ${monthLabel(month)}.`}
+              onRow={(row) => {
+                if (row.Póliza) void openPolicy(row.Póliza);
+              }}
+            />
+          </section>
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold text-navy">Leads recibidos</h2>
+            <Table
+              loading={booting}
+              columns={[
+                { key: "Fecha", label: "Fecha" },
+                { key: "Nombre", label: "Nombre" },
+                { key: "Celular", label: "Celular" },
+                { key: "Origen", label: "Origen" },
+                { key: "Producto", label: "Producto" },
+                { key: "Estado", label: "Estado" },
+              ]}
+              rows={leadRows}
+              empty={`No hay leads recibidos en ${monthLabel(month)}.`}
+              onRow={(row) => {
+                if (row.id) push(`/crm/leads/${row.id}`);
+              }}
+            />
+          </section>
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold text-navy">Comisiones ganadas</h2>
+            <Table
+              loading={booting}
+              columns={[
+                { key: "Póliza", label: "Póliza" },
+                { key: "Comisión", label: "Comisión" },
+                { key: "Período", label: "Período" },
+              ]}
+              rows={commissionRows}
+              empty={`No hay comisiones en ${monthLabel(month)}.`}
+              onRow={(row) => void openPolicy(row.Póliza)}
+            />
+          </section>
           <section className="crm-card grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Código postal">
               <input className="crm-input" value={postal} onChange={(e) => setPostal(e.target.value)} />
@@ -904,21 +1059,18 @@ export default function SanCristobalPage() {
             <Field label="CUIT comisiones">
               <input className="crm-input" value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder={producer.taxId} />
             </Field>
-            <Field label="Período AAAAMM">
-              <input className="crm-input" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} />
-            </Field>
             <button
               type="button"
               className="crm-btn crm-btn-ghost self-end"
-              disabled={busy || !yearMonth}
+              disabled={busy}
               onClick={() =>
                 void run(
-                  () => b2bGet("commissions", { taxId: taxId || producer.taxId, yearMonth }),
+                  () => b2bGet("commissions", { taxId: taxId || producerTaxId, yearMonth }),
                   (data) => setCommissions(asList(data.data))
                 )
               }
             >
-              Ver comisiones
+              Recargar comisiones
             </button>
           </section>
           <Table
@@ -944,17 +1096,6 @@ export default function SanCristobalPage() {
               ]}
               rows={padronRows}
               empty="Sin CUIL para ese DNI."
-            />
-          ) : null}
-          {commissionRows.length ? (
-            <Table
-              columns={[
-                { key: "Póliza", label: "Póliza" },
-                { key: "Comisión", label: "Comisión" },
-                { key: "Período", label: "Período" },
-              ]}
-              rows={commissionRows}
-              empty="Sin comisiones en ese período."
             />
           ) : null}
           <section className="crm-card p-5">
