@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import type { LeadOrigen, ModalidadIngreso, ProductoInteres } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
+import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import {
   buildNotas,
   parseEdadTitular,
@@ -95,6 +96,63 @@ function buildPayload(
   return { ...payload, puntaje: scoreLead(payload) };
 }
 
+export async function findLeadIdByPhone(phone: string): Promise<string | null> {
+  const n = normalizeArPhone(phone);
+  if (!n) return null;
+  const last8 = n.slice(-8);
+  const parts = [`celular.eq.${n}`];
+  if (n.startsWith("549") && n.length > 5) parts.push(`celular.eq.${n.slice(3)}`);
+  if (last8.length >= 8) parts.push(`celular.ilike.%${last8}`);
+  const supabase = createServiceClient();
+  const { data: rows } = await supabase
+    .from("leads")
+    .select("id,celular")
+    .or(parts.join(","))
+    .order("updated_at", { ascending: false })
+    .limit(12);
+  const found = (rows || []).find((row) => {
+    const other = normalizeArPhone(String(row.celular || ""));
+    return other === n || (last8.length >= 8 && other.slice(-8) === last8);
+  });
+  return found?.id ? String(found.id) : null;
+}
+
+export async function resetLeadForWhatsappReplay(phone: string): Promise<string | null> {
+  const leadId = await findLeadIdByPhone(phone);
+  if (!leadId) return null;
+  const supabase = createServiceClient();
+  const patch = {
+    estado: "nuevo" as const,
+    producto: "general" as const,
+    plan_interes: null,
+    coberturas: null,
+    modalidad: "no_aplica" as const,
+    prioridad: "media" as const,
+    tags: ["whatsapp"],
+    notas_iniciales: null,
+    edad: null,
+    localidad: null,
+    puntaje: 0,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
+  if (error) throw new Error(error.message);
+  await supabase
+    .from("seguimientos")
+    .update({ estado: "cancelado" })
+    .eq("lead_id", leadId)
+    .eq("estado", "pendiente");
+  await supabase.from("actividades").insert({
+    lead_id: leadId,
+    tipo: "sistema",
+    titulo: "Chat reiniciado para probar la IA",
+    detalle: "Se limpió el historial de WhatsApp y la ficha quedó como un lead nuevo.",
+    autor: "asesor",
+    meta: { source: "whatsapp_reset" },
+  });
+  return leadId;
+}
+
 export async function upsertHotLeadFromQuote(state: QuoteState) {
   const data = state.data;
   if (!data.nombre || !data.celular) {
@@ -105,12 +163,13 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
   const notas = buildNotas(data, "Estado: LEAD CALIENTE · listo para cotizar");
   const tags = ["chatbot", "caliente", "cotizar", toProducto(data)];
   const payload = buildPayload(data, notas, tags, state.channel);
+  const existingId = state.leadId || (await findLeadIdByPhone(data.celular));
 
-  if (state.leadId) {
+  if (existingId) {
     const { data: updated, error } = await supabase
       .from("leads")
       .update(payload)
-      .eq("id", state.leadId)
+      .eq("id", existingId)
       .select("id")
       .single();
     if (error) throw error;

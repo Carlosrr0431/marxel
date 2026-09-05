@@ -30,7 +30,7 @@ import {
   classifyWhatsappMessage,
   isConversationalIntent,
 } from "@/lib/chatbot/message-classifier";
-import { findPrestadores } from "@/lib/chatbot/lookup-prestadores";
+import { looksLikePrestadorQuery } from "@/lib/chatbot/lookup-prestadores";
 import { answerHealthPlanQuestion } from "@/lib/chatbot/health-plan-answer";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -233,7 +233,7 @@ export async function runChatTurn(input: {
     }
   }
 
-  if (lines.length > 1 && !pauseQuote && !findPrestadores(message).length) {
+  if (lines.length > 1 && !pauseQuote && !looksLikePrestadorQuery(message)) {
     const batch = await processQuoteFlowBatch(
       lines,
       quoteBase,

@@ -4724,6 +4724,18 @@ button.crm-wa-file {
   background: #f0fdfa;
 }
 
+.crm-wa-headbtn.is-ai-off {
+  border-color: #b42318;
+  color: #b42318;
+  background: #fff5f5;
+}
+
+.crm-wa-headbtn.is-warn {
+  border-color: #b45309;
+  color: #b45309;
+  background: #fff7ed;
+}
+
 .crm-wa-composer {
   display: flex;
   align-items: flex-end;

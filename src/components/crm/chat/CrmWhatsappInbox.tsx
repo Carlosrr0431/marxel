@@ -591,6 +591,9 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
   const [composerPhone, setComposerPhone] = useState("");
   const [profilePics, setProfilePics] = useState<Record<string, string>>({});
   const [leadOpen, setLeadOpen] = useState(false);
+  const [agentEnabled, setAgentEnabled] = useState(true);
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef<HTMLTextAreaElement>(null);
@@ -654,6 +657,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
     if (!normalized) return;
     setSelected(normalized);
     setLeadOpen(false);
+    setConfirmReset(false);
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setLoadingThread(true);
@@ -687,6 +691,19 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
       );
     } finally {
       setLoadingThread(false);
+    }
+
+    try {
+      const agentRes = await fetch(
+        `/api/crm/whatsapp/control?phone=${encodeURIComponent(normalized)}`,
+        { cache: "no-store" }
+      );
+      const agentJson = (await agentRes.json().catch(() => ({}))) as {
+        agentEnabled?: boolean;
+      };
+      setAgentEnabled(agentJson.agentEnabled !== false);
+    } catch {
+      setAgentEnabled(true);
     }
   }, []);
 
@@ -776,6 +793,61 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
   function clearFile() {
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function toggleChatAgent() {
+    if (!selected || agentBusy) return;
+    const next = !agentEnabled;
+    setAgentBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/crm/whatsapp/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: selected, action: "ai", enabled: next }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || json.ok === false) throw new Error(json.error || "No se pudo cambiar la IA");
+      setAgentEnabled(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cambiar la IA");
+    } finally {
+      setAgentBusy(false);
+    }
+  }
+
+  async function resetChat() {
+    if (!selected || agentBusy) return;
+    if (!confirmReset) {
+      setConfirmReset(true);
+      window.setTimeout(() => setConfirmReset(false), 4000);
+      return;
+    }
+    setConfirmReset(false);
+    setAgentBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/crm/whatsapp/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: selected, action: "reset" }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || json.ok === false) throw new Error(json.error || "No se pudo limpiar el chat");
+      setMessages([]);
+      setAgentEnabled(true);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.phone === selected
+            ? { ...chat, last_message: null, last_message_at: null, unread_count: 0 }
+            : chat
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo limpiar el chat");
+    } finally {
+      setAgentBusy(false);
+    }
   }
 
   async function startNewChat(event: React.FormEvent) {
@@ -985,6 +1057,29 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                   onClick={() => setLeadOpen((v) => !v)}
                 >
                   Ficha
+                </button>
+                <button
+                  type="button"
+                  className={`crm-wa-headbtn${agentEnabled ? " is-on" : " is-ai-off"}`}
+                  disabled={agentBusy}
+                  aria-pressed={agentEnabled}
+                  title={
+                    agentEnabled
+                      ? "La IA responde este chat. Clic para que atienda el productor."
+                      : "IA pausada. Clic para que el asistente vuelva a responder."
+                  }
+                  onClick={() => void toggleChatAgent()}
+                >
+                  {agentEnabled ? "IA on" : "IA off"}
+                </button>
+                <button
+                  type="button"
+                  className={`crm-wa-headbtn${confirmReset ? " is-warn" : ""}`}
+                  disabled={agentBusy}
+                  title="Borra el historial y deja el lead como uno nuevo para probar la IA"
+                  onClick={() => void resetChat()}
+                >
+                  {confirmReset ? "¿Confirmar?" : "Limpiar"}
                 </button>
                 <a
                   className="crm-wa-ext"

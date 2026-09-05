@@ -8,6 +8,7 @@ import { runQuoteIntentTool } from "@/lib/chatbot/intent-tools";
 import {
   findPrestadores,
   formatPrestadorAnswer,
+  looksLikePrestadorQuery,
 } from "@/lib/chatbot/lookup-prestadores";
 import { answerHealthPlanQuestion } from "@/lib/chatbot/health-plan-answer";
 import {
@@ -104,6 +105,7 @@ El sistema limpia auto/salud/viaje y conserva nombre, WhatsApp y localidad. repl
 - Flujo abierto de auto NO convierte una pregunta de salud en quote.
 - No inventes coberturas. Si falta dato, un asesor de MARXEN lo confirma (387 634-8199).
 - Cartilla: https://www.marxen.com.ar/salud/cartilla-medica
+- Si el producto en curso es viajero o seguros y el cliente responde nombre, WhatsApp, destino o localidad, es quote. "salta" es una ciudad, no la cartilla de Prevención Salud.
 
 ## JSON
 {"intent":"question","pause_quote":true,"producto":"salud","reply":"En A2 y A4 hay cobertura odontológica y prótesis según plan. Un asesor te confirma el detalle.","confidence":0.93}`;
@@ -145,16 +147,18 @@ function ruleClassify(
     };
   }
 
-  const prestadores = findPrestadores(t);
-  if (prestadores.length > 0) {
-    return {
-      intent: "provider",
-      pauseQuote: true,
-      reply: formatPrestadorAnswer(prestadores),
-      confidence: 0.98,
-      source: "rule",
-      producto: "salud",
-    };
+  if (looksLikePrestadorQuery(t) && !isDeterministicQuoteInput(t, state)) {
+    const prestadores = findPrestadores(t);
+    if (prestadores.length > 0) {
+      return {
+        intent: "provider",
+        pauseQuote: true,
+        reply: formatPrestadorAnswer(prestadores),
+        confidence: 0.98,
+        source: "rule",
+        producto: "salud",
+      };
+    }
   }
 
   const planReply = answerHealthPlanQuestion(t);

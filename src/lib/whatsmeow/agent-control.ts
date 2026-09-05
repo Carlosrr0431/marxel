@@ -1,9 +1,12 @@
 import { emptyQuoteState } from "@/lib/chatbot/quote-flow";
 import { createServiceClient } from "@/lib/supabase/server";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { loadConversation, resetConversation, saveConversation } from "@/lib/whatsmeow/conversations";
+import { clearCrmChatMessages } from "@/lib/whatsmeow/crm-chat";
+import { resetLeadForWhatsappReplay } from "@/lib/chatbot/persist-lead";
 
 export const WHATSAPP_TEST_PHONE = "3878630173";
-export const WHATSAPP_AGENT_ALLOWLIST = [WHATSAPP_TEST_PHONE];
+export const WHATSAPP_AGENT_ALLOWLIST: string[] = [];
 
 const SETTINGS_PHONE = "__agent__";
 const ON = "agent:on";
@@ -48,11 +51,38 @@ export async function setWhatsappAgentEnabled(enabled: boolean) {
   if (error) throw new Error(error.message);
 }
 
+export async function isChatAgentEnabled(phone: string) {
+  const conv = await loadConversation(phone);
+  return conv.quote_state.agentEnabled !== false;
+}
+
+export async function setChatAgentEnabled(phone: string, enabled: boolean) {
+  const key = normalizeArPhone(phone);
+  if (!key) throw new Error("Teléfono inválido");
+  const conv = await loadConversation(key);
+  await saveConversation({
+    ...conv,
+    quote_state: { ...conv.quote_state, agentEnabled: enabled },
+  });
+}
+
+export async function resetWhatsappChatForReplay(phone: string) {
+  const key = normalizeArPhone(phone);
+  if (!key) throw new Error("Teléfono inválido");
+  await resetConversation(key);
+  await clearCrmChatMessages(key);
+  const leadId = await resetLeadForWhatsappReplay(key);
+  return { phone: key, leadId };
+}
+
 export async function whatsappAgentGate(phone: string) {
   const enabled = await isWhatsappAgentEnabled();
   if (!enabled) return { ok: false as const, reason: "agent_disabled" as const };
   if (!isWhatsappAgentAllowedPhone(phone)) {
     return { ok: false as const, reason: "not_allowlisted" as const };
+  }
+  if (!(await isChatAgentEnabled(phone))) {
+    return { ok: false as const, reason: "chat_paused" as const };
   }
   return { ok: true as const };
 }

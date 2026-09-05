@@ -74,6 +74,14 @@ const CHOICE_STEPS = new Set([
   "auto_cp",
   "auto_localidad",
   "auto_plan",
+  "viajero_destino",
+  "nombre",
+  "whatsapp",
+  "localidad",
+  "edades",
+  "uso",
+  "prepaga",
+  "seguro_detalle",
 ]);
 
 function shouldReplyNow(text: string, conv: ConversationRow, isPoll: boolean) {
@@ -93,9 +101,11 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     channel: "whatsapp",
     knownPhone: conv.phone,
   });
-  const quoteState = conv.quote_state.notifiedInterest
-    ? { ...result.quoteState, notifiedInterest: true }
-    : result.quoteState;
+  const quoteState = {
+    ...result.quoteState,
+    notifiedInterest: conv.quote_state.notifiedInterest || result.quoteState.notifiedInterest,
+    agentEnabled: conv.quote_state.agentEnabled,
+  };
 
   const history = [
     ...conv.history,

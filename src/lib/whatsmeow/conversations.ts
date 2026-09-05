@@ -178,6 +178,12 @@ export async function claimConversationEvent(phone: string, token: string) {
   }
 }
 
+export async function resetConversation(phone: string) {
+  const row = fallbackRow(normalizeArPhone(phone) || phone);
+  await saveConversation(row);
+  return row;
+}
+
 export async function saveConversation(row: ConversationRow) {
   const payload = {
     phone: row.phone,

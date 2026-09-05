@@ -32,7 +32,16 @@ const GENERIC = new Set([
   "privada",
   "general",
   "santa",
+  "salta",
+  "capital",
+  "argentina",
+  "provincia",
+  "ciudad",
+  "localidad",
 ]);
+
+const PROVIDER_INTENT =
+  /\b(atiend|atend|atent|trabajan|cubren|aceptan|instituto|imagenes|diagnostico|prestador|cartilla|clinica|sanatorio|hospital|farmacia|laboratorio)\b/;
 
 export type PrestadorHit = {
   kind: "prestador" | "farmacia";
@@ -79,13 +88,7 @@ function scoreAgainst(query: string, nombre: string): number {
 
 export function looksLikePrestadorQuery(message: string): boolean {
   const q = fold(message);
-  if (
-    /\b(atiend|atend|atent|trabajan|cubren|aceptan|instituto|imagenes|diagnostico|prestador|cartilla|clinica|sanatorio|hospital|farmacia|laboratorio)\b/.test(
-      q
-    )
-  ) {
-    return true;
-  }
+  if (PROVIDER_INTENT.test(q)) return true;
   return findPrestadores(message).length > 0;
 }
 

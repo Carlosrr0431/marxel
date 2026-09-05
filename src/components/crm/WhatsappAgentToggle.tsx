@@ -89,7 +89,7 @@ export function WhatsappAgentToggle() {
             {loading
               ? "Consultando si el agente está activo…"
               : enabled
-                ? `Activo. Por ahora solo responde al ${testPhone}.`
+                ? "Activo. Responde a todos los chats, salvo los que pauses en el inbox."
                 : "Pausado. El webhook recibe mensajes, pero el agente no responde."}
           </p>
         </div>
@@ -125,7 +125,7 @@ export function WhatsappAgentToggle() {
           {loading ? "Cargando…" : enabled ? "Agente activo" : "Agente pausado"}
         </span>
         <span className="rounded-full bg-mist px-2.5 py-1 text-[11px] font-semibold text-navy">
-          Prueba: {testPhone}
+          Control por chat en el inbox
         </span>
       </div>
       {error ? (

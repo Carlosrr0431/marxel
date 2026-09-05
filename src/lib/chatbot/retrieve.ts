@@ -77,7 +77,7 @@ function sourceBoost(query: string, sourceId: string): number {
     return 2.5;
   if (/(viajero|europa|brasil|ee\.?uu|estados unidos|nomads|adventure)/.test(q) && sourceId.includes("goassistance"))
     return 2.2;
-  if (/plan|cobertura|reintegro|odont|kine|fono|optica|viajero/.test(q) && sourceId.startsWith("plan-"))
+  if (/plan|cobertura|reintegro|odont|kine|fono|optica/.test(q) && sourceId.startsWith("plan-"))
     return 1.8;
   return 1;
 }

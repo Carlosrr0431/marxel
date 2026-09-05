@@ -1,3 +1,4 @@
+import { CrmRealtimeRefresh } from "@/components/crm/CrmRealtimeRefresh";
 import { CrmShell } from "@/components/crm/CrmShell";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Suspense } from "react";
@@ -77,6 +78,7 @@ export default async function CrmPanelLayout({
         </div>
       }
     >
+      <CrmRealtimeRefresh />
       <CrmShell
         badges={{
           inbox: overdue || 0,

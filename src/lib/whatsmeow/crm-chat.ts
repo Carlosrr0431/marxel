@@ -205,6 +205,39 @@ export async function markCrmMessageFromQueue({
   return { ok: true as const, updated: Boolean(data?.length), id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
+export async function clearCrmChatMessages(phone: string) {
+  const normalized = normalizeArPhone(phone);
+  if (!normalized) return { ok: false as const, error: "teléfono inválido" };
+  const supabase = createServiceClient();
+  const { data: chat, error: chatError } = await supabase
+    .from("whatsapp_chats")
+    .select("id")
+    .eq("phone", normalized)
+    .maybeSingle();
+  if (chatError) {
+    if (missingCrmTable(chatError)) return { ok: false as const, error: "schema_missing" };
+    throw new Error(chatError.message);
+  }
+  if (chat?.id) {
+    const { error: deleteError } = await supabase
+      .from("whatsapp_chat_messages")
+      .delete()
+      .eq("chat_id", chat.id);
+    if (deleteError) throw new Error(deleteError.message);
+    const { error: updateError } = await supabase
+      .from("whatsapp_chats")
+      .update({
+        last_message: null,
+        last_message_at: null,
+        unread_count: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", chat.id);
+    if (updateError) throw new Error(updateError.message);
+  }
+  return { ok: true as const };
+}
+
 export async function markCrmChatRead(phone: string) {
   const normalized = normalizeArPhone(phone);
   if (!normalized) return;

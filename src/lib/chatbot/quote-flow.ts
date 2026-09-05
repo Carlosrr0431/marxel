@@ -90,6 +90,8 @@ export type QuoteState = {
   channel?: "web" | "whatsapp";
   /** Aviso corto al productor por el primer interés de WhatsApp. */
   notifiedInterest?: boolean;
+  /** Si es false, el bot de WhatsApp no responde este chat. */
+  agentEnabled?: boolean;
 };
 
 export type QuoteQuickReply = {
@@ -666,6 +668,19 @@ export function shouldSendWhatsappPoll(step: QuoteStep, replies: QuoteQuickReply
   return true;
 }
 
+const FREE_TEXT_QUOTE_STEPS = new Set<QuoteStep>([
+  "localidad",
+  "nombre",
+  "viajero_destino",
+  "edades",
+  "uso",
+  "prepaga",
+  "seguro_detalle",
+]);
+
+const PROVIDER_INTENT_RE =
+  /\b(prestador|cartilla|cl[ií]nica|sanatorio|hospital|farmacia|atiend|atend|atent)\b/i;
+
 export function isDeterministicQuoteInput(text: string, state?: QuoteState | null): boolean {
   const t = text.trim();
   if (!t) return false;
@@ -678,6 +693,12 @@ export function isDeterministicQuoteInput(text: string, state?: QuoteState | nul
   if (state?.step === "auto_anio" && parseYearFromText(t)) return true;
   if (state?.step === "auto_cp" && t.replace(/\D/g, "").length === 4) return true;
   if (state?.step === "whatsapp" && extractPhone(t)) return true;
+  if (state?.active && state.step && FREE_TEXT_QUOTE_STEPS.has(state.step)) {
+    if (looksLikeCoverageQuestion(t, state)) return false;
+    if (looksLikeProductSwitchRequest(t) || looksLikeExplicitQuote(t)) return false;
+    if (/\?/.test(t) || PROVIDER_INTENT_RE.test(t)) return false;
+    return t.length >= 2 && t.length <= 160;
+  }
   return false;
 }
 

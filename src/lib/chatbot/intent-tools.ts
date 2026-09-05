@@ -155,7 +155,7 @@ export async function runQuoteIntentTool(
       );
     const limit = isProviderQuery ? 12 : 6;
     const chunks = retrieveChunks(query, limit);
-    const prestadores = findPrestadores(query, 4);
+    const prestadores = isProviderQuery ? findPrestadores(query, 4) : [];
     const prestadorBlock = prestadores.length
       ? `[Prestadores en cartilla A2/A4]\n${formatPrestadorAnswer(prestadores)}`
       : "";

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   addNota,
   cancelSeguimiento,
@@ -108,6 +109,23 @@ export function ChatLeadPanel({
     if (!open) return;
     void load();
   }, [open, load]);
+
+  useEffect(() => {
+    if (!phone) return;
+    const supabase = createClient();
+    const refresh = () => {
+      if (open) void load();
+    };
+    const channel = supabase
+      .channel(`crm-chat-lead-${phone}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "seguimientos" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "actividades" }, refresh)
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [phone, open, load]);
 
   function run(task: () => Promise<void>) {
     start(async () => {
@@ -403,8 +421,16 @@ export function ChatLeadDock({
       setLeadId(json.lead?.id || null);
     }
     void peek();
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`crm-chat-dock-${phone}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
+        void peek();
+      })
+      .subscribe();
     return () => {
       alive = false;
+      void supabase.removeChannel(channel);
     };
   }, [phone, open]);
 
