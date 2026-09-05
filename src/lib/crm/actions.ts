@@ -15,6 +15,7 @@ import type {
 } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
 
 const COOKIE = "marxel_crm_session";
 
@@ -248,6 +249,73 @@ export async function convertLeadQuiet(leadId: string) {
 export async function convertLead(leadId: string) {
   const afiliadoId = await convertLeadQuiet(leadId);
   redirect(`/crm/afiliados/${afiliadoId}`);
+}
+
+export async function updateChatFicha(
+  phone: string,
+  patch: {
+    nombre?: string;
+    email?: string;
+    localidad?: string;
+    producto?: ProductoInteres;
+    plan_interes?: string;
+  }
+) {
+  await requireCrm();
+  const celular = normalizeArPhone(phone);
+  if (!celular) throw new Error("Celular inválido");
+
+  const nombre = typeof patch.nombre === "string" ? patch.nombre.trim() : "";
+  if (nombre) {
+    const renamed = await setCrmChatName(celular, nombre);
+    if (!renamed.ok) throw new Error(renamed.error);
+  }
+
+  const leadPatch: Record<string, unknown> = {};
+  if (nombre) leadPatch.nombre = nombre;
+  if ("email" in patch) leadPatch.email = String(patch.email || "").trim() || null;
+  if ("localidad" in patch) leadPatch.localidad = String(patch.localidad || "").trim() || null;
+  if (patch.producto) leadPatch.producto = patch.producto;
+  if ("plan_interes" in patch) {
+    leadPatch.plan_interes = String(patch.plan_interes || "").trim() || null;
+  }
+
+  const touchesLead =
+    Boolean(leadPatch.email) ||
+    Boolean(leadPatch.localidad) ||
+    Boolean(leadPatch.producto) ||
+    "plan_interes" in patch ||
+    "email" in patch ||
+    "localidad" in patch;
+
+  if (!nombre && !touchesLead) return null;
+
+  const supabase = createServiceClient();
+  const last8 = celular.slice(-8);
+  const { data: rows } = await supabase
+    .from("leads")
+    .select("id,celular")
+    .or(
+      [`celular.eq.${celular}`, celular.startsWith("549") ? `celular.eq.${celular.slice(3)}` : "", last8 ? `celular.ilike.%${last8}` : ""]
+        .filter(Boolean)
+        .join(",")
+    )
+    .order("updated_at", { ascending: false })
+    .limit(8);
+  const found = (rows || []).find((row) => {
+    const other = normalizeArPhone(String(row.celular || ""));
+    return other === celular || other.slice(-8) === last8;
+  });
+
+  if (!found?.id && !touchesLead && nombre) return null;
+
+  const leadId = found?.id
+    ? String(found.id)
+    : await ensureLeadFromChat(celular, nombre || "WhatsApp");
+  if (Object.keys(leadPatch).length) {
+    await updateLead(leadId, leadPatch);
+  }
+  return leadId;
 }
 
 export async function ensureLeadFromChat(phone: string, name: string) {

@@ -271,6 +271,22 @@ export async function ensureCrmChatContact(phone: string, name?: string | null) 
   return { ok: true as const, chat: data as CrmChat, created: true, phone: key };
 }
 
+export async function setCrmChatName(phone: string, name: string) {
+  const key = normalizeArPhone(phone);
+  const clean = String(name || "").trim();
+  if (!key || !clean) return { ok: false as const, error: "Datos inválidos" };
+  const ensured = await ensureCrmChatContact(key, clean);
+  if (!ensured.ok) return { ok: false as const, error: ensured.error };
+  if (ensured.chat.name === clean) return { ok: true as const, phone: key };
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("whatsapp_chats")
+    .update({ name: clean, updated_at: new Date().toISOString() })
+    .eq("phone", key);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, phone: key };
+}
+
 export async function clearCrmChatMessages(phone: string) {
   const normalized = normalizeArPhone(phone);
   if (!normalized) return { ok: false as const, error: "teléfono inválido" };

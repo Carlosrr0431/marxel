@@ -11,6 +11,7 @@ import {
   createSeguimiento,
   ensureLeadFromChat,
   snoozeSeguimiento,
+  updateChatFicha,
   updateLead,
   updateLeadEstado,
 } from "@/lib/crm/actions";
@@ -56,6 +57,55 @@ function tomorrowTen() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T10:00`;
 }
 
+function FactInput({
+  label,
+  value,
+  type = "text",
+  placeholder,
+  disabled,
+  onCommit,
+  onLive,
+}: {
+  label: string;
+  value: string;
+  type?: "text" | "email";
+  placeholder?: string;
+  disabled?: boolean;
+  onCommit: (value: string) => void;
+  onLive?: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>
+        <input
+          className="crm-wa-lead__edit"
+          type={type}
+          value={draft}
+          placeholder={placeholder || "—"}
+          disabled={disabled}
+          aria-label={label}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            onLive?.(e.target.value);
+          }}
+          onBlur={() => {
+            if (draft.trim() !== value.trim()) onCommit(draft);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
+      </dd>
+    </div>
+  );
+}
+
 export function ChatLeadPanel({
   phone,
   chatName,
@@ -63,6 +113,7 @@ export function ChatLeadPanel({
   onClose,
   onUseMessage,
   onLeadChange,
+  onChatNameChange,
 }: {
   phone: string;
   chatName: string;
@@ -70,6 +121,7 @@ export function ChatLeadPanel({
   onClose: () => void;
   onUseMessage: (text: string) => void;
   onLeadChange?: (lead: Lead | null) => void;
+  onChatNameChange?: (name: string) => void;
 }) {
   const [data, setData] = useState<Payload>({ lead: null, seguimientos: [], actividades: [] });
   const [loading, setLoading] = useState(true);
@@ -139,6 +191,45 @@ export function ChatLeadPanel({
     });
   }
 
+  function saveFicha(patch: {
+    nombre?: string;
+    email?: string;
+    localidad?: string;
+    producto?: ProductoInteres;
+    plan_interes?: string;
+  }) {
+    if (patch.nombre !== undefined) {
+      const nextName = patch.nombre.trim();
+      if (nextName) onChatNameChange?.(nextName);
+      if (lead) {
+        setData((prev) =>
+          prev.lead ? { ...prev, lead: { ...prev.lead, nombre: nextName || prev.lead.nombre } } : prev
+        );
+      }
+    }
+    if (lead) {
+      setData((prev) =>
+        prev.lead
+          ? {
+              ...prev,
+              lead: {
+                ...prev.lead,
+                ...(patch.email !== undefined ? { email: patch.email.trim() || null } : {}),
+                ...(patch.localidad !== undefined ? { localidad: patch.localidad.trim() || null } : {}),
+                ...(patch.producto ? { producto: patch.producto } : {}),
+                ...(patch.plan_interes !== undefined
+                  ? { plan_interes: patch.plan_interes.trim() || null }
+                  : {}),
+              },
+            }
+          : prev
+      );
+    }
+    run(async () => {
+      await updateChatFicha(phone, patch);
+    });
+  }
+
   const templates = WA_TEMPLATES.filter(
     (item) => !lead?.producto || !item.producto || item.producto === lead.producto || item.producto === "general"
   ).slice(0, 5);
@@ -161,58 +252,100 @@ export function ChatLeadPanel({
         {loading ? <p className="crm-wa-lead__muted">Cargando ficha…</p> : null}
         {error ? <p className="crm-wa-lead__error">{error}</p> : null}
 
-        {!loading && !lead ? (
-          <div className="crm-wa-lead__empty">
-            <p>Este chat todavía no tiene ficha en el CRM.</p>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run(async () => { await ensureLeadFromChat(phone, chatName); })}
-            >
-              Crear ficha
-            </button>
-          </div>
-        ) : null}
-
-        {lead ? (
-          <>
-            <section>
-              <dl className="crm-wa-lead__facts">
-                <div>
-                  <dt>Celular</dt>
-                  <dd>{lead.celular}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{lead.email || "—"}</dd>
-                </div>
-                <div>
-                  <dt>Localidad</dt>
-                  <dd>{lead.localidad || lead.provincia || "—"}</dd>
-                </div>
-                <div>
-                  <dt>Producto</dt>
-                  <dd>{PRODUCTOS.find((p) => p.value === lead.producto)?.label || lead.producto}</dd>
-                </div>
-                <div>
-                  <dt>Plan</dt>
-                  <dd>{lead.plan_interes || "—"}</dd>
-                </div>
+        {!loading ? (
+          <section>
+            <dl className="crm-wa-lead__facts">
+              <FactInput
+                label="Nombre"
+                value={lead?.nombre || chatName || ""}
+                placeholder="Nombre del chat"
+                disabled={pending}
+                onLive={(value) => {
+                  if (value.trim()) onChatNameChange?.(value.trim());
+                }}
+                onCommit={(value) => saveFicha({ nombre: value })}
+              />
+              <div>
+                <dt>Celular</dt>
+                <dd>{lead?.celular || phone}</dd>
+              </div>
+              <FactInput
+                label="Email"
+                type="email"
+                value={lead?.email || ""}
+                placeholder="mail@correo.com"
+                disabled={pending}
+                onCommit={(value) => saveFicha({ email: value })}
+              />
+              <FactInput
+                label="Localidad"
+                value={lead?.localidad || ""}
+                placeholder="Ciudad o localidad"
+                disabled={pending}
+                onCommit={(value) => saveFicha({ localidad: value })}
+              />
+              <div>
+                <dt>Producto</dt>
+                <dd>
+                  <select
+                    className="crm-wa-lead__edit"
+                    value={lead?.producto || "general"}
+                    disabled={pending}
+                    aria-label="Producto"
+                    onChange={(e) => saveFicha({ producto: e.target.value as ProductoInteres })}
+                  >
+                    {PRODUCTOS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
+              </div>
+              <FactInput
+                label="Plan"
+                value={lead?.plan_interes || ""}
+                placeholder="Plan o detalle"
+                disabled={pending}
+                onCommit={(value) => saveFicha({ plan_interes: value })}
+              />
+              {lead ? (
                 <div>
                   <dt>Puntaje</dt>
                   <dd>{lead.puntaje || 0}</dd>
                 </div>
-              </dl>
-              {(lead.tags || []).length ? (
-                <p className="crm-wa-lead__tags">{lead.tags.map((tag) => `#${tag}`).join("  ")}</p>
               ) : null}
-              {lead.notas_iniciales ? (
-                <p className="crm-wa-lead__notes">{lead.notas_iniciales}</p>
-              ) : null}
-              <Link className="crm-wa-lead__link" href={`/crm/leads/${lead.id}`}>
-                Abrir ficha completa
-              </Link>
-            </section>
+            </dl>
+            {!lead ? (
+              <div className="crm-wa-lead__empty">
+                <p>Este chat todavía no tiene ficha en el CRM. Completá un dato o creala.</p>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run(async () => { await ensureLeadFromChat(phone, chatName); })}
+                >
+                  Crear ficha
+                </button>
+              </div>
+            ) : null}
+            {lead ? (
+              <>
+                {(lead.tags || []).length ? (
+                  <p className="crm-wa-lead__tags">{lead.tags.map((tag) => `#${tag}`).join("  ")}</p>
+                ) : null}
+                {lead.notas_iniciales ? (
+                  <p className="crm-wa-lead__notes">{lead.notas_iniciales}</p>
+                ) : null}
+                <Link className="crm-wa-lead__link" href={`/crm/leads/${lead.id}`}>
+                  Abrir ficha completa
+                </Link>
+              </>
+            ) : null}
+          </section>
+        ) : null}
+
+        {lead ? (
+          <>
 
             <section>
               <h3>Pipeline</h3>
@@ -400,12 +533,14 @@ export function ChatLeadDock({
   open,
   onToggle,
   onUseMessage,
+  onChatNameChange,
 }: {
   phone: string;
   chatName: string;
   open: boolean;
   onToggle: () => void;
   onUseMessage: (text: string) => void;
+  onChatNameChange?: (name: string) => void;
 }) {
   const [estado, setEstado] = useState<LeadEstado | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
@@ -456,6 +591,7 @@ export function ChatLeadDock({
         chatName={chatName}
         open={open}
         onClose={onToggle}
+        onChatNameChange={onChatNameChange}
         onLeadChange={(lead) => {
           setEstado(lead?.estado || null);
           setLeadId(lead?.id || null);

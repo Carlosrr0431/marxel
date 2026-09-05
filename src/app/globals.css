@@ -5056,6 +5056,25 @@ button.crm-wa-file {
   font-size: 0.9rem;
 }
 
+.crm-wa-lead__edit {
+  width: 100%;
+  min-height: 2.15rem;
+  margin: 0.12rem 0 0;
+  border: 1.5px solid #d6dde3;
+  border-radius: 0.7rem;
+  background: #f7f9fa;
+  padding: 0.35rem 0.6rem;
+  color: #111b21;
+  font-size: 0.88rem;
+}
+
+.crm-wa-lead__edit:focus {
+  outline: none;
+  border-color: #0f766e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
 .crm-wa-lead__link {
   display: inline-block;
   margin-top: 0.7rem;

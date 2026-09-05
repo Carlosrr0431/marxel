@@ -1190,6 +1190,15 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                   chatName={activeChat?.name || ""}
                   open={leadOpen}
                   onToggle={() => setLeadOpen((v) => !v)}
+                  onChatNameChange={(name) => {
+                    const clean = name.trim();
+                    if (!clean || !selected) return;
+                    setChats((prev) =>
+                      prev.map((chat) =>
+                        chat.phone === selected ? { ...chat, name: clean } : chat
+                      )
+                    );
+                  }}
                   onUseMessage={(text) => {
                     setDraft(text);
                     window.setTimeout(() => composerRef.current?.focus(), 0);
