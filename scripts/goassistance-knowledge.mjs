@@ -204,7 +204,7 @@ Cotizar el caso (deporte, mascota, visa Working Holiday) con MARXEN: 387 634-819
     sourceTitle: "GO! ASSISTANCE — Contactos, reseñas y cómo cotizar en Salta",
     content: `CONTACTOS
 
-MARXEN (cotizar/contratar desde Salta): WhatsApp 387 634-8199 · hola@marxel.com.ar · https://www.marxen.com.ar/viajero
+MARXEN (cotizar/contratar desde Salta): WhatsApp 387 634-8199 · comercial@marxen.com.ar · https://www.marxen.com.ar/viajero
 
 GO! ASSISTANCE (central 24 h, una vez emitido el voucher): WhatsApp +54 9 11 5218-7034. El número de emergencias del voucher manda.
 

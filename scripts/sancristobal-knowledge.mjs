@@ -430,7 +430,7 @@ WhatsApp MARXEN: 387 634-8199.`,
     sourceTitle: "San Cristóbal — App, Santi, teléfonos y cómo cotizar con MARXEN",
     content: `GESTIÓN SAN CRISTÓBAL + MARXEN
 
-PRODUCTOR EN SALTA: MARXEN Protección Integral. WhatsApp 387 634-8199. Mail hola@marxel.com.ar. Cotizador auto/moto/hogar/AP/comercio: https://www.marxen.com.ar/seguros
+PRODUCTOR EN SALTA: MARXEN Protección Integral. WhatsApp 387 634-8199. Mail comercial@marxen.com.ar. Cotizador auto/moto/hogar/AP/comercio: https://www.marxen.com.ar/seguros
 
 AUTOGESTIÓN DEL ASEGURADO (una vez emitida la póliza):
 - App San Cristóbal (iOS y Android): póliza, tarjeta para circular, certificado para viajar, denuncia de siniestro, pagos.

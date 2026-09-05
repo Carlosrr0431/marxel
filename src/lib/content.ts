@@ -6,7 +6,7 @@ export const site = {
   description:
     "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá asistencia al viajero.",
   phone: "+54 9 387 634-8199",
-  email: "hola@marxel.com.ar",
+  email: "comercial@marxen.com.ar",
   whatsapp: "5493876348199",
   location: "Salta, Salta, Argentina.",
   instagram: "https://www.instagram.com/marxen.ok/",
@@ -178,7 +178,7 @@ export const faqViajero: FaqItem[] = [
 export const faqContacto: FaqItem[] = [
   {
     q: "¿Cómo contacto a MARXEN en Salta?",
-    a: "WhatsApp +54 9 387 634-8199, email hola@marxel.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+    a: "WhatsApp +54 9 387 634-8199, email comercial@marxen.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
   },
   {
     q: "¿Tienen chat o cotizador en el sitio?",
