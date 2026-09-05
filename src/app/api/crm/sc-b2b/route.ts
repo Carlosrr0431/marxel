@@ -61,6 +61,52 @@ function asRecord(value: unknown) {
 async function handleGet(request: NextRequest) {
   const action = q(request, "action") || "ping";
 
+  if (action === "bootstrap") {
+    if (!isScB2bConfigured()) {
+      return NextResponse.json(
+        { ok: false, error: "Faltan credenciales B2B de San Cristóbal en el servidor." },
+        { status: 503 }
+      );
+    }
+    async function settle<T>(fn: () => Promise<T>) {
+      try {
+        return { ok: true as const, data: await fn() };
+      } catch (err) {
+        return { ok: false as const, error: err instanceof Error ? err.message : "Error" };
+      }
+    }
+    const login = await scB2bLoginProbe();
+    const now = new Date();
+    const monthAgo = new Date(now.getTime() - 30 * 86400000);
+    const [producers, info, portfolio, affinity, products, postal, movements, claims] = await Promise.all([
+      settle(currentProducers),
+      settle(() => producerInfo()),
+      settle(producerPortfolio),
+      settle(() => producerAffinity()),
+      settle(() => typeList("Product")),
+      settle(() => citiesByPostalCode("4400")),
+      settle(() => producerMovements(now.toISOString())),
+      settle(() => claimsByProducer(monthAgo.toISOString(), now.toISOString())),
+    ]);
+    return NextResponse.json({
+      ok: true,
+      login,
+      producers: producers.ok ? producers.data : [],
+      info: info.ok ? info.data : null,
+      producerCode: producerCode(),
+      env: scB2bConfig().baseUrl.includes("uat") ? "UAT" : "prod",
+      portfolio: portfolio.ok ? portfolio.data : { Policies: [] },
+      affinity: affinity.ok ? affinity.data : { AffinityGroups: [] },
+      products: products.ok ? products.data : { Values: [] },
+      postal: postal.ok ? postal.data : { ciudadDTO: [] },
+      movements: movements.ok ? movements.data : { Policies: [] },
+      claims: claims.ok ? claims.data : { Claims: [] },
+      warnings: [producers, info, portfolio, affinity, products, postal, movements, claims]
+        .filter((row) => !row.ok)
+        .map((row) => ("error" in row ? row.error : "")),
+    });
+  }
+
   if (action === "ping") {
     if (!isScB2bConfigured()) {
       return NextResponse.json(
