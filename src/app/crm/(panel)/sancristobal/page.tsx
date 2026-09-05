@@ -310,12 +310,13 @@ export default function SanCristobalPage() {
                   city: "SALTA",
                   phone,
                   policyTypeCode: "CP7_CombinedCombinedFamily",
+                  basicPlanCode: "Plan Plus",
                   officialIdType: "Ext_CUIL86",
                 })
               )
             }
           >
-            Cotizar hogar (CP7)
+            Cotizar hogar Plan Plus (CP7)
           </button>
         </section>
       ) : null}

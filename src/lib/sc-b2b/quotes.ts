@@ -110,7 +110,7 @@ export function buildCp7Quote(input: Cp7QuoteInput) {
     Genre: input.genre || "M",
     ProducerCode: scB2bConfig().producerCode,
     PolicyTypeCode: input.policyTypeCode || "CP7_CombinedCombinedFamily",
-    BasicPlanCode: input.basicPlanCode || "Plan Standard",
+    BasicPlanCode: input.basicPlanCode || "Plan Plus",
     AdditionalPlanCode: input.additionalPlanCode || undefined,
     Payment: {
       Method: input.paymentMethod || "creditcard",

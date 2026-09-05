@@ -239,6 +239,7 @@ async function handlePost(request: NextRequest) {
         officialIdType: payload.officialIdType ? String(payload.officialIdType) : undefined,
         genre: payload.genre ? String(payload.genre) : undefined,
         policyTypeCode: payload.policyTypeCode ? String(payload.policyTypeCode) : undefined,
+        basicPlanCode: payload.basicPlanCode ? String(payload.basicPlanCode) : undefined,
         postalCode: String(payload.postalCode || ""),
         state: String(payload.state || "AR_01"),
         city: payload.city ? String(payload.city) : undefined,
