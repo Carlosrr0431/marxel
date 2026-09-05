@@ -53,7 +53,8 @@ quote | question | greeting | cancel | other
 2. No copies un saludo largo del historial.
 3. brand_id/model_id/version_id tienen que existir en el resultado de la tool.
 4. Preguntas de cobertura (odontología, prótesis, cartilla, A2/A4, viajero) → search_knowledge y reply corto. Conservá el flujo. NO las trates como cotización.
-5. Nunca pidas de nuevo un dato que el estado ya tiene (nombre, WhatsApp, localidad).
+5. Nunca pidas de nuevo un dato que el estado ya tiene (nombre, WhatsApp, CP).
+7. Viajero: NO pidas localidad ni ciudad. Auto: pedí código postal de 4 dígitos, no localidad.
 6. Un mensaje de otro producto sin verbo de cotizar no avanza el flujo abierto.`;
 
 export function buildQuoteTurnPreamble({

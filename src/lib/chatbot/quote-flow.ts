@@ -379,6 +379,12 @@ async function continueWithContact(
       answer: `Gracias, ${firstName(data.nombre)}. Dejanos tu WhatsApp, con código de área, para enviarte las opciones.`,
     };
   }
+  if (data.producto === "viajero") {
+    return finishQuote({ active: true, step: "localidad", data, channel });
+  }
+  if (data.seguroGrupo === "auto") {
+    return continueAutoQuote({ active: true, step: "whatsapp", data, channel });
+  }
   if (!data.localidad) {
     return afterWhatsapp({ active: true, step: "whatsapp", data, channel });
   }
@@ -483,8 +489,11 @@ function askSeguroDetalle(data: QuoteData): QuoteFlowResult {
 }
 
 async function afterWhatsapp(state: QuoteState): Promise<QuoteFlowResult> {
-  if (state.data.seguroGrupo === "auto" && state.data.auto?.version && state.data.auto.location) {
-    return submitAutoQuote(state);
+  if (state.data.seguroGrupo === "auto") {
+    return continueAutoQuote(state);
+  }
+  if (state.data.producto === "viajero") {
+    return finishQuote(state);
   }
   const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
   state.step = "localidad";
@@ -683,6 +692,8 @@ const PROVIDER_INTENT_RE =
 
 export function inferStepFromAssistant(text: string): QuoteStep | null {
   const t = String(text || "");
+  if (/c[oó]digo postal|4 d[ií]gitos|salta capital es 4400/i.test(t)) return "auto_cp";
+  if (/m[aá]s de una localidad para ese CP/i.test(t)) return "auto_localidad";
   if (/de qu[eé] localidad|qu[eé] ciudad|ciudad o localidad/i.test(t)) return "localidad";
   if (/c[oó]mo te llam|dec[ií]s tu nombre|me dec[ií]s tu nombre/i.test(t)) return "nombre";
   if (/whatsapp|c[oó]digo de [aá]rea/i.test(t)) return "whatsapp";
@@ -987,6 +998,12 @@ export async function processQuoteFlow(
     }
 
     case "localidad": {
+      if (state.data.producto === "viajero") {
+        return finishQuote(state);
+      }
+      if (state.data.seguroGrupo === "auto") {
+        return handleAutoQuoteStep(text, { ...state, step: "auto_cp" });
+      }
       if (text.length < 2) {
         return {
           handled: true,
@@ -1099,6 +1116,12 @@ export async function resumeQuoteState(state: QuoteState): Promise<QuoteFlowResu
       state: { ...state, active: true, step: "whatsapp", data, channel },
       answer: `Gracias, ${firstName(data.nombre)}. Dejanos tu WhatsApp, con código de área, para enviarte las opciones.`,
     };
+  }
+  if (data.producto === "viajero" && data.celular) {
+    return finishQuote({ ...state, active: true, data, channel });
+  }
+  if (data.seguroGrupo === "auto" && data.celular) {
+    return continueAutoQuote({ ...state, active: true, data, channel });
   }
   if (data.celular && !data.localidad) {
     return afterWhatsapp({ ...state, active: true, data, channel });
