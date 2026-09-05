@@ -205,6 +205,72 @@ export async function markCrmMessageFromQueue({
   return { ok: true as const, updated: Boolean(data?.length), id: data?.[0]?.id ? String(data[0].id) : null };
 }
 
+export async function ensureCrmChatContact(phone: string, name?: string | null) {
+  const key = normalizeArPhone(phone);
+  if (!key) return { ok: false as const, error: "Celular inválido" };
+
+  const supabase = createServiceClient();
+  const now = new Date().toISOString();
+  const cleanName = String(name || "").trim() || null;
+
+  const { data: existing, error: readError } = await supabase
+    .from("whatsapp_chats")
+    .select("*")
+    .eq("phone", key)
+    .maybeSingle();
+  if (readError) {
+    if (missingCrmTable(readError)) {
+      return { ok: false as const, error: "Falta aplicar el SQL de chats en Supabase." };
+    }
+    return { ok: false as const, error: readError.message };
+  }
+
+  if (existing) {
+    if (cleanName && !existing.name) {
+      const { data: updated, error: updateError } = await supabase
+        .from("whatsapp_chats")
+        .update({ name: cleanName, updated_at: now })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (!updateError && updated) {
+        return { ok: true as const, chat: updated as CrmChat, created: false, phone: key };
+      }
+    }
+    return { ok: true as const, chat: existing as CrmChat, created: false, phone: key };
+  }
+
+  const { data, error } = await supabase
+    .from("whatsapp_chats")
+    .insert({
+      phone: key,
+      name: cleanName,
+      last_message: null,
+      last_message_at: now,
+      unread_count: 0,
+      updated_at: now,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    const { data: raced } = await supabase
+      .from("whatsapp_chats")
+      .select("*")
+      .eq("phone", key)
+      .maybeSingle();
+    if (raced) {
+      return { ok: true as const, chat: raced as CrmChat, created: false, phone: key };
+    }
+    if (missingCrmTable(error)) {
+      return { ok: false as const, error: "Falta aplicar el SQL de chats en Supabase." };
+    }
+    return { ok: false as const, error: error.message };
+  }
+
+  return { ok: true as const, chat: data as CrmChat, created: true, phone: key };
+}
+
 export async function clearCrmChatMessages(phone: string) {
   const normalized = normalizeArPhone(phone);
   if (!normalized) return { ok: false as const, error: "teléfono inválido" };

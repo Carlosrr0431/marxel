@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
-import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { canResetWhatsappChat, normalizeArPhone } from "@/lib/whatsmeow/config";
 import {
   isChatAgentEnabled,
   isWhatsappAgentEnabled,
@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
 
   try {
     if (body.action === "reset") {
+      if (!canResetWhatsappChat(phone)) {
+        return NextResponse.json(
+          { ok: false, error: "Limpiar solo está habilitado en el chat de prueba" },
+          { status: 403 }
+        );
+      }
       const result = await resetWhatsappChatForReplay(phone);
       return NextResponse.json({
         ok: true,

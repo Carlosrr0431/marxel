@@ -1,6 +1,6 @@
 import { emptyQuoteState } from "@/lib/chatbot/quote-flow";
 import { createServiceClient } from "@/lib/supabase/server";
-import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { canResetWhatsappChat, normalizeArPhone } from "@/lib/whatsmeow/config";
 import { loadConversation, resetConversation, saveConversation } from "@/lib/whatsmeow/conversations";
 import { clearCrmChatMessages } from "@/lib/whatsmeow/crm-chat";
 import { resetLeadForWhatsappReplay } from "@/lib/chatbot/persist-lead";
@@ -69,6 +69,9 @@ export async function setChatAgentEnabled(phone: string, enabled: boolean) {
 export async function resetWhatsappChatForReplay(phone: string) {
   const key = normalizeArPhone(phone);
   if (!key) throw new Error("Teléfono inválido");
+  if (!canResetWhatsappChat(key)) {
+    throw new Error("Limpiar solo está habilitado en el chat de prueba");
+  }
   await resetConversation(key);
   await clearCrmChatMessages(key);
   const leadId = await resetLeadForWhatsappReplay(key);

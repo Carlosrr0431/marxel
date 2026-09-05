@@ -68,6 +68,15 @@ export function isMarxenLinePhone(value: string) {
   return Boolean(own && got && own === got);
 }
 
+/** Único chat del CRM que puede borrar historial para probar la IA. */
+export const WHATSAPP_RESET_PHONE = "3875724473";
+
+export function canResetWhatsappChat(phone: string) {
+  const a = normalizeArPhone(phone);
+  const b = normalizeArPhone(WHATSAPP_RESET_PHONE);
+  return Boolean(a && b && a === b);
+}
+
 export function getAppBaseUrl() {
   const explicit = String(process.env.NEXT_PUBLIC_APP_URL || "").trim();
   if (explicit) return explicit.replace(/\/$/, "");

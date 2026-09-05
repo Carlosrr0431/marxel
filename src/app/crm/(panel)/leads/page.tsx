@@ -4,9 +4,11 @@ import type { Lead } from "@/lib/crm/types";
 import { LEAD_ESTADOS, MODALIDADES, PRODUCTOS } from "@/lib/crm/types";
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
 import { PageHeader, Avatar, EmptyState, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
+import { ChatbotLeadsBoard } from "@/components/crm/ChatbotLeadsBoard";
 import { LeadsBulkBar } from "@/components/crm/LeadsBulkBar";
 import { prioridadColor, relativeTime, scoreLead } from "@/lib/crm/utils";
 import { isChatbotLead } from "@/lib/crm/chatbot-brief";
+import { normalizeArPhone } from "@/lib/whatsmeow/config";
 
 const QUICK = [
   { href: "/crm/leads?origen=chatbot", label: "Chatbot" },
@@ -50,6 +52,27 @@ export default async function LeadsPage({
   }));
 
   const fromChatbot = params.origen === "chatbot";
+
+  if (fromChatbot) {
+    const phones = [
+      ...new Set(leads.map((lead) => normalizeArPhone(lead.celular)).filter(Boolean)),
+    ];
+    const { data: chats } = phones.length
+      ? await supabase.from("whatsapp_chats").select("phone").in("phone", phones)
+      : { data: [] as { phone: string }[] };
+    return (
+      <ChatbotLeadsBoard
+        leads={leads}
+        existingPhones={(chats || []).map((chat) => String(chat.phone))}
+        filters={{
+          q: params.q,
+          estado: params.estado,
+          producto: params.producto,
+          modalidad: params.modalidad,
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

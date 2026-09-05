@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { normalizeArPhone } from "@/lib/whatsmeow/config";
+import { canResetWhatsappChat, normalizeArPhone } from "@/lib/whatsmeow/config";
 import { relativeTime } from "@/lib/crm/utils";
 import { ChatLeadDock } from "@/components/crm/chat/ChatLeadPanel";
 import type { CrmChat, CrmChatMessage, CrmDeliveryStatus } from "@/lib/whatsmeow/crm-chat";
@@ -648,9 +648,30 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
       return;
     }
     setSchemaMissing(false);
-    setChats(json.chats || []);
+    setChats((prev) => {
+      const incoming = json.chats || [];
+      const seed = normalizeArPhone(initialPhone || "");
+      if (seed && !incoming.some((chat) => chat.phone === seed)) {
+        const keep = prev.find((chat) => chat.phone === seed);
+        const now = new Date().toISOString();
+        return [
+          keep || {
+            id: `tmp-${seed}`,
+            phone: seed,
+            name: null,
+            last_message: null,
+            last_message_at: now,
+            unread_count: 0,
+            created_at: now,
+            updated_at: now,
+          },
+          ...incoming,
+        ];
+      }
+      return incoming;
+    });
     if (!json.ok && json.error) setError(json.error);
-  }, []);
+  }, [initialPhone]);
 
   const openChat = useCallback(async (phone: string) => {
     const normalized = normalizeArPhone(phone);
@@ -817,7 +838,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
   }
 
   async function resetChat() {
-    if (!selected || agentBusy) return;
+    if (!selected || agentBusy || !canResetWhatsappChat(selected)) return;
     if (!confirmReset) {
       setConfirmReset(true);
       window.setTimeout(() => setConfirmReset(false), 4000);
@@ -1072,15 +1093,17 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                 >
                   {agentEnabled ? "IA on" : "IA off"}
                 </button>
-                <button
-                  type="button"
-                  className={`crm-wa-headbtn${confirmReset ? " is-warn" : ""}`}
-                  disabled={agentBusy}
-                  title="Borra el historial y deja el lead como uno nuevo para probar la IA"
-                  onClick={() => void resetChat()}
-                >
-                  {confirmReset ? "¿Confirmar?" : "Limpiar"}
-                </button>
+                {canResetWhatsappChat(selected) ? (
+                  <button
+                    type="button"
+                    className={`crm-wa-headbtn${confirmReset ? " is-warn" : ""}`}
+                    disabled={agentBusy}
+                    title="Borra el historial y deja el lead como uno nuevo para probar la IA"
+                    onClick={() => void resetChat()}
+                  >
+                    {confirmReset ? "¿Confirmar?" : "Limpiar"}
+                  </button>
+                ) : null}
                 <a
                   className="crm-wa-ext"
                   href={`https://wa.me/${selected}`}

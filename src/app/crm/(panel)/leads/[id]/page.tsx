@@ -12,9 +12,11 @@ import {
 } from "@/lib/crm/types";
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
 import { LeadQuickActions } from "@/components/crm/LeadQuickActions";
+import { OpenCrmChatButton } from "@/components/crm/OpenCrmChatButton";
 import { SeguimientoActions } from "@/components/crm/SeguimientoActions";
 import { Avatar, ScoreRing, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
 import { ChatbotBriefCard } from "@/components/crm/ChatbotBriefCard";
+import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import {
   addLeadTag,
   addNota,
@@ -62,6 +64,10 @@ export default async function LeadDetailPage({
 
   if (!lead) notFound();
   const l = lead as Lead;
+  const leadPhone = normalizeArPhone(l.celular);
+  const { data: existingChat } = leadPhone
+    ? await supabase.from("whatsapp_chats").select("id").eq("phone", leadPhone).maybeSingle()
+    : { data: null };
   const estado = LEAD_ESTADOS.find((e) => e.value === l.estado);
   const puntaje = l.puntaje || scoreLead(l);
   const fields = parseChatbotNotas(l.notas_iniciales);
@@ -175,6 +181,14 @@ export default async function LeadDetailPage({
             </div>
             <div className="flex flex-col items-start gap-3 sm:items-end">
               <ScoreRing score={puntaje} />
+              {chatbot ? (
+                <OpenCrmChatButton
+                  leadId={l.id}
+                  phone={l.celular}
+                  name={l.nombre}
+                  existing={Boolean(existingChat)}
+                />
+              ) : null}
               <LeadQuickActions
                 leadId={l.id}
                 nombre={l.nombre}
