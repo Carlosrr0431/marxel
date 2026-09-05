@@ -231,7 +231,6 @@ export default function SanCristobalPage() {
   const [affinity, setAffinity] = useState<Record<string, unknown>[]>([]);
   const [movements, setMovements] = useState<Record<string, unknown>[]>([]);
   const [claims, setClaims] = useState<Record<string, unknown>[]>([]);
-  const [jobs, setJobs] = useState<Record<string, unknown>[]>([]);
   const [leads, setLeads] = useState<Record<string, unknown>[]>([]);
   const [products, setProducts] = useState<Record<string, unknown>[]>([]);
   const [cities, setCities] = useState<Record<string, unknown>[]>([]);
@@ -270,7 +269,10 @@ export default function SanCristobalPage() {
 
   const producer = useMemo(() => pickProducer(boot), [boot]);
   const warnings = useMemo(
-    () => (Array.isArray(boot?.warnings) ? boot.warnings.filter((item): item is string => Boolean(item)) : []),
+    () =>
+      (Array.isArray(boot?.warnings) ? boot.warnings.filter((item): item is string => Boolean(item)) : []).filter(
+        (item) => !/no est[aá] habilitado para consumir/i.test(item)
+      ),
     [boot]
   );
   const city = cities[0] || {};
@@ -297,7 +299,6 @@ export default function SanCristobalPage() {
     setMovements(asList(data.movements));
     setClaims(asList(data.claims));
     setCommissions(asList(data.commissions));
-    setJobs(asList(data.jobs));
     setLeads(asList(data.leads));
     if (typeof data.month === "string" && data.month) setMonth(data.month);
     setBoot((prev) => (prev ? { ...prev, ...data } : data));
@@ -449,23 +450,13 @@ export default function SanCristobalPage() {
     Hecho: dateOf(row.LossDate),
     Estado: textOf(asDict(row.State).Description) || textOf(asDict(row.State).Code),
   }));
-  const jobRows = jobs.map((row, index) => ({
-    id: textOf(row.PolicyPeriodID) || `${textOf(row.PolicyNumber)}-${index}`,
-    Fecha: dateOf(row.StartDate || row.EffectiveDate),
-    Producto: textOf(row.Product),
-    Ramo: textOf(row.PolicyType),
-    Cobertura: textOf(row.Offering) || textOf(row.OfferingPlan),
-    Tipo: textOf(row.TransactionJob) || textOf(row.Subtype),
-    Estado: textOf(row.Status),
-    Póliza: textOf(row.PolicyNumber),
-  }));
   const leadRows = leads.map((row, index) => ({
     id: textOf(row.id) || String(index),
     Fecha: dateOf(row.created_at),
     Nombre: textOf(row.nombre),
     Celular: textOf(row.celular),
     Origen: [textOf(row.origen), textOf(row.origen_detalle)].filter(Boolean).join(" · "),
-    Producto: textOf(row.producto) || textOf(row.plan_interes),
+    Producto: textOf(row.plan_interes) || "Seguros",
     Estado: textOf(row.estado),
   }));
   const paymentRows = payments.map((row, index) => ({
@@ -548,8 +539,7 @@ export default function SanCristobalPage() {
             <Stat label="Campañas" value={String(affinity.length)} />
             <Stat label={`Movimientos · ${monthLabel(month)}`} value={String(movements.length)} />
             <Stat label={`Siniestros · ${monthLabel(month)}`} value={String(claims.length)} />
-            <Stat label={`Consultas digitales · ${monthLabel(month)}`} value={String(jobs.length)} />
-            <Stat label="Leads del mes" value={String(leads.length)} />
+            <Stat label={`Consultas de cotizadores · ${monthLabel(month)}`} value={String(leads.length)} />
             <Stat label="Productos" value={String(products.length)} />
             <Stat label="Localidad CP 4400" value={textOf(city.Nombre) || "Salta"} />
           </div>
@@ -946,37 +936,17 @@ export default function SanCristobalPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wide text-teal">Período</p>
             <h2 className="mt-1 font-display text-2xl font-semibold text-navy">{monthLabel(month)}</h2>
             <p className="mt-1 text-sm text-muted">
-              Consultas digitales de San Cristóbal y leads recibidos en MARXEN durante el mes elegido.
+              Leads que completaron un cotizador San Cristóbal (auto, moto, hogar, AP o comercio) en el mes elegido.
             </p>
           </section>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Consultas digitales" value={String(jobs.length)} />
-            <Stat label="Leads recibidos" value={String(leads.length)} />
+            <Stat label="Consultas de cotizadores" value={String(leads.length)} />
             <Stat label="Movimientos" value={String(movements.length)} />
             <Stat label="Siniestros" value={String(claims.length)} />
+            <Stat label="Comisiones" value={String(commissions.length)} />
           </div>
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-navy">Consultas digitales</h2>
-            <Table
-              loading={booting}
-              columns={[
-                { key: "Fecha", label: "Fecha" },
-                { key: "Producto", label: "Producto" },
-                { key: "Ramo", label: "Ramo" },
-                { key: "Cobertura", label: "Cobertura" },
-                { key: "Tipo", label: "Tipo" },
-                { key: "Estado", label: "Estado" },
-                { key: "Póliza", label: "Póliza" },
-              ]}
-              rows={jobRows}
-              empty={`No hay consultas digitales en ${monthLabel(month)}.`}
-              onRow={(row) => {
-                if (row.Póliza) void openPolicy(row.Póliza);
-              }}
-            />
-          </section>
-          <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-navy">Leads recibidos</h2>
+            <h2 className="font-display text-lg font-semibold text-navy">Consultas de cotizadores San Cristóbal</h2>
             <Table
               loading={booting}
               columns={[
@@ -988,7 +958,7 @@ export default function SanCristobalPage() {
                 { key: "Estado", label: "Estado" },
               ]}
               rows={leadRows}
-              empty={`No hay leads recibidos en ${monthLabel(month)}.`}
+              empty={`No hay consultas de cotizadores San Cristóbal en ${monthLabel(month)}.`}
               onRow={(row) => {
                 if (row.id) push(`/crm/leads/${row.id}`);
               }}

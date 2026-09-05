@@ -20,7 +20,6 @@ import {
   issueAtm,
   issueCa7,
   issueCp7,
-  jobMovements,
   monthPeriod,
   movementQueryDate,
   motoVersion,
@@ -66,6 +65,11 @@ function asRecord(value: unknown) {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+function isServiceDisabled(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err || "");
+  return /no est[aá] habilitado para consumir/i.test(message);
+}
+
 async function settle<T>(fn: () => Promise<T>) {
   try {
     return { ok: true as const, data: await fn() };
@@ -74,17 +78,44 @@ async function settle<T>(fn: () => Promise<T>) {
   }
 }
 
+async function settleOptional<T>(fn: () => Promise<T>, empty: T) {
+  try {
+    return { ok: true as const, data: await fn() };
+  } catch (err) {
+    if (isServiceDisabled(err)) return { ok: true as const, data: empty };
+    return { ok: false as const, error: err instanceof Error ? err.message : "Error" };
+  }
+}
+
+function isSanCristobalQuoteLead(row: Record<string, unknown>) {
+  const producto = String(row.producto || "").toLowerCase();
+  if (producto === "salud" || producto === "viajero") return false;
+  const path = String(row.page_path || "").toLowerCase();
+  const plan = String(row.plan_interes || "").toLowerCase();
+  const notas = String(row.notas_iniciales || "").toLowerCase();
+  if (path.includes("/cotizar") || path.includes("/seguros")) return true;
+  if (notas.includes("san cristóbal") || notas.includes("san cristobal")) return true;
+  if (producto !== "seguros") return false;
+  if (String(row.origen_detalle || "") === "chatbot") {
+    return /auto|moto|hogar|comercio|accidente|praxis|\bart\b/.test(plan);
+  }
+  return /auto|moto|hogar|comercio|accidente|praxis|\bart\b|seguro/.test(plan) || !plan;
+}
+
 async function digitalLeads(start: string, end: string) {
   try {
     const supabase = createServiceClient();
     const { data } = await supabase
       .from("leads")
-      .select("id, created_at, nombre, celular, email, producto, origen, origen_detalle, estado, plan_interes")
+      .select(
+        "id, created_at, nombre, celular, email, producto, origen, origen_detalle, estado, plan_interes, page_path, notas_iniciales"
+      )
+      .eq("producto", "seguros")
       .gte("created_at", start)
       .lte("created_at", end)
       .order("created_at", { ascending: false })
       .limit(200);
-    return data || [];
+    return (data || []).filter((row) => isSanCristobalQuoteLead(row as Record<string, unknown>));
   } catch {
     return [];
   }
@@ -93,18 +124,19 @@ async function digitalLeads(start: string, end: string) {
 async function loadMonthPack(month: string, taxId: string) {
   const period = monthPeriod(month);
   const emptyMove = { ok: true as const, data: { Policies: [] } };
-  const emptyJobs = { ok: true as const, data: { ListJobSummary: [] } };
   const emptyComm = { ok: true as const, data: { EarnedCommissions: [] } };
-  const [movements, claims, commissions, jobs, leads] = await Promise.all([
+  const [movements, claims, commissions, leads] = await Promise.all([
     taxId ? settle(() => producerMovements(period.movementDate, taxId)) : Promise.resolve(emptyMove),
     settle(() => claimsByProducer(period.start, period.end)),
     taxId
-      ? settle(() => earnedCommissions({ taxId, yearMonth: period.yearMonth, currencyCode: "ars" }))
+      ? settleOptional(
+          () => earnedCommissions({ taxId, yearMonth: period.yearMonth, currencyCode: "ars" }),
+          emptyComm.data
+        )
       : Promise.resolve(emptyComm),
-    taxId ? settle(() => jobMovements({ taxId, start: period.start, end: period.end })) : Promise.resolve(emptyJobs),
     digitalLeads(period.start, period.end),
   ]);
-  return { period, movements, claims, commissions, jobs, leads };
+  return { period, movements, claims, commissions, leads };
 }
 
 async function handleGet(request: NextRequest) {
@@ -144,9 +176,8 @@ async function handleGet(request: NextRequest) {
       movements: pack.movements.ok ? pack.movements.data : { Policies: [] },
       claims: pack.claims.ok ? pack.claims.data : { Claims: [] },
       commissions: pack.commissions.ok ? pack.commissions.data : { EarnedCommissions: [] },
-      jobs: pack.jobs.ok ? pack.jobs.data : { ListJobSummary: [] },
       leads: pack.leads,
-      warnings: [producers, info, portfolio, affinity, products, postal, pack.movements, pack.claims, pack.commissions, pack.jobs]
+      warnings: [producers, info, portfolio, affinity, products, postal, pack.movements, pack.claims, pack.commissions]
         .filter((row) => !row.ok)
         .map((row) => ("error" in row ? row.error : "")),
     });
@@ -172,9 +203,8 @@ async function handleGet(request: NextRequest) {
       movements: pack.movements.ok ? pack.movements.data : { Policies: [] },
       claims: pack.claims.ok ? pack.claims.data : { Claims: [] },
       commissions: pack.commissions.ok ? pack.commissions.data : { EarnedCommissions: [] },
-      jobs: pack.jobs.ok ? pack.jobs.data : { ListJobSummary: [] },
       leads: pack.leads,
-      warnings: [pack.movements, pack.claims, pack.commissions, pack.jobs]
+      warnings: [pack.movements, pack.claims, pack.commissions]
         .filter((row) => !row.ok)
         .map((row) => ("error" in row ? row.error : "")),
     });
