@@ -50,6 +50,7 @@ export {
   producerMovements,
   producerPortfolio,
   searchPolicy,
+  taxIdFromProducerPayload,
   typeList,
   vehicleVersion,
   type AgriCatalogKind,

@@ -35,6 +35,7 @@ import {
   scB2bConfig,
   scB2bLoginProbe,
   searchPolicy,
+  taxIdFromProducerPayload,
   typeList,
   vehicleVersion,
   type AgriCatalogKind,
@@ -78,15 +79,20 @@ async function handleGet(request: NextRequest) {
     const login = await scB2bLoginProbe();
     const now = new Date();
     const monthAgo = new Date(now.getTime() - 30 * 86400000);
-    const [producers, info, portfolio, affinity, products, postal, movements, claims] = await Promise.all([
+    const [producers, info, portfolio, products, postal, claims] = await Promise.all([
       settle(currentProducers),
       settle(() => producerInfo()),
       settle(producerPortfolio),
-      settle(() => producerAffinity()),
       settle(() => typeList("Product")),
       settle(() => citiesByPostalCode("4400")),
-      settle(() => producerMovements(now.toISOString())),
       settle(() => claimsByProducer(monthAgo.toISOString(), now.toISOString())),
+    ]);
+    const taxId = taxIdFromProducerPayload(producers.ok ? producers.data : null, info.ok ? info.data : null);
+    const [affinity, movements] = await Promise.all([
+      settle(() => producerAffinity("CA7CommAuto")),
+      taxId
+        ? settle(() => producerMovements(now.toISOString(), taxId))
+        : Promise.resolve({ ok: true as const, data: { Policies: [] } }),
     ]);
     return NextResponse.json({
       ok: true,
@@ -131,12 +137,19 @@ async function handleGet(request: NextRequest) {
   if (action === "affinity") {
     return NextResponse.json({
       ok: true,
-      data: await producerAffinity(q(request, "productCode") || undefined, q(request, "policyTypeCode") || undefined),
+      data: await producerAffinity(
+        q(request, "productCode") || "CA7CommAuto",
+        q(request, "policyTypeCode") || undefined
+      ),
     });
   }
   if (action === "movements") {
     const date = q(request, "date") || new Date().toISOString();
-    return NextResponse.json({ ok: true, data: await producerMovements(date, q(request, "taxId") || undefined) });
+    const taxId = q(request, "taxId") || taxIdFromProducerPayload(await currentProducers());
+    if (!taxId) {
+      return NextResponse.json({ ok: false, error: "No se pudo obtener el CUIT del productor" }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, data: await producerMovements(date, taxId) });
   }
   if (action === "commissions") {
     const taxId = q(request, "taxId");

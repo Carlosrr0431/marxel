@@ -24,6 +24,25 @@ export function producerCode() {
   return scB2bConfig().producerCode;
 }
 
+function asRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+export function taxIdFromProducerPayload(producers: unknown, info?: unknown) {
+  const root = asRecord(producers);
+  const list = Array.isArray(producers)
+    ? producers
+    : Array.isArray(root.Producers)
+      ? (root.Producers as unknown[])
+      : Array.isArray(root.producers)
+        ? (root.producers as unknown[])
+        : [];
+  const first = asRecord(list[0]);
+  const infoRoot = asRecord(info);
+  const nested = asRecord(infoRoot.producerInfo || infoRoot.ProducerInfo || infoRoot);
+  return String(first.TaxId || first.TaxID || nested.TaxID || nested.TaxId || "").trim();
+}
+
 export async function currentProducers() {
   return scB2bGet("/api/User/producers-current-user");
 }
@@ -36,7 +55,10 @@ export async function producerPortfolio(code = producerCode()) {
   return scB2bGet(withQuery("/api/Producer/portfolio-by-producer-code", { producerCode: code }));
 }
 
-export async function producerAffinity(productCode?: string, policyTypeCode?: string) {
+export async function producerAffinity(productCode: string, policyTypeCode?: string) {
+  if (!productCode) {
+    throw new Error("Falta el código de producto para campañas");
+  }
   return scB2bGet(
     withQuery("/api/Producer/GetAffinityGroupsByProducerCode", {
       producerCode: producerCode(),
@@ -46,7 +68,10 @@ export async function producerAffinity(productCode?: string, policyTypeCode?: st
   );
 }
 
-export async function producerMovements(date: string, taxId?: string) {
+export async function producerMovements(date: string, taxId: string) {
+  if (!taxId) {
+    throw new Error("Falta el CUIT del productor para movimientos");
+  }
   return scB2bGet(
     withQuery("/api/Producer/movements-by-date", {
       producerCode: producerCode(),
