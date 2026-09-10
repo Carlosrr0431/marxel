@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
 import {
   appliedDiscountPct,
   campaignFor,
@@ -213,12 +214,78 @@ type QuoteBody = {
   celular: string;
   location: Location;
   landingId?: number;
+  page_path?: string;
   plan?: { key: string; title: string; monthly?: number | null };
   hogar?: { planCode: string; title: string; monthly: number | null };
   moto?: { cc: string; vehicle: string };
   ap?: { actividad: string; workers: number; period: number; isMotorcycle: boolean };
   comercio?: { rubro?: string };
 };
+
+function scQuoteInteres(product: string) {
+  if (product === "hogar") return "Seguro de hogar";
+  if (product === "moto") return "Seguro de moto";
+  if (product === "ap") return "Seguro de accidentes personales";
+  if (product === "comercio") return "Seguro integral de comercio";
+  return "Seguro San Cristóbal";
+}
+
+function scQuoteNotes(body: QuoteBody, opportunityId: unknown) {
+  const code = opportunityId ? `#${opportunityId}` : "";
+  const loc = body.location
+    ? `CP: ${body.location.zipCode} ${body.location.description}`
+    : "";
+  if (body.product === "hogar") {
+    const plan = body.hogar;
+    return [
+      `Cotización hogar San Cristóbal ${code}`,
+      plan?.title ? `Plan: ${plan.title}${plan.monthly ? ` · $ ${plan.monthly} / mes` : ""}` : "",
+      loc,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (body.product === "moto") {
+    return [
+      `Cotización moto San Cristóbal ${code}`,
+      body.moto?.cc ? `Cilindrada: ${body.moto.cc}` : "",
+      body.moto?.vehicle ? `Moto: ${body.moto.vehicle}` : "",
+      body.plan?.title ? `Plan: ${body.plan.title}` : "",
+      loc,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (body.product === "ap") {
+    return [
+      `Cotización AP San Cristóbal ${code}`,
+      body.ap?.actividad ? `Actividad: ${body.ap.actividad}` : "",
+      body.plan?.title ? `Plan: ${body.plan.title}` : "",
+      loc,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  return [
+    `Cotización comercio San Cristóbal ${code}`,
+    body.comercio?.rubro ? `Rubro: ${body.comercio.rubro}` : "",
+    body.plan?.title ? `Plan: ${body.plan.title}` : "",
+    loc,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function persistScQuoteLead(body: QuoteBody, opportunityId: unknown) {
+  return saveQuoteLeadSafe({
+    nombre: body.nombre,
+    celular: body.celular,
+    localidad: body.location?.description || null,
+    interes: scQuoteInteres(body.product),
+    pagePath: body.page_path || "/seguros",
+    notas: scQuoteNotes(body, opportunityId),
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -278,9 +345,11 @@ export async function POST(req: Request) {
         },
         affinityGroupId: campaign.affinityGroupId,
       });
+      const opportunityId = (data as { opportunitiesId?: number })?.opportunitiesId || null;
+      await persistScQuoteLead(body, opportunityId);
       return NextResponse.json({
         ok: true,
-        opportunityId: (data as { opportunitiesId?: number })?.opportunitiesId || null,
+        opportunityId,
       });
     }
 
@@ -342,12 +411,14 @@ export async function POST(req: Request) {
       commercialAlternative: 0,
     });
 
+    const opportunityId =
+      (data as { opportunityId?: number; opportunitiesId?: number })?.opportunityId ||
+      (data as { opportunitiesId?: number })?.opportunitiesId ||
+      null;
+    await persistScQuoteLead(body, opportunityId);
     return NextResponse.json({
       ok: true,
-      opportunityId:
-        (data as { opportunityId?: number; opportunitiesId?: number })?.opportunityId ||
-        (data as { opportunitiesId?: number })?.opportunitiesId ||
-        null,
+      opportunityId,
     });
   } catch (err) {
     return NextResponse.json(

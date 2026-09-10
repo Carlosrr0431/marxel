@@ -501,3 +501,32 @@ async function adoptPendingCrmOutbound(inbound: InboundMessage) {
   const { error: upErr } = await supabase.from("whatsapp_chat_messages").update(patch).eq("id", data.id);
   return !upErr;
 }
+
+/** Eco de un mensaje que acaba de mandar el bot, no un humano desde el celular. */
+export async function isRecentBotOutbound(inbound: InboundMessage) {
+  const phone = normalizeArPhone(inbound.phone);
+  if (!phone) return false;
+  const supabase = createServiceClient();
+  const since = new Date(Date.now() - 3 * 60_000).toISOString();
+  if (inbound.id) {
+    const { data } = await supabase
+      .from("whatsapp_chat_messages")
+      .select("source")
+      .eq("phone", phone)
+      .eq("wa_message_id", inbound.id)
+      .maybeSingle();
+    if (data?.source === "bot") return true;
+  }
+  const body = String(inbound.text || inbound.caption || "").trim();
+  if (!body) return false;
+  const { data: rows } = await supabase
+    .from("whatsapp_chat_messages")
+    .select("id")
+    .eq("phone", phone)
+    .eq("from_me", true)
+    .eq("source", "bot")
+    .eq("body", body)
+    .gte("created_at", since)
+    .limit(1);
+  return Boolean(rows?.length);
+}

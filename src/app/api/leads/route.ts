@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
-import { mapInteresToProducto } from "@/lib/crm/types";
-import { notifyProducerQuoteReady } from "@/lib/whatsmeow/producer-notify";
+import { upsertWebLead } from "@/lib/crm/quote-lead";
 
 export async function POST(request: Request) {
   try {
@@ -16,49 +14,21 @@ export async function POST(request: Request) {
     }
 
     const interes = String(body.interes || "");
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-      .from("leads")
-      .insert({
-        nombre,
-        celular,
-        email: body.email || null,
-        dni: body.dni || null,
-        edad: body.edad ? Number(body.edad) : null,
-        provincia: body.provincia || null,
-        localidad: body.localidad || null,
-        producto: mapInteresToProducto(interes),
-        plan_interes: interes || null,
-        origen: "web",
-        page_path: body.page_path || null,
-        user_agent: request.headers.get("user-agent"),
-        notas_iniciales: body.notas || `Cotización web: ${interes || "general"}`,
-        prioridad: "alta",
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      console.error("lead insert error", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    await notifyProducerQuoteReady({
-      leadId: data.id,
-      canal: "Cotizador web",
+    const id = await upsertWebLead({
       nombre,
       celular,
       email: body.email || null,
       dni: body.dni || null,
-      edad: body.edad || null,
+      edad: body.edad ? Number(body.edad) : null,
       provincia: body.provincia || null,
       localidad: body.localidad || null,
-      interes: interes || null,
+      interes,
       notas: body.notas || `Cotización web: ${interes || "general"}`,
+      pagePath: body.page_path || null,
+      userAgent: request.headers.get("user-agent"),
     });
 
-    return NextResponse.json({ ok: true, id: data.id });
+    return NextResponse.json({ ok: true, id });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
 import {
   AutoQuoteError,
   fetchAutoCatalog,
@@ -58,6 +59,24 @@ export async function POST(req: Request) {
         vin: String(body.vin || ""),
         engineNumber: String(body.engineNumber || ""),
       });
+      await saveQuoteLeadSafe({
+        nombre: String(result.nombre || body.nombre || ""),
+        celular: String(body.celular || ""),
+        email: String(body.email || ""),
+        dni: String(body.dni || "").replace(/\D/g, "") || null,
+        edad: Number(body.age) || null,
+        localidad: body.location?.description || null,
+        interes: "Seguro de auto",
+        pagePath: String(body.page_path || "/seguros"),
+        notas: [
+          `Cotización auto San Cristóbal #${body.opportunityId}`,
+          `Registrado con el productor`,
+          body.location?.description ? `Localidad: ${body.location.description}` : "",
+          String(body.licensePlate || "") ? `Patente: ${body.licensePlate}` : "0km sin patente",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
       return NextResponse.json(result);
     }
 
@@ -76,6 +95,25 @@ export async function POST(req: Request) {
       hasTracker: Boolean(body.hasTracker),
       licensePlate: String(body.licensePlate || ""),
       source: "web",
+    });
+    await saveQuoteLeadSafe({
+      nombre: String(body.nombre || ""),
+      celular: String(body.celular || ""),
+      email: String(body.email || ""),
+      edad: Number(body.age) || null,
+      localidad: body.location?.description || null,
+      interes: "Seguro de auto",
+      pagePath: String(body.page_path || "/seguros"),
+      notas: [
+        `Cotización auto San Cristóbal #${result.opportunityId}`,
+        result.carDescription ? `Vehículo: ${result.carDescription}` : "",
+        String(body.licensePlate || "") ? `Patente: ${body.licensePlate}` : "",
+        `Planes: ${(result.plans || [])
+          .map((plan) => `${plan.title} $ ${Number(plan.monthly || 0).toLocaleString("es-AR")} / mes`)
+          .join(" · ")}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
     });
     return NextResponse.json(result);
   } catch (err) {

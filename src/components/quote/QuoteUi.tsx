@@ -73,7 +73,10 @@ export async function submitQuote(body: unknown) {
   return fetchJson("/api/sc-quote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...(typeof body === "object" && body ? body : {}),
+      page_path: typeof window !== "undefined" ? window.location.pathname : "/seguros",
+    }),
   });
 }
 

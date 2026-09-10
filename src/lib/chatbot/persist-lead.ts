@@ -53,6 +53,7 @@ function planInteres(data: QuoteData): string {
       ? `Viajero · ${data.viajeroDestino}`
       : "Viajero · consulta chatbot";
   }
+  if (data.wantsAdvisor) return "Hablar con un asesor";
   return "Consulta chatbot";
 }
 
@@ -160,8 +161,15 @@ export async function upsertHotLeadFromQuote(state: QuoteState) {
   }
 
   const supabase = createServiceClient();
-  const notas = buildNotas(data, "Estado: LEAD CALIENTE · listo para cotizar");
-  const tags = ["chatbot", "caliente", "cotizar", toProducto(data)];
+  const notas = buildNotas(
+    data,
+    data.wantsAdvisor
+      ? "Estado: pidió hablar con un asesor"
+      : "Estado: LEAD CALIENTE · listo para cotizar"
+  );
+  const tags = data.wantsAdvisor
+    ? ["chatbot", "asesor", "urgente", toProducto(data)]
+    : ["chatbot", "caliente", "cotizar", toProducto(data)];
   const payload = buildPayload(data, notas, tags, state.channel);
   const existingId = state.leadId || (await findLeadIdByPhone(data.celular));
 

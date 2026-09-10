@@ -99,6 +99,18 @@ export function ComercioQuoteNative({ onBack }: { onBack: () => void }) {
     setStep("plans");
     setTouched(false);
     setError("");
+    notifyLead(
+      nombre.trim(),
+      celular.trim(),
+      "Seguro integral de comercio",
+      [
+        "Vio planes de comercio San Cristóbal",
+        rubro.trim() ? `Rubro: ${rubro.trim()}` : "",
+        location ? `CP: ${location.zipCode} ${location.description}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
   }
 
   async function onSelect(plan: Plan) {

@@ -132,6 +132,19 @@ export function MotoQuoteNative({
     setStep("plans");
     setTouched(false);
     setError("");
+    notifyLead(
+      nombre.trim(),
+      celular.trim(),
+      "Seguro de moto",
+      [
+        "Vio planes de moto San Cristóbal",
+        cc ? `Cilindrada: ${cc.label}` : "",
+        vehicle.trim() ? `Moto: ${vehicle.trim()}` : "",
+        location ? `CP: ${location.zipCode} ${location.description}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
   }
 
   async function onSelect(plan: Plan) {

@@ -80,6 +80,16 @@ export function HogarQuoteNative({ onBack }: { onBack: () => void }) {
       setPlans(next);
       setStep("plans");
       setTouched(false);
+      notifyLead(
+        nombre.trim(),
+        celular.trim(),
+        "Seguro de hogar",
+        [
+          "Vio planes de hogar San Cristóbal",
+          `CP: ${location.zipCode} ${location.description}`,
+          `Planes: ${next.map((plan) => plan.title).join(" · ")}`,
+        ].join("\n")
+      );
     } catch {
       setError("No pudimos cargar los planes. Probá de nuevo.");
     } finally {

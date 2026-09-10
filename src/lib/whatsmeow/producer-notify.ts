@@ -30,6 +30,7 @@ export function isQuoteReadyForProducer(data: QuoteData) {
   if (!String(data.nombre || "").trim() || !normalizeArPhone(data.celular || "")) {
     return false;
   }
+  if (data.wantsAdvisor) return true;
   if (data.producto === "salud") {
     return Boolean(data.modalidad);
   }
@@ -99,7 +100,8 @@ export function looksLikeWhatsappInterest(text: string) {
   if (!t) return false;
   if (isGreeting(t)) return false;
   if (/^(cancelar|salir|dejar\s+cotiz|menu|men[uú])$/i.test(t)) return false;
-  if (t === MENU_WHATSAPP) return true;
+  if (t === MENU_WHATSAPP || t === MENU_SEGUROS || t === MENU_SALUD || t === MENU_VIAJERO) return true;
+  if (/hablar con (un )?asesor/i.test(t)) return true;
   if (looksLikeExplicitQuote(t) || detectsQuoteIntent(t)) return true;
   if (looksLikeCoverageQuestion(t) || detectsHealthCoverageIntent(t)) return true;
   return Boolean(inferProductoFromMessage(t));
@@ -344,7 +346,9 @@ export async function notifyProducerFromQuoteState(
     nombre: state.data.nombre,
     celular: state.data.celular,
     localidad: state.data.localidad || state.data.auto?.location?.description,
-    interes: state.data.producto,
+    interes: state.data.wantsAdvisor
+      ? "Hablar con un asesor"
+      : state.data.producto,
     notas: buildNotas(
       state.data,
       kind === "actualizacion"
@@ -353,4 +357,54 @@ export async function notifyProducerFromQuoteState(
     ),
     kind,
   });
+}
+
+function shouldForwardPausedFollowup(text: string) {
+  const t = String(text || "").trim();
+  if (!t || isGreeting(t)) return false;
+  if (/^(ok|oka|okey|dale|gracias|listo|perfecto|buen d[ií]a|buenas)[\s!.]*$/i.test(t)) {
+    return false;
+  }
+  return t.length >= 24;
+}
+
+/** Si el bot ya está en silencio, reenvía al productor lo que el cliente agrega. */
+export async function notifyProducerPausedFollowup(input: {
+  phone: string;
+  message: string;
+  pushName?: string | null;
+}) {
+  try {
+    if (!shouldForwardPausedFollowup(input.message)) return;
+    const customer = normalizeArPhone(input.phone);
+    const producer = getProducerWhatsapp();
+    if (!customer || !producer || customer === producer) return;
+
+    const now = Date.now();
+    const prevLock = interestLocks.get(`paused:${customer}`) || 0;
+    if (prevLock && now - prevLock < 45_000) return;
+    interestLocks.set(`paused:${customer}`, now);
+
+    const conv = await loadConversation(customer);
+    const nombre =
+      (await resolveChatName(
+        customer,
+        usableName(input.pushName) || conv.quote_state.data.nombre
+      )) || null;
+    const snippet = interestSnippet(input.message);
+    const text = [
+      "🔔 WhatsApp — sigue escribiendo (IA en silencio)",
+      nombre,
+      displayPhone(customer),
+      `wa.me/${customer}`,
+      conv.quote_state.data.localidad ? `📍 ${conv.quote_state.data.localidad}` : null,
+      snippet ? `«${snippet}»` : null,
+      `\nCRM: https://www.marxen.com.ar/crm/chats?phone=${encodeURIComponent(customer)}`,
+    ]
+      .filter((line) => line != null && String(line).trim() !== "")
+      .join("\n");
+    await sendToProducer(text);
+  } catch (err) {
+    console.error("[productor][paused]", err instanceof Error ? err.message : err);
+  }
 }

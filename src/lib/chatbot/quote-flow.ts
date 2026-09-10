@@ -79,6 +79,8 @@ export type QuoteData = {
   prepaga?: string;
   uso?: string;
   auto?: AutoQuoteDraft;
+  wantsAdvisor?: boolean;
+  advisorNotes?: string;
 };
 
 export type QuoteState = {
@@ -326,6 +328,7 @@ export function buildNotas(data: QuoteData, extra?: string): string {
   const lines = [
     "Lead desde chatbot MARXEN",
     data.producto ? `Interés: ${productLabel(data.producto)}` : null,
+    data.producto === "seguros" ? "Aseguradora: San Cristóbal" : null,
     data.seguroGrupo ? `Ramo: ${seguroLabel(data.seguroGrupo)}` : null,
     data.seguroDetalle ? `Detalle seguro: ${data.seguroDetalle}` : null,
     data.auto?.year
@@ -353,6 +356,8 @@ export function buildNotas(data: QuoteData, extra?: string): string {
     data.edades ? `Edades titular/grupo: ${data.edades}` : null,
     data.uso ? `Busca: ${data.uso}` : null,
     data.prepaga ? `Prepaga/OS actual: ${data.prepaga}` : null,
+    data.wantsAdvisor ? "Pedido: hablar con un asesor" : null,
+    data.advisorNotes ? `Consulta: ${data.advisorNotes}` : null,
     extra || null,
   ].filter(Boolean);
   return lines.join("\n");
@@ -497,7 +502,8 @@ async function afterWhatsapp(state: QuoteState): Promise<QuoteFlowResult> {
   }
   const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
   state.step = "localidad";
-  state.pendingSave = "hot";
+  // Pedido de asesor: no avisamos al productor hasta tener localidad o el motivo.
+  state.pendingSave = state.data.wantsAdvisor ? null : "hot";
   return {
     handled: true,
     state,
@@ -505,7 +511,25 @@ async function afterWhatsapp(state: QuoteState): Promise<QuoteFlowResult> {
   };
 }
 
+function finishAdvisorHandoff(state: QuoteState): QuoteFlowResult {
+  const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
+  return {
+    handled: true,
+    state: {
+      ...state,
+      active: false,
+      step: "done",
+      pendingSave: "hot",
+      agentEnabled: false,
+    },
+    answer: `Listo${nombre ? `, ${nombre}` : ""}. Un asesor de MARXEN te escribe por WhatsApp. Dejo de responder acá para no interrumpir.`,
+  };
+}
+
 function finishQuote(state: QuoteState, extra?: string): QuoteFlowResult {
+  if (state.data.wantsAdvisor) {
+    return finishAdvisorHandoff(state);
+  }
   state.pendingSave = extra ? "optional" : "hot";
   const nombre = state.data.nombre ? firstName(state.data.nombre) : "";
   return {
@@ -729,7 +753,8 @@ export function isDeterministicQuoteInput(text: string, state?: QuoteState | nul
     if (looksLikeCoverageQuestion(t, state)) return false;
     if (looksLikeProductSwitchRequest(t) || looksLikeExplicitQuote(t)) return false;
     if (/\?/.test(t) || PROVIDER_INTENT_RE.test(t)) return false;
-    return t.length >= 2 && t.length <= 160;
+    const max = state.data.wantsAdvisor && state.step === "localidad" ? 2000 : 160;
+    return t.length >= 2 && t.length <= max;
   }
   return false;
 }
@@ -745,7 +770,11 @@ export async function processQuoteFlow(
     if (channel === "whatsapp") {
       return {
         handled: true,
-        state: { active: true, step: "nombre", data: { ...(prev?.data || {}) } },
+        state: {
+          active: true,
+          step: "nombre",
+          data: { ...(prev?.data || {}), wantsAdvisor: true },
+        },
         answer: "Dale, un asesor de MARXEN te va a escribir. ¿Me decís tu nombre?",
       };
     }
@@ -1010,6 +1039,14 @@ export async function processQuoteFlow(
           state,
           answer: "¿De qué ciudad o localidad sos?",
         };
+      }
+      if (state.data.wantsAdvisor) {
+        if (text.length < 80 && !/\n/.test(text)) {
+          state.data.localidad = text;
+        } else {
+          state.data.advisorNotes = text;
+        }
+        return finishAdvisorHandoff(state);
       }
       state.data.localidad = text;
       if (state.data.producto === "salud") {

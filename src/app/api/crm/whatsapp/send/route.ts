@@ -9,6 +9,7 @@ import {
   uploadCrmMediaBuffer,
 } from "@/lib/whatsmeow/crm-chat";
 import { createServiceClient } from "@/lib/supabase/server";
+import { setChatAgentEnabled } from "@/lib/whatsmeow/agent-control";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -192,6 +193,8 @@ export async function POST(request: NextRequest) {
   if (!message) {
     await touchChatPreview(phone, caption, messageType, filename || null);
   }
+
+  await setChatAgentEnabled(phone, false).catch(() => null);
 
   return NextResponse.json({
     ok: true,

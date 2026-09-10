@@ -410,6 +410,7 @@ export function AutoQuoteNative({
           hasGnc: hasGnc === "si",
           hasTracker: hasTracker === "si",
           licensePlate: plate,
+          page_path: window.location.pathname,
         }),
       })) as QuoteResult;
       setQuote(data);
@@ -445,7 +446,7 @@ export function AutoQuoteNative({
     setRegistering(true);
     setError("");
     try {
-      const saved = await fetchJson("/api/sc-auto", {
+      await fetchJson("/api/sc-auto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -463,36 +464,9 @@ export function AutoQuoteNative({
           licensePlate: plate,
           vin: digitsOnly(vin),
           engineNumber: digitsOnly(engineNumber),
-        }),
-      });
-      const notas = [
-        `Cotización auto San Cristóbal #${quote.opportunityId}`,
-        `Plan: ${plan.title} ${money(plan.monthly)} / mes`,
-        `Vehículo: ${quote.carDescription}`,
-        `DNI: ${dni.replace(/\D/g, "")}`,
-        `Email: ${email.trim()}`,
-        plate ? `Patente: ${plate}` : "0km sin patente",
-        vin ? `Chasis: ${vin}` : "",
-        engineNumber ? `Motor: ${engineNumber}` : "",
-        `GNC: ${hasGnc === "si" ? "Sí" : "No"} · Rastreador: ${hasTracker === "si" ? "Sí" : "No"}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-      fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: saved.nombre || nombre.trim(),
-          celular: celular.trim(),
-          email: email.trim(),
-          dni: dni.replace(/\D/g, ""),
-          edad: ageNum,
-          localidad: location.description,
-          interes: "Seguro de auto",
-          notas,
           page_path: window.location.pathname,
         }),
-      }).catch(() => {});
+      });
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos registrar la cotización.");

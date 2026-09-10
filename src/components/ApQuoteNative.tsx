@@ -141,6 +141,18 @@ export function ApQuoteNative({ onBack }: { onBack: () => void }) {
     setStep("plans");
     setTouched(false);
     setError("");
+    notifyLead(
+      nombre.trim(),
+      celular.trim(),
+      "Seguro de accidentes personales",
+      [
+        "Vio planes de AP San Cristóbal",
+        actividad.trim() ? `Actividad: ${actividad.trim()}` : "",
+        location ? `CP: ${location.zipCode} ${location.description}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
   }
 
   async function onSelect(plan: Plan) {

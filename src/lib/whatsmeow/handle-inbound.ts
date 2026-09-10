@@ -12,16 +12,17 @@ import {
   saveConversation,
   type ConversationRow,
 } from "@/lib/whatsmeow/conversations";
-import { persistCrmInbound, updateCrmChatNameIfMissing } from "@/lib/whatsmeow/crm-chat";
+import { persistCrmInbound, updateCrmChatNameIfMissing, isRecentBotOutbound } from "@/lib/whatsmeow/crm-chat";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
 import {
   detectsQuoteIntent,
   isGreeting,
   shouldSendWhatsappPoll,
 } from "@/lib/chatbot/quote-flow";
-import { whatsappAgentGate } from "@/lib/whatsmeow/agent-control";
+import { whatsappAgentGate, setChatAgentEnabled } from "@/lib/whatsmeow/agent-control";
 import {
   looksLikeWhatsappInterest,
+  notifyProducerPausedFollowup,
   notifyProducerWhatsappInterest,
 } from "@/lib/whatsmeow/producer-notify";
 
@@ -104,7 +105,10 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
   const quoteState = {
     ...result.quoteState,
     notifiedInterest: conv.quote_state.notifiedInterest || result.quoteState.notifiedInterest,
-    agentEnabled: conv.quote_state.agentEnabled,
+    agentEnabled:
+      result.quoteState.agentEnabled !== undefined
+        ? result.quoteState.agentEnabled
+        : conv.quote_state.agentEnabled,
   };
 
   const history = [
@@ -171,18 +175,19 @@ async function replyFromTurn(conv: ConversationRow, dest: string, mapped: string
     } else {
       // Guardar en CRM tanto si fue inmediato como si quedó en cola
       const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
-      const queueId = "queueId" in poll ? (poll.queueId || null) : null;
+      const queueId = "queueId" in poll && typeof poll.queueId === "string" ? poll.queueId : null;
+      const waMessageId = typeof poll.messageId === "string" ? poll.messageId : null;
       await saveCrmWhatsappMessage({
         phone: conv.phone,
         direction: "outbound",
         body: "Elegí una opción",
         messageType: "poll",
         fromMe: true,
-        waMessageId: poll.messageId || null,
+        waMessageId,
         queueId,
         source: "bot",
         pollOptions: pollOptions.map((item) => item.label),
-        deliveryStatus: poll.messageId ? "sent" : "pending",
+        deliveryStatus: waMessageId ? "sent" : "pending",
       }).catch(() => null);
     }
   }
@@ -291,14 +296,25 @@ export async function handleWhatsappInbound(body: unknown) {
   }
 
   if (inbound.fromMe && !inbound.isPoll) {
+    if (!(await isRecentBotOutbound(inbound))) {
+      after(() => {
+        void setChatAgentEnabled(inbound.phone, false);
+      });
+    }
     return { status: 200, body: { success: true, ignored: true, reason: "outgoing" } };
   }
 
-  if (!inbound.fromMe && inbound.phone && looksLikeWhatsappInterest(inbound.text)) {
+  const destEarly = destination(inbound.chatJid, inbound.phone);
+  const convEarly = await loadConversation(inbound.phone);
+  const mappedInterest = convEarly.pending_poll
+    ? mapPollToValue(inbound.text, convEarly.pending_poll) || inbound.text
+    : inbound.text;
+
+  if (inbound.phone && looksLikeWhatsappInterest(mappedInterest)) {
     after(() => {
       void notifyProducerWhatsappInterest({
         phone: inbound.phone,
-        message: inbound.text,
+        message: mappedInterest,
         pushName: inbound.pushName,
       });
     });
@@ -309,11 +325,20 @@ export async function handleWhatsappInbound(body: unknown) {
     if (inbound.isPoll) {
       console.error("[whatsapp][poll-skip]", gate.reason, inbound.phone);
     }
+    if (gate.reason === "chat_paused" && inbound.text.trim()) {
+      after(() => {
+        void notifyProducerPausedFollowup({
+          phone: inbound.phone,
+          message: inbound.text,
+          pushName: inbound.pushName,
+        });
+      });
+    }
     return { status: 200, body: { success: true, ignored: true, reason: gate.reason } };
   }
 
-  const dest = destination(inbound.chatJid, inbound.phone);
-  const conv = await loadConversation(inbound.phone);
+  const dest = destEarly;
+  const conv = convEarly;
   const mappedNow = conv.pending_poll
     ? mapPollToValue(inbound.text, conv.pending_poll) || inbound.text
     : inbound.text;

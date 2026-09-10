@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCrmSession } from "@/lib/crm/auth";
+import { isSanCristobalQuoteLead } from "@/lib/crm/quote-lead";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
   ScB2bError,
@@ -88,36 +89,25 @@ async function settleOptional<T>(fn: () => Promise<T>, empty: T) {
   }
 }
 
-function isSanCristobalQuoteLead(row: Record<string, unknown>) {
-  const producto = String(row.producto || "").toLowerCase();
-  if (producto === "salud" || producto === "viajero") return false;
-  const path = String(row.page_path || "").toLowerCase();
-  const plan = String(row.plan_interes || "").toLowerCase();
-  const notas = String(row.notas_iniciales || "").toLowerCase();
-  if (path.includes("/cotizar") || path.includes("/seguros")) return true;
-  if (notas.includes("san cristóbal") || notas.includes("san cristobal")) return true;
-  if (producto !== "seguros") return false;
-  if (String(row.origen_detalle || "") === "chatbot") {
-    return /auto|moto|hogar|comercio|accidente|praxis|\bart\b/.test(plan);
-  }
-  return /auto|moto|hogar|comercio|accidente|praxis|\bart\b|seguro/.test(plan) || !plan;
-}
-
 async function digitalLeads(start: string, end: string) {
   try {
     const supabase = createServiceClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("leads")
       .select(
         "id, created_at, nombre, celular, email, producto, origen, origen_detalle, estado, plan_interes, page_path, notas_iniciales"
       )
-      .eq("producto", "seguros")
       .gte("created_at", start)
       .lte("created_at", end)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(500);
+    if (error) {
+      console.error("[sc-b2b] digitalLeads", error);
+      return [];
+    }
     return (data || []).filter((row) => isSanCristobalQuoteLead(row as Record<string, unknown>));
-  } catch {
+  } catch (err) {
+    console.error("[sc-b2b] digitalLeads", err);
     return [];
   }
 }
