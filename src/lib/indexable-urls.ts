@@ -7,7 +7,13 @@ export type IndexablePage = {
   priority: number;
 };
 
-/** URLs públicas a indexar (Search Console + sitemap). No incluir /crm ni /api. */
+/** Fecha de última actualización de contenido (zona Argentina, YYYY-MM-DD). */
+export const SITEMAP_LASTMOD = "2026-09-10";
+
+/**
+ * URLs públicas a indexar (Search Console + sitemap). No incluir /crm ni /api.
+ * Si cambia esta lista, actualizar también `public/sitemap.xml` y `public/sitemaps/pages.xml`.
+ */
 export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/seguro-de-auto", changeFrequency: "weekly", priority: 0.95 },
@@ -29,8 +35,13 @@ export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/contacto", changeFrequency: "monthly", priority: 0.65 },
 ];
 
-export function sitemapEntries(lastModified = new Date()): MetadataRoute.Sitemap {
-  const lastmod = lastModified.toISOString().slice(0, 10);
+export function sitemapEntries(lastModified: string | Date = SITEMAP_LASTMOD): MetadataRoute.Sitemap {
+  const lastmod =
+    typeof lastModified === "string"
+      ? lastModified
+      : lastModified.toLocaleDateString("en-CA", {
+          timeZone: "America/Argentina/Buenos_Aires",
+        });
   return INDEXABLE_PAGES.map((page) => ({
     url: absoluteUrl(page.path),
     lastModified: lastmod,

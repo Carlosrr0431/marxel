@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
     contentDispositionType: "inline",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  async headers() {
+    const sitemapHeaders = [
+      { key: "Content-Type", value: "text/xml; charset=utf-8" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Cache-Control", value: "public, max-age=3600, s-maxage=3600" },
+    ];
+    return [
+      { source: "/sitemap.xml", headers: sitemapHeaders },
+      { source: "/sitemaps/pages.xml", headers: sitemapHeaders },
+    ];
+  },
   async redirects() {
     return [
       { source: "/seguros-de-auto", destination: "/seguro-de-auto", permanent: true },
