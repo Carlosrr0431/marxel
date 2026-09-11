@@ -197,6 +197,14 @@ export function websiteNode(): JsonLd {
     name: site.name,
     inLanguage: "es-AR",
     publisher: { "@id": ORG_ID },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/cotizar?interes={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
@@ -254,6 +262,7 @@ export function serviceNode(opts: {
   description: string;
   path: string;
   serviceType?: string;
+  brand?: string;
 }): JsonLd {
   const url = absoluteUrl(opts.path);
   return {
@@ -274,6 +283,9 @@ export function serviceNode(opts: {
       serviceUrl: url,
       availableLanguage: ["es-AR", "es"],
     },
+    ...(opts.brand
+      ? { brand: { "@type": "Brand", name: opts.brand } }
+      : {}),
   };
 }
 
@@ -284,13 +296,70 @@ export function jsonLdGraph(nodes: Array<JsonLd | null>) {
   };
 }
 
+export function howToNode(opts: {
+  name: string;
+  description: string;
+  path: string;
+  steps: { name: string; text: string }[];
+}): JsonLd {
+  return {
+    "@type": "HowTo",
+    name: opts.name,
+    description: opts.description,
+    url: absoluteUrl(opts.path),
+    inLanguage: "es-AR",
+    step: opts.steps.map((step, index) => ({
+      "@type": "HowToStep",
+      position: index + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+}
+
+export function itemListNode(opts: {
+  name: string;
+  items: { name: string; path: string }[];
+}): JsonLd {
+  return {
+    "@type": "ItemList",
+    name: opts.name,
+    itemListElement: opts.items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: absoluteUrl(item.path),
+    })),
+  };
+}
+
+export function articleNode(opts: {
+  path: string;
+  title: string;
+  description: string;
+}): JsonLd {
+  const url = absoluteUrl(opts.path);
+  return {
+    "@type": "Article",
+    "@id": `${url}#articulo`,
+    headline: opts.title,
+    description: opts.description,
+    url,
+    inLanguage: "es-AR",
+    author: { "@id": ORG_ID },
+    publisher: { "@id": ORG_ID },
+    mainEntityOfPage: url,
+  };
+}
+
 export function pageJsonLd(opts: {
   path: string;
   title: string;
   description: string;
   crumbs: { name: string; path: string }[];
   faqs?: FaqItem[];
-  service?: { name: string; serviceType?: string };
+  service?: { name: string; serviceType?: string; brand?: string };
+  extra?: JsonLd[];
 }) {
   return jsonLdGraph([
     webPageNode(opts),
@@ -299,10 +368,12 @@ export function pageJsonLd(opts: {
       ? serviceNode({
           name: opts.service.name,
           serviceType: opts.service.serviceType,
+          brand: opts.service.brand,
           description: opts.description,
           path: opts.path,
         })
       : null,
     faqNode(opts.faqs || []),
+    ...(opts.extra || []),
   ]);
 }

@@ -75,7 +75,14 @@ export default function SaludPage() {
           </div>
           <p className="mt-8 text-center text-xs leading-relaxed text-muted">
             Información orientativa según folletos de Prevención Salud. Topes y
-            reintegros se confirman al cotizar. Prestaciones sujetas a auditoría.
+            reintegros se confirman al cotizar. Prestaciones sujetas a auditoría.{" "}
+            <Link
+              href="/guias/prepaga-en-salta"
+              className="font-medium text-navy underline-offset-2 hover:underline"
+            >
+              Guía para elegir prepaga en Salta
+            </Link>
+            .
           </p>
         </div>
       </section>

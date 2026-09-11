@@ -133,7 +133,19 @@ export function Footer() {
             <p>
               © {new Date().getFullYear()} {site.name}
             </p>
-            <p>Seguros · Salud · Viajero</p>
+            <p className="max-w-xl sm:text-right">
+              Productor asesor en Salta. No es aseguradora. Pólizas de auto, moto y
+              hogar: San Cristóbal Seguros (SSN 0192). Reclamos:{" "}
+              <a
+                href="https://www.argentina.gob.ar/ssn"
+                className="footer-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                SSN
+              </a>
+              .
+            </p>
             <p className="flex flex-wrap gap-3">
               <a href={site.instagram} className="footer-link" target="_blank" rel="noopener noreferrer">
                 Instagram

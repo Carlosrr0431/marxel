@@ -23,7 +23,7 @@ export type ProductLanding = {
 export const productLandings: Record<QuoteProduct, ProductLanding> = {
   auto: {
     path: "/seguro-de-auto",
-    title: "Seguro de auto en Salta | Cotizá online",
+    title: "Seguro de auto en Salta | Cotización online",
     description:
       "Cotizá seguro de auto en Salta con MARXEN y San Cristóbal: terceros básico, completo y todo riesgo. Productor asesor local, respuesta por WhatsApp.",
     h1: "Seguro de auto en Salta",
@@ -76,6 +76,7 @@ export const productLandings: Record<QuoteProduct, ProductLanding> = {
       },
     ],
     related: [
+      { href: "/guias/seguro-de-auto-en-salta", label: "Guía: cómo elegir" },
       { href: "/seguro-de-moto", label: "Seguro de moto" },
       { href: "/seguro-de-hogar", label: "Seguro de hogar" },
       { href: "/salud", label: "Prepaga / salud" },

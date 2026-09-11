@@ -77,7 +77,7 @@ export default function ViajeroPage() {
               <SectionHeading
                 eyebrow="Por qué importa"
                 title="Un imprevisto no tiene que arruinar el viaje"
-                description="El seguro de viaje cubre emergencias médicas, orientación y logística cuando estás lejos de casa. No reemplaza a la prepaga: se contrata antes de salir."
+                description="El seguro de viaje cubre emergencias médicas, orientación y logística cuando estás lejos de casa. No reemplaza a la prepaga: se contrata antes de salir. Guía Schengen: cómo cumplir el mínimo de 30.000 EUR desde Salta."
               />
               <ul className="mt-6 flex flex-col gap-3 text-sm text-muted">
                 {[
@@ -92,6 +92,12 @@ export default function ViajeroPage() {
                   </li>
                 ))}
               </ul>
+              <Link
+                href="/guias/seguro-de-viaje-schengen"
+                className="mt-6 inline-flex text-sm font-semibold text-navy underline-offset-4 hover:underline"
+              >
+                Guía: seguro de viaje Schengen desde Salta →
+              </Link>
             </div>
 
             <div className="viajero-panel">

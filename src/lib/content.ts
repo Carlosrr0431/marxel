@@ -30,6 +30,8 @@ export const seoLinks = [
   { href: "/salud", label: "Prepaga / salud" },
   { href: "/salud/cartilla-medica", label: "Cartilla médica" },
   { href: "/viajero", label: "Seguro de viaje" },
+  { href: "/guias", label: "Guías" },
+  { href: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
 ];
 
 export const seguros = [
