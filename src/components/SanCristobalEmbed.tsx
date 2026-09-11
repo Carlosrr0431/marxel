@@ -48,8 +48,12 @@ const PRODUCTS: Product[] = [
   },
 ];
 
-export function SanCristobalEmbed() {
-  const [active, setActive] = useState<Product["key"] | null>(null);
+export function SanCristobalEmbed({
+  initialProduct,
+}: {
+  initialProduct?: Product["key"];
+}) {
+  const [active, setActive] = useState<Product["key"] | null>(initialProduct ?? null);
   const [motoPlate, setMotoPlate] = useState("");
   const onBack = () => {
     setMotoPlate("");

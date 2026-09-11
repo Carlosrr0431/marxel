@@ -8,17 +8,18 @@ import { GoAssistanceQuote } from "@/components/GoAssistanceQuote";
 import { faqViajero } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const TITLE = "Asistencia al viajero desde Salta";
+const TITLE = "Seguro de viaje y asistencia al viajero en Salta";
 const DESCRIPTION =
-  "Asistencia médica internacional, pérdida de equipaje y cobertura 24 hs. Contratá asistencia al viajero con MARXEN desde Salta.";
+  "Contratá seguro de viaje y asistencia al viajero desde Salta: cobertura médica internacional, Schengen, equipaje y asistencia 24 hs con MARXEN.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,
   description: DESCRIPTION,
   path: "/viajero",
   keywords: [
+    "seguro de viaje Salta",
     "asistencia al viajero Salta",
-    "seguro de viaje",
+    "seguro de viaje Schengen",
     "GoAssistance",
     "MARXEN Viajero",
   ],
@@ -50,12 +51,13 @@ export default function ViajeroPage() {
             { name: "Viajero", path: "/viajero" },
           ],
           faqs: faqViajero,
+          service: { name: "Seguro de viaje y asistencia al viajero", serviceType: "Travel insurance" },
         })}
       />
       <PageHero
         eyebrow="MARXEN Viajero"
-        title="Asistencia al viajero desde Salta"
-        description="Asistencia médica global, pérdida de equipaje y orientación 24 hs. Elegí tu plan y viajá sin preocupaciones."
+        title="Seguro de viaje y asistencia al viajero en Salta"
+        description="Asistencia médica internacional, espacio Schengen, pérdida de equipaje y orientación 24 hs. Cotizá desde Salta Capital y viajá cubierto."
         cta={{
           href: "#cotizar-viajero",
           label: "Cotizar ahora",
@@ -75,7 +77,7 @@ export default function ViajeroPage() {
               <SectionHeading
                 eyebrow="Por qué importa"
                 title="Un imprevisto no tiene que arruinar el viaje"
-                description="La asistencia al viajero cubre emergencias médicas, orientación y logística cuando estás lejos de casa."
+                description="El seguro de viaje cubre emergencias médicas, orientación y logística cuando estás lejos de casa. No reemplaza a la prepaga: se contrata antes de salir."
               />
               <ul className="mt-6 flex flex-col gap-3 text-sm text-muted">
                 {[

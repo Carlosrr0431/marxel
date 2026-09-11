@@ -67,7 +67,7 @@ export default function ContactoPage() {
                 Teléfono
               </p>
               <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
-                {site.phone}
+                {site.phoneLocal}
               </p>
             </a>
             <a
@@ -80,7 +80,20 @@ export default function ContactoPage() {
                 WhatsApp
               </p>
               <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
-                {site.phone}
+                {site.phoneLocal}
+              </p>
+            </a>
+            <a
+              href={site.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="surface group p-6 transition hover:border-sky/40"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">
+                Google Maps
+              </p>
+              <p className="mt-3 font-display text-xl font-semibold text-navy transition group-hover:text-blue">
+                MARXEN · Salta Capital
               </p>
             </a>
             <a
@@ -109,6 +122,35 @@ export default function ContactoPage() {
                 Marxen Salta
               </p>
             </a>
+          </div>
+
+          <div className="mt-10 overflow-hidden rounded-[1.5rem] border border-line/80 bg-white">
+            <div className="border-b border-line/70 px-6 py-5">
+              <p className="eyebrow">Zona de cobertura</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold text-navy">
+                MARXEN en Google Maps
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+                Productor asesor en Salta Capital (CP 4400). Atendemos por WhatsApp,
+                email y el cotizador web. Ver ficha:{" "}
+                <a
+                  href={site.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-navy underline-offset-2 hover:underline"
+                >
+                  Google Maps
+                </a>
+                .
+              </p>
+            </div>
+            <iframe
+              title="MARXEN en Google Maps, Salta Capital"
+              src="https://www.google.com/maps?q=Marxen+Salta+Agente+de+seguros&z=12&output=embed"
+              className="h-72 w-full border-0 sm:h-96"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
 
           <div className="mt-10 flex justify-center">

@@ -4,11 +4,13 @@ export const site = {
   tagline:
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
-    "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá asistencia al viajero.",
+    "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá seguro de viaje / asistencia al viajero.",
   phone: "+54 9 387 634-8199",
+  phoneLocal: "0387 634-8199",
   email: "comercial@marxen.com.ar",
   whatsapp: "5493876348199",
-  location: "Salta, Salta, Argentina.",
+  location: "Salta Capital (CP 4400), Salta, Argentina.",
+  mapsUrl: "https://share.google/lzKEp4xPQDnOpkqcB",
   instagram: "https://www.instagram.com/marxen.ok/",
   facebook: "https://www.facebook.com/profile.php?id=61593725283104",
 };
@@ -21,6 +23,15 @@ export const navLinks = [
   { href: "/contacto", label: "Contacto" },
 ];
 
+export const seoLinks = [
+  { href: "/seguro-de-auto", label: "Seguro de auto" },
+  { href: "/seguro-de-moto", label: "Seguro de moto" },
+  { href: "/seguro-de-hogar", label: "Seguro de hogar" },
+  { href: "/salud", label: "Prepaga / salud" },
+  { href: "/salud/cartilla-medica", label: "Cartilla médica" },
+  { href: "/viajero", label: "Seguro de viaje" },
+];
+
 export const seguros = [
   {
     slug: "autos-y-motos",
@@ -29,6 +40,7 @@ export const seguros = [
     description:
       "Coberturas para autos y motos: responsabilidad civil, todo riesgo, granizo, cristales y asistencia 24 hs en ruta.",
     highlights: ["RC y todo riesgo", "Asistencia en ruta", "Granizo y cristales"],
+    href: "/seguro-de-auto",
   },
   {
     slug: "accidentes-personales",
@@ -37,6 +49,7 @@ export const seguros = [
     description:
       "Cobertura para vos y tu familia ante accidentes: indemnización, gastos médicos y protección en actividades cotidianas o laborales.",
     highlights: ["Familia y deportes", "Gastos médicos", "Indemnización"],
+    href: "/seguros#accidentes-personales",
   },
   {
     slug: "integral-comercios",
@@ -45,6 +58,7 @@ export const seguros = [
     description:
       "Seguro integral para locales y comercios: incendio, robo, responsabilidad civil y cobertura de mercadería.",
     highlights: ["Incendio y robo", "RC comercial", "Mercadería"],
+    href: "/seguros#integral-comercios",
   },
   {
     slug: "art",
@@ -53,6 +67,7 @@ export const seguros = [
     description:
       "Asesoramiento en ART para empresas: cobertura de riesgos laborales, prevención y acompañamiento ante siniestros.",
     highlights: ["Cumplimiento legal", "Prevención", "Gestión de siniestros"],
+    href: "/seguros#art",
   },
   {
     slug: "mala-praxis",
@@ -61,6 +76,7 @@ export const seguros = [
     description:
       "Protección específica para profesionales de la salud ante reclamos por responsabilidad profesional.",
     highlights: ["Profesionales de salud", "Defensa legal", "Cobertura a medida"],
+    href: "/seguros#mala-praxis",
   },
   {
     slug: "hogar",
@@ -69,6 +85,7 @@ export const seguros = [
     description:
       "Seguro de hogar para vivienda y contenido: incendio, robo, daños por agua y responsabilidad civil familiar.",
     highlights: ["Vivienda y contenido", "Daños por agua", "RC familiar"],
+    href: "/seguro-de-hogar",
   },
 ] as const;
 
@@ -129,7 +146,7 @@ export const faqHome: FaqItem[] = [
   },
   {
     q: "¿Puedo cotizar un seguro de auto en Salta por internet?",
-    a: "Sí. En marxen.com.ar/seguros cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 634-8199 o en el chat del sitio.",
+    a: "Sí. En marxen.com.ar/seguro-de-auto cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 634-8199 o en el chat del sitio.",
   },
   {
     q: "¿Con qué compañías trabajan?",
@@ -148,7 +165,7 @@ export const faqHome: FaqItem[] = [
 export const faqSeguros: FaqItem[] = [
   {
     q: "¿Cómo cotizo un seguro de auto o moto?",
-    a: "Usá el cotizador de esta página: cargás año, marca, modelo, versión y código postal. Ves planes (terceros básico, terceros completo y todo riesgo) y dejás tu WhatsApp para cerrar con un asesor de MARXEN en Salta.",
+    a: "Usá el cotizador de seguro de auto o de moto: cargás año, marca, modelo, versión y código postal. Ves planes (terceros básico, terceros completo y todo riesgo) y dejás tu WhatsApp para cerrar con un asesor de MARXEN en Salta.",
   },
   {
     q: "¿Qué cubre un seguro de auto con MARXEN?",
@@ -166,19 +183,31 @@ export const faqSeguros: FaqItem[] = [
 
 export const faqViajero: FaqItem[] = [
   {
-    q: "¿Qué cubre la asistencia al viajero?",
-    a: "Emergencias médicas en el destino, orientación telefónica las 24 horas y, según el plan, pérdida de equipaje y otras asistencias. El alcance depende del país y de los días de viaje.",
+    q: "¿Qué cubre un seguro de viaje o asistencia al viajero?",
+    a: "Emergencias médicas en el destino, orientación telefónica las 24 horas y, según el plan, pérdida de equipaje, cancelación y otras asistencias. El alcance depende del país y de los días de viaje.",
   },
   {
-    q: "¿Puedo contratar asistencia al viajero desde Salta?",
-    a: "Sí. MARXEN arma el plan desde Salta para viajes nacionales e internacionales. Contanos destino y fechas en /cotizar o por WhatsApp.",
+    q: "¿Puedo contratar seguro de viaje desde Salta?",
+    a: "Sí. MARXEN arma el plan desde Salta Capital para turismo nacional e internacional (incluye Schengen). Cotizá en /viajero o por WhatsApp +54 9 387 634-8199.",
+  },
+  {
+    q: "¿El seguro de viaje es obligatorio para Europa?",
+    a: "Para el espacio Schengen se exige asistencia médica de al menos 30.000 EUR, repatriación y vigencia durante toda la estadía. Los planes internacionales que cotizamos cubren ese mínimo; confirmamos el voucher al emitir.",
+  },
+  {
+    q: "¿Es lo mismo seguro de viaje que prepaga?",
+    a: "No. La prepaga cubre tu salud en Argentina. El seguro de viaje / asistencia al viajero cubre imprevistos médicos y logísticos fuera de tu ciudad o del país, y se contrata antes de salir.",
   },
 ];
 
 export const faqContacto: FaqItem[] = [
   {
     q: "¿Cómo contacto a MARXEN en Salta?",
-    a: "WhatsApp +54 9 387 634-8199, email comercial@marxen.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+    a: "WhatsApp 0387 634-8199, email comercial@marxen.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+  },
+  {
+    q: "¿Dónde está MARXEN en Google Maps?",
+    a: "El perfil de negocio es MARXEN, agente de seguros, con zona de cobertura en Salta Capital (CP 4400). Buscanos en Google Maps o en share.google/lzKEp4xPQDnOpkqcB. El asesoramiento es por WhatsApp, email o el cotizador web.",
   },
   {
     q: "¿Tienen chat o cotizador en el sitio?",

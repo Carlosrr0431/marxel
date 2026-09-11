@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
-import { site, navLinks } from "@/lib/content";
+import { site, navLinks, seoLinks } from "@/lib/content";
 
 const AUTOGESTION = "https://autogestion.sancristobal.com.ar";
 const ASISTENCIA = "08102228887";
@@ -27,7 +27,7 @@ export function Footer() {
       </section>
 
       <footer className="site-footer">
-        <div className="container-mx grid gap-10 py-14 md:grid-cols-3">
+        <div className="container-mx grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="footer-heading uppercase">MARXEN Seguros</p>
             <Logo href="/" className="mt-4" />
@@ -58,6 +58,17 @@ export function Footer() {
             <address className="mt-4 not-italic">
               <p className="text-sm text-muted">{site.location}</p>
               <p className="mt-2 text-sm text-muted">
+                Google Maps:{" "}
+                <a
+                  href={site.mapsUrl}
+                  className="footer-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  MARXEN Salta
+                </a>
+              </p>
+              <p className="mt-2 text-sm text-muted">
                 E-mail:{" "}
                 <a href={`mailto:${site.email}`} className="footer-link">
                   {site.email}
@@ -66,7 +77,7 @@ export function Footer() {
               <p className="mt-2 text-sm text-muted">
                 WhatsApp:{" "}
                 <a href={wa} className="footer-link" target="_blank" rel="noopener noreferrer">
-                  {site.phone}
+                  {site.phoneLocal}
                 </a>
               </p>
             </address>
@@ -76,6 +87,19 @@ export function Footer() {
             <p className="footer-heading">Link de interés</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="footer-link text-sm">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="footer-heading">Cotizar en Salta</p>
+            <ul className="mt-4 flex flex-col gap-2.5">
+              {seoLinks.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="footer-link text-sm">
                     {link.label}

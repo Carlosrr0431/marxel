@@ -17,7 +17,7 @@ const SHARE_DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "MARXEN | Productores de seguros y prepagas en Salta",
+    default: "Seguro de auto, prepaga y viajero en Salta | MARXEN",
     template: `%s · ${site.name}`,
   },
   description: site.description,

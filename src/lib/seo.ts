@@ -22,12 +22,15 @@ export const DEFAULT_KEYWORDS = [
   "MARXEN Salta",
   "productores de seguros Salta",
   "seguro de auto Salta",
+  "seguros de auto",
   "cotizar seguro de auto",
   "San Cristóbal Seguros",
   "prepaga Salta",
+  "seguro de salud Salta",
   "Prevención Salud",
   "plan A2",
   "plan A4",
+  "seguro de viaje Salta",
   "asistencia al viajero Salta",
   "seguro de hogar Salta",
   "seguro de moto Salta",
@@ -53,6 +56,7 @@ export function pageMetadata(opts: {
     alternates: {
       canonical,
       languages: { "es-AR": canonical, es: canonical },
+      types: { "text/plain": "/llms.txt" },
     },
     openGraph: {
       title: opts.title,
@@ -85,11 +89,19 @@ export function organizationNode(): JsonLd {
       url: absoluteUrl("/brand/marxel-lockup.svg"),
     },
     image: absoluteUrl("/opengraph-image"),
-    telephone: site.phone,
+    telephone: site.phoneLocal,
     email: site.email,
     description:
       "Productores asesores de seguros, prepagas y asistencia al viajero en Salta, Argentina. Cotización de auto, moto y hogar con San Cristóbal, planes de Prevención Salud y asistencia al viajero.",
     slogan: "Tu protección, sin vueltas.",
+    priceRange: "$$",
+    currenciesAccepted: "ARS",
+    paymentAccepted: "Cash, Credit Card, Debit Card, Bank Transfer",
+    identifier: {
+      "@type": "PropertyValue",
+      name: "Código de productor San Cristóbal",
+      value: "08-006051",
+    },
     foundingLocation: {
       "@type": "Place",
       name: "Salta, Argentina",
@@ -98,6 +110,7 @@ export function organizationNode(): JsonLd {
       "@type": "PostalAddress",
       addressLocality: SITE_GEO.locality,
       addressRegion: SITE_GEO.region,
+      postalCode: "4400",
       addressCountry: SITE_GEO.country,
     },
     geo: {
@@ -105,6 +118,7 @@ export function organizationNode(): JsonLd {
       latitude: SITE_GEO.latitude,
       longitude: SITE_GEO.longitude,
     },
+    hasMap: site.mapsUrl,
     areaServed: [
       { "@type": "City", name: "Salta" },
       { "@type": "AdministrativeArea", name: "Provincia de Salta" },
@@ -112,6 +126,7 @@ export function organizationNode(): JsonLd {
     ],
     knowsAbout: [
       "Seguro de automóviles",
+      "Seguros de auto en Salta",
       "Seguro de motos",
       "Seguro de hogar",
       "Seguro de comercio",
@@ -119,8 +134,10 @@ export function organizationNode(): JsonLd {
       "Accidentes personales",
       "Mala praxis",
       "Medicina prepaga",
+      "Seguro de salud",
       "Prevención Salud",
       "Asistencia al viajero",
+      "Seguro de viaje",
     ],
     contactPoint: [
       {
@@ -133,16 +150,40 @@ export function organizationNode(): JsonLd {
         url: `https://wa.me/${site.whatsapp}`,
       },
     ],
-    sameAs: [site.instagram, site.facebook],
+    sameAs: [site.instagram, site.facebook, site.mapsUrl],
     hasOfferCatalog: {
       "@type": "OfferCatalog",
       name: "Coberturas MARXEN",
       itemListElement: [
-        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Seguro de auto" } },
-        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Seguro de moto" } },
-        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Seguro de hogar" } },
-        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Medicina prepaga" } },
-        { "@type": "Offer", itemOffered: { "@type": "Service", name: "Asistencia al viajero" } },
+        {
+          "@type": "Offer",
+          url: absoluteUrl("/seguro-de-auto"),
+          itemOffered: { "@type": "Service", name: "Seguro de auto", url: absoluteUrl("/seguro-de-auto") },
+        },
+        {
+          "@type": "Offer",
+          url: absoluteUrl("/seguro-de-moto"),
+          itemOffered: { "@type": "Service", name: "Seguro de moto", url: absoluteUrl("/seguro-de-moto") },
+        },
+        {
+          "@type": "Offer",
+          url: absoluteUrl("/seguro-de-hogar"),
+          itemOffered: { "@type": "Service", name: "Seguro de hogar", url: absoluteUrl("/seguro-de-hogar") },
+        },
+        {
+          "@type": "Offer",
+          url: absoluteUrl("/salud"),
+          itemOffered: { "@type": "Service", name: "Medicina prepaga", url: absoluteUrl("/salud") },
+        },
+        {
+          "@type": "Offer",
+          url: absoluteUrl("/viajero"),
+          itemOffered: {
+            "@type": "Service",
+            name: "Seguro de viaje y asistencia al viajero",
+            url: absoluteUrl("/viajero"),
+          },
+        },
       ],
     },
   };
@@ -208,6 +249,34 @@ export function faqNode(items: FaqItem[]): JsonLd | null {
   };
 }
 
+export function serviceNode(opts: {
+  name: string;
+  description: string;
+  path: string;
+  serviceType?: string;
+}): JsonLd {
+  const url = absoluteUrl(opts.path);
+  return {
+    "@type": "Service",
+    "@id": `${url}#servicio`,
+    name: opts.name,
+    serviceType: opts.serviceType ?? opts.name,
+    description: opts.description,
+    url,
+    provider: { "@id": ORG_ID },
+    areaServed: [
+      { "@type": "City", name: SITE_GEO.locality },
+      { "@type": "AdministrativeArea", name: "Provincia de Salta" },
+      { "@type": "Country", name: SITE_GEO.countryName },
+    ],
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: url,
+      availableLanguage: ["es-AR", "es"],
+    },
+  };
+}
+
 export function jsonLdGraph(nodes: Array<JsonLd | null>) {
   return {
     "@context": "https://schema.org",
@@ -221,10 +290,19 @@ export function pageJsonLd(opts: {
   description: string;
   crumbs: { name: string; path: string }[];
   faqs?: FaqItem[];
+  service?: { name: string; serviceType?: string };
 }) {
   return jsonLdGraph([
     webPageNode(opts),
     breadcrumbNode(opts.crumbs),
+    opts.service
+      ? serviceNode({
+          name: opts.service.name,
+          serviceType: opts.service.serviceType,
+          description: opts.description,
+          path: opts.path,
+        })
+      : null,
     faqNode(opts.faqs || []),
   ]);
 }

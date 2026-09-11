@@ -11,15 +11,24 @@ import { JsonLd } from "@/components/JsonLd";
 import { faqHome, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const HOME_TITLE = "MARXEN | Productores de seguros y prepagas en Salta";
+const HOME_TITLE = "Seguro de auto, prepaga y viajero en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "Productores asesores en Salta: cotizá seguro de auto, moto y hogar con San Cristóbal, compará prepagas Prevención Salud y contratá asistencia al viajero.";
+  "Productor asesor en Salta Capital: cotizá seguro de auto, moto y hogar con San Cristóbal, compará prepagas Prevención Salud (A2 y A4) y contratá seguro de viaje / asistencia al viajero.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
   description: HOME_DESCRIPTION,
   path: "/",
   absoluteTitle: true,
+  keywords: [
+    "seguro de auto Salta",
+    "seguros de auto",
+    "prepaga Salta",
+    "seguro de viaje Salta",
+    "MARXEN Salta",
+    "San Cristóbal Seguros",
+    "Prevención Salud",
+  ],
 });
 
 const STATS = [
@@ -44,6 +53,7 @@ export default function HomePage() {
           description: HOME_DESCRIPTION,
           crumbs: [{ name: "Inicio", path: "/" }],
           faqs: faqHome,
+          service: { name: "Asesoramiento en seguros, prepaga y viajero", serviceType: "Insurance brokerage" },
         })}
       />
       {/* ——— HERO ——— */}
@@ -51,7 +61,7 @@ export default function HomePage() {
         <div className="hero-bg" aria-hidden />
         <div className="container-mx hero-section__inner">
           <div className="hero-copy">
-            <p className="animate-rise eyebrow">Productores de seguros en Salta</p>
+            <p className="animate-rise eyebrow">Seguros de auto, prepaga y viajero en Salta</p>
             <h1 className="animate-rise-delay-1">
               Tu protección,
               <br />
@@ -64,8 +74,8 @@ export default function HomePage() {
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
-              <Link href="/seguros#cotizar-online" className="btn btn-primary btn-lg">
-                Cotizar seguros
+              <Link href="/seguro-de-auto" className="btn btn-primary btn-lg">
+                Cotizar seguro de auto
               </Link>
               <Link href="/salud" className="btn btn-secondary btn-lg">
                 Prepagas A2 / A4
@@ -121,11 +131,11 @@ export default function HomePage() {
             {(
               [
                 {
-                  href: "/seguros#cotizar-online",
+                  href: "/seguro-de-auto",
                   icon: "shield",
                   title: "MARXEN Seguros",
                   text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cotizá online con San Cristóbal.",
-                  cta: "Cotizar online",
+                  cta: "Cotizar auto",
                   tone: "navy",
                   delay: 0,
                 },
@@ -141,7 +151,7 @@ export default function HomePage() {
                 {
                   href: "/viajero",
                   icon: "plane",
-                  title: "Asistencia al viajero",
+                  title: "Seguro de viaje",
                   text: "Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y disfrutá de tu viaje sin preocupaciones.",
                   cta: "Ver coberturas",
                   tone: "sky",
@@ -177,7 +187,7 @@ export default function HomePage() {
             </Reveal>
             <Reveal delay={100}>
               <Link
-                href="/seguros#cotizar-online"
+                href="/seguros"
                 className="btn btn-outline shrink-0"
               >
                 Ver todas
@@ -189,7 +199,7 @@ export default function HomePage() {
             {seguros.map((item, i) => (
               <Reveal key={item.slug} delay={i * 50}>
                 <Link
-                  href={`/seguros#${item.slug}`}
+                  href={item.href}
                   className="seguro-card group"
                 >
                   <span className="seguro-card__icon">

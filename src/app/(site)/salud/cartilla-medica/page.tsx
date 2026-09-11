@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CartillaBuscador } from "./CartillaBuscador";
-import { pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/JsonLd";
+import { pageJsonLd, pageMetadata } from "@/lib/seo";
 import { PRESTADORES, FARMACIAS } from "@/data/cartilla-prestadores";
 
+const TITLE = "Cartilla médica Salta — Planes A2 y A4";
+const DESCRIPTION =
+  "Encontrá todos los prestadores, clínicas, sanatorios, laboratorios y farmacias habilitados para los planes A2 y A4 de Prevención Salud en Salta. Información completa en MARXEN.";
+
 export const metadata: Metadata = pageMetadata({
-  title: "Cartilla médica Salta — Planes A2 y A4 | MARXEN",
-  description:
-    "Encontrá todos los prestadores, clínicas, sanatorios, laboratorios y farmacias habilitados para los planes A2 y A4 de Prevención Salud en Salta. Información completa en MARXEN.",
+  title: TITLE,
+  description: DESCRIPTION,
   path: "/salud/cartilla-medica",
   keywords: [
     "cartilla médica Salta",
@@ -23,6 +27,19 @@ export const metadata: Metadata = pageMetadata({
 export default function CartillaMedicaPage() {
   return (
     <>
+      <JsonLd
+        data={pageJsonLd({
+          path: "/salud/cartilla-medica",
+          title: TITLE,
+          description: DESCRIPTION,
+          crumbs: [
+            { name: "Inicio", path: "/" },
+            { name: "Salud", path: "/salud" },
+            { name: "Cartilla médica", path: "/salud/cartilla-medica" },
+          ],
+          service: { name: "Cartilla médica Prevención Salud", serviceType: "Medical directory" },
+        })}
+      />
       {/* ── Hero ── */}
       <section className="cartilla-page-hero">
         <div className="container-mx py-16 sm:py-20">

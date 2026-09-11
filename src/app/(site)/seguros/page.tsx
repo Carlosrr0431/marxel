@@ -38,12 +38,14 @@ export default function SegurosPage() {
             { name: "Seguros", path: "/seguros" },
           ],
           faqs: faqSeguros,
+          service: { name: "Seguros patrimoniales", serviceType: "Insurance brokerage" },
         })}
       />
       <PageHero
         eyebrow="MARXEN Seguros"
         title="Seguros de auto, moto y hogar en Salta"
         description="Cotizá online con San Cristóbal: año, marca y modelo. También te asesoramos en comercio, ART, accidentes personales y mala praxis."
+        cta={{ href: "/seguro-de-auto", label: "Seguro de auto" }}
         crumbs={[
           { href: "/", label: "Inicio" },
           { href: "/seguros", label: "Seguros" },
@@ -52,6 +54,21 @@ export default function SegurosPage() {
 
       <section id="cotizar-online" className="scroll-mt-24 bg-cloud">
         <div className="container-mx py-10 sm:py-14">
+          <p className="mb-6 text-sm text-muted">
+            Atajos:{" "}
+            <Link href="/seguro-de-auto" className="font-medium text-navy underline-offset-2 hover:underline">
+              seguro de auto
+            </Link>
+            ,{" "}
+            <Link href="/seguro-de-moto" className="font-medium text-navy underline-offset-2 hover:underline">
+              moto
+            </Link>{" "}
+            y{" "}
+            <Link href="/seguro-de-hogar" className="font-medium text-navy underline-offset-2 hover:underline">
+              hogar
+            </Link>
+            .
+          </p>
           <SanCristobalEmbed />
         </div>
       </section>
@@ -104,9 +121,9 @@ export default function SegurosPage() {
                   ))}
                 </ul>
                 <div className="mt-7 flex flex-col gap-2 sm:flex-row">
-                  <a href="#cotizar-online" className="btn btn-primary w-full sm:w-auto">
+                  <Link href={item.href} className="btn btn-primary w-full sm:w-auto">
                     Cotizar online
-                  </a>
+                  </Link>
                   <Link
                     href={`/cotizar?interes=${encodeURIComponent(item.title)}`}
                     className="btn btn-secondary w-full sm:w-auto"

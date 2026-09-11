@@ -12,9 +12,9 @@ import {
 } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const TITLE = "Prepaga en Salta: planes A2 y A4";
+const TITLE = "Prepaga y seguro de salud en Salta | Planes A2 y A4";
 const DESCRIPTION =
-  "Compará planes de Prevención Salud con MARXEN en Salta. A2, A4 y derivación de aportes de monotributo o relación de dependencia.";
+  "Prepaga en Salta con MARXEN: planes A2 y A4 de Prevención Salud, cartilla médica y derivación de aportes de monotributo o relación de dependencia.";
 const FAQ_ITEMS = faqSalud.flatMap((bloque) => bloque.items);
 
 export const metadata: Metadata = pageMetadata({
@@ -23,6 +23,8 @@ export const metadata: Metadata = pageMetadata({
   path: "/salud",
   keywords: [
     "prepaga Salta",
+    "seguro de salud Salta",
+    "medicina prepaga Salta",
     "Prevención Salud",
     "plan A2",
     "plan A4",
@@ -44,12 +46,13 @@ export default function SaludPage() {
             { name: "Salud", path: "/salud" },
           ],
           faqs: FAQ_ITEMS,
+          service: { name: "Medicina prepaga", serviceType: "Health insurance" },
         })}
       />
       <PageHero
         eyebrow="MARXEN Salud"
-        title="Prepaga en Salta, con asesoramiento de verdad"
-        description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular."
+        title="Prepaga en Salta: planes de salud A2 y A4"
+        description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular. Cartilla local y derivación de aportes."
         cta={{ href: "#planes-a2-a4", label: "Comparar A2 y A4" }}
         crumbs={[
           { href: "/", label: "Inicio" },
@@ -108,7 +111,14 @@ export default function SaludPage() {
           </div>
 
           <p className="mt-6 text-sm text-muted">
-            Cartilla médica:{" "}
+            Cartilla médica en Salta (planes A2 y A4):{" "}
+            <Link
+              href="/salud/cartilla-medica"
+              className="font-medium text-navy underline-offset-2 hover:underline"
+            >
+              marxen.com.ar/salud/cartilla-medica
+            </Link>
+            . Cartilla oficial de Prevención Salud:{" "}
             <a
               href="https://www.prevencionsalud.com.ar/cartilla-medica"
               target="_blank"
@@ -117,6 +127,7 @@ export default function SaludPage() {
             >
               prevencionsalud.com.ar/cartilla-medica
             </a>
+            .
           </p>
         </div>
       </section>

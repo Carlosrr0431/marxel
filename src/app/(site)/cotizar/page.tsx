@@ -6,9 +6,9 @@ import { GoAssistanceQuote } from "@/components/GoAssistanceQuote";
 import { JsonLd } from "@/components/JsonLd";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const TITLE = "Cotizar seguro de auto en Salta";
+const TITLE = "Cotizar seguro de auto, prepaga y viajero en Salta";
 const DESCRIPTION =
-  "Cotizá online tu seguro San Cristóbal o pedí una propuesta de prepaga y viajero. MARXEN te responde por WhatsApp.";
+  "Cotizá online tu seguro San Cristóbal o pedí una propuesta de prepaga y seguro de viaje. MARXEN te responde por WhatsApp desde Salta.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,
