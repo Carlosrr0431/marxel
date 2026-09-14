@@ -12,7 +12,6 @@ import {
 } from "@/lib/crm/types";
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
 import { LeadQuickActions } from "@/components/crm/LeadQuickActions";
-import { OpenCrmChatButton } from "@/components/crm/OpenCrmChatButton";
 import { SeguimientoActions } from "@/components/crm/SeguimientoActions";
 import { Avatar, ScoreRing, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
 import { ChatbotBriefCard } from "@/components/crm/ChatbotBriefCard";
@@ -32,7 +31,6 @@ import {
 import { fillTemplate, WA_TEMPLATES } from "@/lib/crm/templates";
 import {
   briefValue,
-  chatbotWhatsAppText,
   isChatbotLead,
   parseChatbotNotas,
   qualificationGaps,
@@ -73,15 +71,14 @@ export default async function LeadDetailPage({
   const fields = parseChatbotNotas(l.notas_iniciales);
   const chatbot = isChatbotLead(l);
   const gaps = qualificationGaps(l, fields);
-  const waContext = chatbotWhatsAppText(l, fields);
   const modalidadLabel =
     MODALIDADES.find((m) => m.value === l.modalidad)?.label || l.modalidad;
 
   const tips: string[] = [];
   if (chatbot && (l.estado === "nuevo" || l.estado === "interesado")) {
-    tips.push("Lead del chatbot: mandá WhatsApp con el contexto ya calificado.");
+    tips.push("Lead del chatbot: abrí el chat del CRM con el contexto ya calificado.");
   } else if (l.estado === "nuevo") {
-    tips.push("Hacé el WhatsApp inicial con plantilla de apertura.");
+    tips.push("Abrí el chat del CRM para el primer contacto.");
   }
   if (gaps.length) tips.push(`Completar ficha: ${gaps.join(", ")}.`);
   if (!l.email) tips.push("Pedí el email para enviar la propuesta formal.");
@@ -181,20 +178,12 @@ export default async function LeadDetailPage({
             </div>
             <div className="flex flex-col items-start gap-3 sm:items-end">
               <ScoreRing score={puntaje} />
-              {chatbot ? (
-                <OpenCrmChatButton
-                  leadId={l.id}
-                  phone={l.celular}
-                  name={l.nombre}
-                  existing={Boolean(existingChat)}
-                />
-              ) : null}
               <LeadQuickActions
                 leadId={l.id}
                 nombre={l.nombre}
                 celular={l.celular}
                 estado={l.estado}
-                mensaje={waContext}
+                existing={Boolean(existingChat)}
               />
             </div>
           </div>

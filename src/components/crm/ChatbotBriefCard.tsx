@@ -1,12 +1,11 @@
 import type { Lead } from "@/lib/crm/types";
 import {
   briefSummary,
-  chatbotWhatsAppText,
   parseChatbotNotas,
   qualificationGaps,
 } from "@/lib/crm/chatbot-brief";
 import { CopyTextButton } from "@/components/crm/CopyTextButton";
-import { WhatsAppLogLink } from "@/components/crm/LeadQuickActions";
+import { OpenCrmChatButton } from "@/components/crm/OpenCrmChatButton";
 
 export function ChatbotBriefCard({
   lead,
@@ -18,7 +17,6 @@ export function ChatbotBriefCard({
   const fields = parseChatbotNotas(lead.notas_iniciales);
   if (!fields.length && !lead.notas_iniciales) return null;
 
-  const wa = chatbotWhatsAppText(lead, fields);
   const gaps = qualificationGaps(lead, fields);
   const ready = gaps.length === 0;
   const summary = briefSummary(fields);
@@ -73,14 +71,11 @@ export function ChatbotBriefCard({
       )}
 
       <div className="flex flex-wrap gap-2 border-t border-line/80 px-5 py-4">
-        <WhatsAppLogLink
+        <OpenCrmChatButton
           leadId={lead.id}
-          celular={lead.celular}
-          text={wa}
-          className="crm-btn bg-[#25D366] text-white"
-        >
-          WhatsApp con contexto
-        </WhatsAppLogLink>
+          phone={lead.celular}
+          name={lead.nombre}
+        />
         <CopyTextButton
           text={fields.map((f) => `${f.label}: ${f.value}`).join("\n") || lead.notas_iniciales || ""}
         />

@@ -9,11 +9,13 @@ export function OpenCrmChatButton({
   phone,
   name,
   existing = false,
+  className = "",
 }: {
   leadId?: string;
   phone: string;
   name?: string;
   existing?: boolean;
+  className?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -22,7 +24,7 @@ export function OpenCrmChatButton({
 
   if (!normalized) {
     return (
-      <span className="bot-chat-btn is-disabled" title="Este lead no tiene un celular válido">
+      <span className={`bot-chat-btn is-disabled ${className}`.trim()} title="Este lead no tiene un celular válido">
         Sin celular
       </span>
     );
@@ -61,12 +63,12 @@ export function OpenCrmChatButton({
     <span className="bot-chat-wrap">
       <button
         type="button"
-        className="bot-chat-btn"
+        className={`bot-chat-btn ${className}`.trim()}
         disabled={busy}
         title={
           existing
             ? "Abrir este contacto en el panel de Chats"
-            : "Crear el contacto en Chats y escribirle por WhatsApp"
+            : "Crear el contacto en Chats y escribirle desde el CRM"
         }
         onClick={() => void openChat()}
       >
@@ -79,7 +81,7 @@ export function OpenCrmChatButton({
             strokeLinejoin="round"
           />
         </svg>
-        {busy ? "Abriendo…" : existing ? "Abrir chat" : "Crear contacto"}
+        {busy ? "Abriendo…" : "Abrir chat"}
       </button>
       {error ? <span className="bot-chat-error">{error}</span> : null}
     </span>

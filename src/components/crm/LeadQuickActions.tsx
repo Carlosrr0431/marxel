@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTransition, type ReactNode } from "react";
 import { logWhatsApp, convertLead } from "@/lib/crm/actions";
 import { whatsappLink } from "@/lib/crm/types";
+import { OpenCrmChatButton } from "@/components/crm/OpenCrmChatButton";
 
 export function WhatsAppLogLink({
   leadId,
@@ -37,29 +38,25 @@ export function LeadQuickActions({
   nombre,
   celular,
   estado,
-  mensaje,
+  existing = false,
 }: {
   leadId: string;
   nombre: string;
   celular: string;
   estado: string;
-  mensaje?: string;
+  existing?: boolean;
 }) {
   const [pending, start] = useTransition();
-  const text =
-    mensaje ||
-    `Hola ${nombre}, te escribo de MARXEN. ¿Seguimos con tu cotización?`;
 
   return (
     <div className="flex flex-wrap gap-2">
-      <WhatsAppLogLink
+      <OpenCrmChatButton
         leadId={leadId}
-        celular={celular}
-        text={text}
-        className="rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white"
-      >
-        WhatsApp
-      </WhatsAppLogLink>
+        phone={celular}
+        name={nombre}
+        existing={existing}
+        className="px-4 py-2.5 text-sm"
+      />
       {estado !== "ganado" ? (
         <button
           type="button"
