@@ -97,6 +97,22 @@ export function ChatbotBadge() {
   );
 }
 
+export function OrigenBadge({ origen, detalle }: { origen?: string; detalle?: string | null }) {
+  if (detalle === "whatsapp_directo") {
+    return <span className="crm-badge bg-emerald-100 text-emerald-800">WhatsApp Directo</span>;
+  }
+  if (detalle === "chatbot" || origen === "chatbot") {
+    return <span className="crm-badge bg-indigo-100 text-indigo-800">Chatbot</span>;
+  }
+  if (origen === "whatsapp") {
+    return <span className="crm-badge bg-emerald-50 text-emerald-700">WhatsApp</span>;
+  }
+  if (origen === "web") {
+    return <span className="crm-badge bg-sky-100 text-sky-800">Web</span>;
+  }
+  return null;
+}
+
 export function ScoreRing({ score }: { score: number }) {
   const color =
     score >= 70 ? "text-teal" : score >= 40 ? "text-blue" : "text-muted";

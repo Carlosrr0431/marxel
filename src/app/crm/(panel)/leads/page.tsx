@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import type { Lead } from "@/lib/crm/types";
 import { LEAD_ESTADOS, MODALIDADES, PRODUCTOS } from "@/lib/crm/types";
 import { LeadEstadoSelect } from "@/components/crm/LeadEstadoSelect";
-import { PageHeader, Avatar, EmptyState, ProductoPill, ChatbotBadge } from "@/components/crm/ui";
+import { PageHeader, Avatar, EmptyState, ProductoPill, ChatbotBadge, OrigenBadge } from "@/components/crm/ui";
 import { ChatbotLeadsBoard } from "@/components/crm/ChatbotLeadsBoard";
 import { LeadsBulkBar } from "@/components/crm/LeadsBulkBar";
 import { prioridadColor, relativeTime, scoreLead } from "@/lib/crm/utils";
@@ -12,6 +12,7 @@ import { normalizeArPhone } from "@/lib/whatsmeow/config";
 
 const QUICK = [
   { href: "/crm/leads?origen=chatbot", label: "Chatbot" },
+  { href: "/crm/leads?origen=whatsapp_directo", label: "WhatsApp Directo" },
   { href: "/crm/leads?tag=caliente", label: "Calientes" },
   { href: "/crm/leads?producto=salud", label: "Salud" },
   { href: "/crm/leads?producto=seguros", label: "Seguros" },
@@ -38,6 +39,8 @@ export default async function LeadsPage({
   if (params.producto) query = query.eq("producto", params.producto);
   if (params.modalidad) query = query.eq("modalidad", params.modalidad);
   if (params.origen === "chatbot") query = query.eq("origen_detalle", "chatbot");
+  if (params.origen === "whatsapp_directo") query = query.eq("origen_detalle", "whatsapp_directo");
+  if (params.origen === "web") query = query.eq("origen", "web");
   if (params.q) {
     query = query.or(
       `nombre.ilike.%${params.q}%,celular.ilike.%${params.q}%,email.ilike.%${params.q}%,localidad.ilike.%${params.q}%`
@@ -138,8 +141,10 @@ export default async function LeadsPage({
           ))}
         </select>
         <select name="origen" defaultValue={params.origen || ""} className="crm-input" aria-label="Origen">
-          <option value="">Origen</option>
+          <option value="">Todos los orígenes</option>
           <option value="chatbot">Chatbot</option>
+          <option value="whatsapp_directo">WhatsApp Directo</option>
+          <option value="web">Web</option>
         </select>
         <div className="flex flex-col gap-2 sm:flex-row sm:col-span-2 xl:col-span-1 xl:flex-col">
           <select name="modalidad" defaultValue={params.modalidad || ""} className="crm-input" aria-label="Modalidad">
@@ -178,7 +183,7 @@ export default async function LeadsPage({
                           <Link href={`/crm/leads/${lead.id}`} className="font-semibold text-navy hover:underline">
                             {lead.nombre}
                           </Link>
-                          {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                          <OrigenBadge origen={lead.origen} detalle={lead.origen_detalle} />
                         </div>
                         <p className="truncate text-xs text-muted">{lead.celular}</p>
                       </div>
@@ -250,7 +255,7 @@ export default async function LeadsPage({
                                 >
                                   {lead.nombre}
                                 </Link>
-                                {isChatbotLead(lead) ? <ChatbotBadge /> : null}
+                                <OrigenBadge origen={lead.origen} detalle={lead.origen_detalle} />
                               </div>
                               <p className="text-xs text-muted">{lead.celular}</p>
                             </div>

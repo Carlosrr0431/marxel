@@ -61,8 +61,16 @@ export function LeadQuickActions({
         <button
           type="button"
           disabled={pending}
-          onClick={() => start(async () => convertLead(leadId))}
-          className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          onClick={() => {
+            if (
+              window.confirm(
+                `¿Confirmás la conversión de ${nombre} a Afiliado? Pasará al padrón de afiliados y se creará su ficha.`
+              )
+            ) {
+              start(async () => convertLead(leadId));
+            }
+          }}
+          className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:opacity-90 transition"
         >
           Convertir a afiliado
         </button>

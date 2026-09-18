@@ -226,10 +226,42 @@ export function mapInteresToProducto(interes: string): ProductoInteres {
 }
 
 export function whatsappLink(celular: string, text?: string) {
-  const digits = celular.replace(/\D/g, "");
-  const phone = digits.startsWith("54") ? digits : `54${digits}`;
+  let clean = String(celular || "").replace(/\D/g, "");
+  if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
+  let phone = clean;
+  if (clean.startsWith("549")) {
+    phone = clean;
+  } else if (clean.startsWith("54") && clean.length >= 12) {
+    phone = `549${clean.slice(2)}`;
+  } else if (clean.length >= 10) {
+    phone = `549${clean}`;
+  } else if (clean.length >= 8) {
+    phone = `549387${clean.slice(-7)}`;
+  } else if (clean) {
+    phone = clean.startsWith("54") ? clean : `54${clean}`;
+  }
   const q = text ? `?text=${encodeURIComponent(text)}` : "";
   return `https://wa.me/${phone}${q}`;
+}
+
+export function googleCalendarLink(options: {
+  title: string;
+  startDate: string | Date;
+  endDate?: string | Date;
+  description?: string;
+  location?: string;
+}) {
+  const start = new Date(options.startDate);
+  const end = options.endDate ? new Date(options.endDate) : new Date(start.getTime() + 30 * 60 * 1000);
+  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: options.title,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    details: options.description || "",
+    location: options.location || "",
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export function formatDate(value: string | null | undefined) {

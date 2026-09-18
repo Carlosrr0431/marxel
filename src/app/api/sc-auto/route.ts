@@ -109,7 +109,7 @@ export async function POST(req: Request) {
         result.carDescription ? `Vehículo: ${result.carDescription}` : "",
         String(body.licensePlate || "") ? `Patente: ${body.licensePlate}` : "",
         `Planes: ${(result.plans || [])
-          .map((plan) => `${plan.title} $ ${Number(plan.monthly || 0).toLocaleString("es-AR")} / mes`)
+          .map((plan) => plan.technicalName || `${plan.title} $ ${Number(plan.monthly || 0).toLocaleString("es-AR")} / mes`)
           .join(" · ")}`,
       ]
         .filter(Boolean)

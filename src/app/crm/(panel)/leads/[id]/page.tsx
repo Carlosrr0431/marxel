@@ -63,9 +63,19 @@ export default async function LeadDetailPage({
   if (!lead) notFound();
   const l = lead as Lead;
   const leadPhone = normalizeArPhone(l.celular);
-  const { data: existingChat } = leadPhone
-    ? await supabase.from("whatsapp_chats").select("id").eq("phone", leadPhone).maybeSingle()
-    : { data: null };
+  const [{ data: existingChat }, { data: chatMessages }] = await Promise.all([
+    leadPhone
+      ? supabase.from("whatsapp_chats").select("id").eq("phone", leadPhone).maybeSingle()
+      : Promise.resolve({ data: null }),
+    leadPhone
+      ? supabase
+          .from("whatsapp_chat_messages")
+          .select("*")
+          .eq("phone", leadPhone)
+          .order("created_at", { ascending: true })
+          .limit(50)
+      : Promise.resolve({ data: null }),
+  ]);
   const estado = LEAD_ESTADOS.find((e) => e.value === l.estado);
   const puntaje = l.puntaje || scoreLead(l);
   const fields = parseChatbotNotas(l.notas_iniciales);
@@ -285,6 +295,58 @@ export default async function LeadDetailPage({
               </button>
             </form>
           </div>
+
+          {/* Punto 3-C: Historial completo de conversación / Chatbot */}
+          <div className="rounded-2xl border border-line bg-white p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold text-navy">
+                Historial de Chat
+              </h2>
+              {leadPhone ? (
+                <Link
+                  href={`/crm/chats?phone=${leadPhone}`}
+                  className="text-xs font-semibold text-teal hover:underline"
+                >
+                  Abrir en Chat CRM →
+                </Link>
+              ) : null}
+            </div>
+            {chatMessages && chatMessages.length > 0 ? (
+              <div className="mt-4 max-h-96 space-y-2.5 overflow-y-auto rounded-xl border border-line bg-mist/30 p-3">
+                {chatMessages.map((msg) => {
+                  const isMe = Boolean(msg.from_me);
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs shadow-sm ${
+                          isMe
+                            ? "rounded-br-xs bg-navy text-white"
+                            : "rounded-bl-xs border border-line bg-white text-navy"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{msg.body}</p>
+                        <p
+                          className={`mt-1 text-[10px] ${
+                            isMe ? "text-white/60 text-right" : "text-muted"
+                          }`}
+                        >
+                          {formatDate(msg.created_at)}
+                          {msg.source ? ` · ${msg.source}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-muted">
+                No hay mensajes registrados aún para este contacto.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -310,6 +372,8 @@ export default async function LeadDetailPage({
                         leadId={l.id}
                         celular={l.celular}
                         nombre={l.nombre}
+                        titulo={s.titulo}
+                        programadoPara={s.programado_para}
                       />
                     </div>
                   ) : null}

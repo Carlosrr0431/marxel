@@ -251,6 +251,169 @@ export async function convertLead(leadId: string) {
   redirect(`/crm/afiliados/${afiliadoId}`);
 }
 
+export async function revertirAfiliadoALead(afiliadoId: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { data: af } = await supabase
+    .from("afiliados")
+    .select("*")
+    .eq("id", afiliadoId)
+    .single();
+  if (!af) throw new Error("Afiliado no encontrado");
+
+  if (af.lead_id) {
+    await supabase
+      .from("leads")
+      .update({ estado: "interesado", updated_at: new Date().toISOString() })
+      .eq("id", af.lead_id);
+
+    await supabase.from("actividades").insert({
+      lead_id: af.lead_id,
+      afiliado_id: afiliadoId,
+      tipo: "cambio_estado",
+      titulo: "Revertido de Afiliado a Lead",
+      detalle: "Se canceló la conversión a afiliado y volvió al pipeline de leads.",
+      autor: "asesor",
+    });
+
+    await supabase.from("afiliados").delete().eq("id", afiliadoId);
+    revalidateCrm();
+    redirect(`/crm/leads/${af.lead_id}`);
+  } else {
+    const payload = {
+      nombre: af.nombre,
+      celular: af.celular,
+      email: af.email,
+      dni: af.dni,
+      edad: af.edad,
+      localidad: af.localidad,
+      provincia: af.provincia,
+      producto: af.producto,
+      plan_interes: af.plan,
+      modalidad: af.modalidad,
+      estado: "interesado" as const,
+      origen: "otro" as const,
+      notas_iniciales: af.notas,
+    };
+    const { data: newLead, error } = await supabase
+      .from("leads")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    await supabase.from("afiliados").delete().eq("id", afiliadoId);
+    revalidateCrm();
+    redirect(`/crm/leads/${newLead.id}`);
+  }
+}
+
+export async function notificarSeguimientoAgente(seguimiento: {
+  titulo: string;
+  nombre?: string | null;
+  celular?: string | null;
+  fecha: string;
+  leadId?: string | null;
+  notas?: string | null;
+}) {
+  const { getProducerWhatsapp } = await import("@/lib/whatsmeow/producer-notify");
+  const { sendWhatsmeowText } = await import("@/lib/whatsmeow/client");
+  const { getWhatsmeowAgentCode } = await import("@/lib/whatsmeow/config");
+  const producer = getProducerWhatsapp();
+  if (!producer) return;
+  const agent = getWhatsmeowAgentCode();
+  const crmLink = seguimiento.leadId
+    ? `\nCRM: https://www.marxen.com.ar/crm/leads/${seguimiento.leadId}`
+    : "";
+  const text = [
+    "📅 *Recordatorio Agendado para Asesor*",
+    `Tarea: ${seguimiento.titulo}`,
+    seguimiento.nombre ? `Contacto: ${seguimiento.nombre}` : null,
+    seguimiento.celular ? `Tel: ${seguimiento.celular}` : null,
+    `Fecha/Hora: ${new Date(seguimiento.fecha).toLocaleString("es-AR")}`,
+    seguimiento.notas ? `Notas: ${seguimiento.notas}` : null,
+    crmLink,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  await sendWhatsmeowText(agent, producer, text, { wake: true }).catch(() => null);
+}
+
+export async function activarSeguimientoIA(
+  seguimientoId: string,
+  leadId?: string | null,
+  phone?: string | null,
+  instructions?: string
+) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const { normalizeArPhone } = await import("@/lib/whatsmeow/config");
+  const key = phone ? normalizeArPhone(phone) : null;
+  if (key) {
+    const { setChatAgentEnabled } = await import("@/lib/whatsmeow/agent-control");
+    await setChatAgentEnabled(key, true);
+
+    try {
+      const { loadConversation } = await import("@/lib/whatsmeow/conversations");
+      const { runChatTurn } = await import("@/lib/chatbot/run-turn");
+      const { sendWhatsmeowText } = await import("@/lib/whatsmeow/client");
+      const { getWhatsmeowAgentCode } = await import("@/lib/whatsmeow/config");
+      const { saveCrmWhatsappMessage } = await import("@/lib/whatsmeow/crm-chat");
+
+      const conv = await loadConversation(key);
+      const prompt =
+        instructions ||
+        "Hola, te escribo para retomar el contacto desde Marxen Seguros. ¿Pudiste revisar las opciones o te gustaría consultar algo?";
+      const turn = await runChatTurn({
+        message: prompt,
+        history: conv.history,
+        quoteState: conv.quote_state,
+        channel: "whatsapp",
+        knownPhone: key,
+      });
+
+      if (turn.answer) {
+        const agent = getWhatsmeowAgentCode();
+        const sent = await sendWhatsmeowText(agent, key, turn.answer, { wake: true });
+        if (sent.success && "messageId" in sent && sent.messageId) {
+          await saveCrmWhatsappMessage({
+            phone: key,
+            direction: "outbound",
+            body: turn.answer,
+            fromMe: true,
+            waMessageId: sent.messageId,
+            source: "ai_followup",
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("[ia-followup]", err);
+    }
+  }
+
+  await supabase
+    .from("seguimientos")
+    .update({
+      estado: "hecho",
+      completado_at: new Date().toISOString(),
+      resultado: "Retomado automáticamente por Agente IA",
+    })
+    .eq("id", seguimientoId);
+
+  if (leadId) {
+    await supabase.from("actividades").insert({
+      lead_id: leadId,
+      tipo: "sistema",
+      titulo: "Seguimiento retomado por IA",
+      detalle:
+        instructions ||
+        "Agente IA reactivado para continuar el seguimiento automático del contacto.",
+      autor: "sistema",
+    });
+  }
+  revalidateCrm();
+}
+
 export async function updateChatFicha(
   phone: string,
   patch: {

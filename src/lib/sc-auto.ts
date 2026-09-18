@@ -76,7 +76,50 @@ export type AutoPlan = {
   original: number | null;
   discount: number;
   quoteId: number;
+  productCode?: string;
+  technicalName?: string;
+  franchiseType?: string | null;
+  franchiseValue?: number | null;
 };
+
+export function formatScPlanDetail(plan: {
+  title?: string;
+  key?: string;
+  productCode?: string;
+  monthly?: number;
+  franchiseType?: string | null;
+  franchiseValue?: number | null;
+}) {
+  const code = String(plan.productCode || plan.key || "").toUpperCase();
+  let label = "";
+  if (code.includes("CA7_A") || code === "A") {
+    label = "Cobertura A (Resp. Civil)";
+  } else if (code.includes("CA7_B1") || code === "B1") {
+    label = "Cobertura B1 (Terceros Básicos)";
+  } else if (code.includes("CA7_B") || code === "B") {
+    label = "Cobertura B (Terceros Básicos)";
+  } else if (code.includes("CA7_CM") || code === "CM") {
+    label = "Cobertura CM (Terceros Completo)";
+  } else if (code.includes("CA7_C") || code === "C") {
+    label = "Cobertura C (Terceros Completo)";
+  } else if (code.includes("CA7_D") || code === "D") {
+    let franq = "";
+    if (plan.franchiseValue != null && plan.franchiseValue > 0) {
+      if (plan.franchiseType === "percentage" || plan.franchiseValue <= 10) {
+        franq = ` - Franquicia ${plan.franchiseValue}%`;
+      } else {
+        franq = ` - Franquicia $${Number(plan.franchiseValue).toLocaleString("es-AR")}`;
+      }
+    } else {
+      franq = " - Franquicia variable";
+    }
+    label = `Cobertura D (Todo Riesgo${franq})`;
+  } else {
+    label = plan.title || code;
+  }
+  const price = plan.monthly ? ` $ ${Number(plan.monthly).toLocaleString("es-AR")} / mes` : "";
+  return `${label}${price}`;
+}
 
 export type AutoQuoteResult = {
   opportunityId?: number;
@@ -902,7 +945,11 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
     const quote = pickQuote(quotes, plan.codes, plan.franchise);
     if (!quote) return null;
     const monthly = quote.monthlyCost;
-    return {
+    const productCode = quote.product?.code || plan.codes[0];
+    const franchiseType = quote.product?.franchiseType || null;
+    const franchiseValue =
+      quote.product?.franchiseValue != null ? Number(quote.product.franchiseValue) : null;
+    const planObj: AutoPlan = {
       key: plan.key,
       title: plan.title,
       description: plan.description,
@@ -911,7 +958,12 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
       original: discount > 0 ? originalPrice(monthly, alt) : null,
       discount,
       quoteId: Number(quote.id) || 0,
+      productCode,
+      franchiseType,
+      franchiseValue,
     };
+    planObj.technicalName = formatScPlanDetail(planObj);
+    return planObj;
   }).filter(Boolean) as AutoPlan[];
 
   if (plans.length === 0) {

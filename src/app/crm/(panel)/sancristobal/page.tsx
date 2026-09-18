@@ -319,6 +319,7 @@ export default function SanCristobalPage() {
   const [lookupKey, setLookupKey] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupHint, setLookupHint] = useState("");
+  const [autoEngine, setAutoEngine] = useState<"sitio_seguro" | "b2b">("sitio_seguro");
 
   const producer = useMemo(() => pickProducer(boot), [boot]);
   const warnings = useMemo(
@@ -552,6 +553,8 @@ export default function SanCristobalPage() {
     });
   }, [tab, agriKind]);
 
+  const selectedBrand = brands.find((item) => String(item.id) === brandId);
+  const selectedModel = models.find((item) => String(item.id) === modelId);
   const selectedVersion = versions.find((item) => String(item.id) === versionId);
   const policyRows = policies
     .map((row, index) => ({
@@ -1022,6 +1025,32 @@ export default function SanCristobalPage() {
             ) : selectedVersion?.statedAmount ? (
               <p className="self-end text-sm text-muted">Suma {moneyOf(selectedVersion.statedAmount)}</p>
             ) : null}
+            <div className="flex flex-col gap-2 self-end sm:col-span-2 lg:col-span-3">
+              <span className="text-xs font-semibold text-ink">Canal de cotización:</span>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <label className="flex items-center gap-1.5 cursor-pointer font-medium text-navy">
+                  <input
+                    type="radio"
+                    name="autoEngine"
+                    value="sitio_seguro"
+                    checked={autoEngine === "sitio_seguro"}
+                    onChange={() => setAutoEngine("sitio_seguro")}
+                  />
+                  <span>Sitio Seguro Digital (Descuentos y campañas activas)</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-muted hover:text-navy">
+                  <input
+                    type="radio"
+                    name="autoEngine"
+                    value="b2b"
+                    checked={autoEngine === "b2b"}
+                    onChange={() => setAutoEngine("b2b")}
+                  />
+                  <span>Oficina Virtual (Guidewire B2B PAS)</span>
+                </label>
+              </div>
+            </div>
+
             <button
               type="button"
               className="crm-btn crm-btn-primary sm:col-span-2 lg:col-span-3"
@@ -1031,6 +1060,7 @@ export default function SanCristobalPage() {
                   () =>
                     b2bPost({
                       action: "quote-ca7",
+                      engine: autoEngine,
                       taxId,
                       officialIdType: "Ext_CUIL86",
                       age: Number(age),
@@ -1041,21 +1071,39 @@ export default function SanCristobalPage() {
                       statedAmount: selectedVersion?.statedAmount,
                       is0Km,
                       hasGnc,
+                      brandId,
+                      brandName: selectedBrand?.description,
+                      modelId,
+                      modelName: selectedModel?.description,
+                      versionId,
+                      versionDescription: selectedVersion?.description,
+                      plate,
+                      cityName: textOf(city.Nombre) || "SALTA, SALTA",
                     }),
-                  (data) => setQuotePlans(asList(asDict(data.data).Summaries))
+                  (data) => {
+                    if (data.notice) setNotice(data.notice);
+                    setQuotePlans(asList(asDict(data.data).Summaries));
+                  }
                 )
               }
             >
-              Cotizar auto
+              {autoEngine === "sitio_seguro" ? "Cotizar por Sitio Seguro" : "Cotizar auto (B2B)"}
             </button>
           </section>
           {quotePlans.length ? (
             <div className="grid gap-3 md:grid-cols-3">
               {quotePlans.map((plan) => (
                 <article key={textOf(plan.QuoteId) || textOf(plan.ProductCode)} className="crm-card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-teal">
-                    {textOf(plan.ProductOffering) || textOf(plan.ProductCode)}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal">
+                      {textOf(plan.ProductOffering) || textOf(plan.ProductCode)}
+                    </p>
+                    {textOf(plan.Engine) ? (
+                      <span className="text-[10px] rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-700">
+                        {textOf(plan.Engine)}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-2 font-display text-2xl font-semibold text-navy">{moneyOf(plan.TotalCost)}</p>
                   <p className="mt-1 text-sm text-muted">Prima {moneyOf(plan.TotalPremium)}</p>
                   {textOf(plan.DeductibleTypeFullDescription) ? (
@@ -1067,7 +1115,7 @@ export default function SanCristobalPage() {
           ) : (
             <EmptyState
               title="Todavía no hay cotización"
-              description="Ingresá la patente o elegí año, marca, modelo y versión. La cotización sale por QuoteCA7 de San Cristóbal."
+              description="Ingresá la patente o elegí año, marca, modelo y versión. Podés cotizar directamente con los beneficios digitales de Sitio Seguro o por B2B."
             />
           )}
         </div>

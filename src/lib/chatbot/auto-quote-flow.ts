@@ -163,7 +163,8 @@ function formatPlans(car: string, plans: AutoPlan[]) {
       plan.original && plan.original > plan.monthly
         ? ` (antes ${money(plan.original)})`
         : "";
-    return `${plan.title}${chosen}: ${money(plan.monthly)} por mes${original}\n${plan.description}`;
+    const tech = plan.technicalName ? ` [${plan.technicalName.split(" $")[0]}]` : "";
+    return `${plan.title}${chosen}${tech}: ${money(plan.monthly)} por mes${original}\n${plan.description}`;
   });
   return `Cotización para ${car}:\n\n${lines.join("\n\n")}\n\n¿Cuál te interesa? Un asesor de MARXEN te escribe para cerrarlo.`;
 }
@@ -589,8 +590,11 @@ export async function handleAutoQuoteStep(
         quickReplies: replies,
       };
     }
-    data.auto = { ...data.auto, planElegido: plan.title };
-    data.seguroDetalle = [data.seguroDetalle || carLine(data), plan.title, `${money(plan.monthly)}/mes`]
+    data.auto = { ...data.auto, planElegido: plan.technicalName || plan.title };
+    data.seguroDetalle = [
+      data.seguroDetalle || carLine(data),
+      plan.technicalName || plan.title,
+    ]
       .filter(Boolean)
       .join(" · ");
     const nombre = data.nombre?.split(/\s+/)[0] || "";

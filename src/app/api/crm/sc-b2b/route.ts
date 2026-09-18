@@ -360,9 +360,63 @@ async function handlePost(request: NextRequest) {
   const confirm = payload.confirm === true;
 
   if (action === "quote-ca7") {
-    return NextResponse.json({
-      ok: true,
-      data: await quoteCa7({
+    const engine = String(payload.engine || "sitio_seguro");
+    const useSitioSeguroDirectly = engine === "sitio_seguro";
+
+    const runSitioSeguro = async () => {
+      const { quoteAutoVehicle } = await import("@/lib/sc-auto");
+      const result = await quoteAutoVehicle({
+        year: Number(payload.year),
+        is0km: Boolean(payload.is0Km),
+        brand: { id: Number(payload.brandId || 0), description: String(payload.brandName || "Auto") },
+        model: { id: Number(payload.modelId || 0), description: String(payload.modelName || "Modelo") },
+        version: {
+          id: Number(payload.versionId || 0),
+          description: String(payload.versionDescription || "Versión"),
+          statedAmount: payload.statedAmount ? Number(payload.statedAmount) : undefined,
+          infoAutoCode: payload.infoautoCode ? Number(payload.infoautoCode) : undefined,
+        },
+        location: {
+          locationId: Number(payload.postalCode) || 4400,
+          description: String(payload.cityName || "SALTA, SALTA"),
+          stateKey: String(payload.locationState || "AR_01"),
+          zipCode: Number(payload.postalCode) || 4400,
+          synonymous: "SALTA",
+        },
+        nombre: String(payload.insuredName || "Cliente Marxen"),
+        celular: String(payload.celular || "3875724473"),
+        age: Number(payload.age) || 35,
+        licensePlate: payload.plate ? String(payload.plate) : undefined,
+        source: "web",
+      });
+
+      const summaries = result.plans.map((p) => ({
+        QuoteId: p.quoteId,
+        ProductOffering: p.technicalName || p.title,
+        ProductCode: p.productCode || `CA7_${p.key}`,
+        TotalCost: { Amount: p.monthly, Currency: "ARS" },
+        TotalPremium: { Amount: p.original || p.monthly, Currency: "ARS" },
+        DeductibleTypeFullDescription:
+          p.franchiseValue != null && p.franchiseValue > 0
+            ? `Franquicia: ${p.franchiseValue}%`
+            : p.description,
+        Engine: "Sitio Seguro (Digital)",
+      }));
+
+      return {
+        ok: true,
+        engine: "sitio_seguro",
+        notice: "Cotización obtenida con éxito mediante Sitio Seguro (con descuento digital del productor).",
+        data: { Summaries: summaries, raw: result },
+      };
+    };
+
+    if (useSitioSeguroDirectly) {
+      return NextResponse.json(await runSitioSeguro());
+    }
+
+    try {
+      const data = await quoteCa7({
         taxId: String(payload.taxId || ""),
         officialIdType: payload.officialIdType ? String(payload.officialIdType) : undefined,
         gender: payload.gender ? String(payload.gender) : undefined,
@@ -381,8 +435,27 @@ async function handlePost(request: NextRequest) {
           ? payload.productCodes.map((code) => String(code))
           : undefined,
         policyType: payload.policyType ? String(payload.policyType) : undefined,
-      }),
-    });
+      });
+      return NextResponse.json({ ok: true, data, engine: "b2b" });
+    } catch (err) {
+      const isCatalogErr =
+        err instanceof Error &&
+        /catálogo Infoauto|Object reference not set/i.test(err.message);
+      if (isCatalogErr) {
+        try {
+          const fallbackRes = await runSitioSeguro();
+          return NextResponse.json({
+            ...fallbackRes,
+            fallback: true,
+            notice:
+              "Guidewire B2B UAT no tiene este vehículo cargado en su base interna. Se cotizó con éxito mediante Sitio Seguro aplicando el descuento comercial de la compañía.",
+          });
+        } catch {
+          // Si falla también el fallback, lanzar el error
+        }
+      }
+      throw err;
+    }
   }
 
   if (action === "quote-cp7") {

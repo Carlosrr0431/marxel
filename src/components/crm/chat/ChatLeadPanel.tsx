@@ -381,7 +381,17 @@ export function ChatLeadPanel({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => run(async () => { await convertLeadQuiet(lead.id); })}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `¿Confirmás la conversión de ${lead.nombre} a Afiliado? Pasará al padrón de afiliados.`
+                        )
+                      ) {
+                        run(async () => {
+                          await convertLeadQuiet(lead.id);
+                        });
+                      }
+                    }}
                   >
                     Convertir
                   </button>

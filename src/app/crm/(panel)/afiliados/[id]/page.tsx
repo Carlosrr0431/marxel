@@ -13,6 +13,7 @@ import { SeguimientoActions } from "@/components/crm/SeguimientoActions";
 import {
   addNota,
   createSeguimiento,
+  revertirAfiliadoALead,
   updateAfiliado,
   updateAfiliadoEstado,
 } from "@/lib/crm/actions";
@@ -25,7 +26,7 @@ export default async function AfiliadoDetailPage({
   const { id } = await params;
   const supabase = createServiceClient();
 
-  const [{ data: afiliado }, { data: actividades }, { data: seguimientos }] =
+  const [{ data: afiliado }, { data: actividades }, { data: actividades_lead }, { data: seguimientos }] =
     await Promise.all([
       supabase.from("afiliados").select("*").eq("id", id).maybeSingle(),
       supabase
@@ -34,14 +35,34 @@ export default async function AfiliadoDetailPage({
         .eq("afiliado_id", id)
         .order("created_at", { ascending: false })
         .limit(40),
+      // Placeholder — will be filled after we have afiliado.lead_id
+      Promise.resolve({ data: [] as Actividad[] }),
       supabase
         .from("seguimientos")
         .select("*")
-        .eq("afiliado_id", id)
+        .or(`afiliado_id.eq.${id}`)
         .order("programado_para", { ascending: true }),
     ]);
 
   if (!afiliado) notFound();
+
+  // Unify history: load lead-linked activities too if afiliado has a lead_id
+  let allActividades = [...(actividades || [])] as Actividad[];
+  if (afiliado.lead_id) {
+    const { data: leadActs } = await supabase
+      .from("actividades")
+      .select("*")
+      .eq("lead_id", afiliado.lead_id)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    const leadIds = new Set(allActividades.map((a: Actividad) => a.id));
+    for (const act of leadActs || []) {
+      if (!leadIds.has((act as Actividad).id)) allActividades.push(act as Actividad);
+    }
+    allActividades.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
   const a = afiliado as Afiliado;
   const estado = AFILIADO_ESTADOS.find((e) => e.value === a.estado);
 
@@ -81,6 +102,11 @@ export default async function AfiliadoDetailPage({
     "use server";
     formData.set("afiliado_id", id);
     await createSeguimiento(formData);
+  }
+
+  async function revertir() {
+    "use server";
+    await revertirAfiliadoALead(id);
   }
 
   return (
@@ -124,6 +150,22 @@ export default async function AfiliadoDetailPage({
               </select>
               <button type="submit" className="rounded-xl bg-navy px-3 text-sm font-semibold text-white">
                 Actualizar
+              </button>
+            </form>
+            {/* Punto 5: Botón Revertir a Lead con confirmación */}
+            <form
+              action={revertir}
+              onSubmit={(e) => {
+                if (!window.confirm(`¿Revertir a ${a.nombre} de Afiliado a Lead? Se perderá el estado de afiliado pero se conservará todo el historial.`)) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              <button
+                type="submit"
+                className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition"
+              >
+                ↩ Revertir a Lead
               </button>
             </form>
           </div>
@@ -235,6 +277,8 @@ export default async function AfiliadoDetailPage({
                         afiliadoId={a.id}
                         celular={a.celular}
                         nombre={a.nombre}
+                        titulo={s.titulo}
+                        programadoPara={s.programado_para}
                       />
                     </div>
                   ) : null}
@@ -269,7 +313,7 @@ export default async function AfiliadoDetailPage({
           <div className="rounded-2xl border border-line bg-white p-5">
             <h2 className="font-display text-lg font-semibold text-navy">Timeline</h2>
             <ul className="mt-4 space-y-3">
-              {(actividades as Actividad[] | null)?.map((act) => (
+              {(allActividades as Actividad[] | null)?.map((act) => (
                 <li key={act.id} className="border-l-2 border-sky/50 pl-3">
                   <p className="text-sm font-semibold text-navy">{act.titulo}</p>
                   {act.detalle ? (

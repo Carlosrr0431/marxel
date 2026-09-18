@@ -368,7 +368,8 @@ function shouldForwardPausedFollowup(text: string) {
   return t.length >= 24;
 }
 
-/** Si el bot ya está en silencio, reenvía al productor lo que el cliente agrega. */
+/** Si el bot ya está en silencio, reenvía al productor lo que el cliente agrega.
+ *  Solo notifica si el asesor estuvo inactivo ≥ 15 minutos (sin enviar mensajes salientes). */
 export async function notifyProducerPausedFollowup(input: {
   phone: string;
   message: string;
@@ -383,6 +384,31 @@ export async function notifyProducerPausedFollowup(input: {
     const now = Date.now();
     const prevLock = interestLocks.get(`paused:${customer}`) || 0;
     if (prevLock && now - prevLock < 45_000) return;
+
+    // --- Punto 6: Throttle durante chat activo ---
+    // Comprobar cuándo fue el último mensaje saliente del asesor en este chat.
+    // Si fue hace menos de 15 minutos, el asesor está activo → no molestar.
+    try {
+      const supabase = createServiceClient();
+      const fifteenMinutesAgo = new Date(now - 15 * 60_000).toISOString();
+      const { data: recentOutbound } = await supabase
+        .from("whatsapp_chat_messages")
+        .select("created_at")
+        .eq("phone", customer)
+        .eq("direction", "outbound")
+        .eq("from_me", true)
+        .gt("created_at", fifteenMinutesAgo)
+        .not("source", "eq", "bot")         // excluir mensajes del bot, solo del asesor
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (recentOutbound && recentOutbound.length > 0) {
+        // El asesor respondió en los últimos 15 min → suprimir notificación
+        return;
+      }
+    } catch {
+      // Si falla la consulta, seguir con el flujo normal (mejor notificar que silenciar)
+    }
+
     interestLocks.set(`paused:${customer}`, now);
 
     const conv = await loadConversation(customer);

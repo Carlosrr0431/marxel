@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { runChatTurn } from "@/lib/chatbot/run-turn";
-import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret, stripDeviceFromJid, toWhatsappSendTarget } from "@/lib/whatsmeow/config";
+import { getWhatsmeowAgentCode, getWhatsmeowWebhookSecret, normalizeArPhone, stripDeviceFromJid, toWhatsappSendTarget } from "@/lib/whatsmeow/config";
 import { sendWhatsmeowPoll, sendWhatsmeowText } from "@/lib/whatsmeow/client";
 import { WHATSAPP_OUTBOUND_INTERVAL_MS } from "@/lib/whatsmeow/outbound-queue";
 import {
@@ -278,6 +278,57 @@ export async function handleWhatsappInbound(body: unknown) {
     await persistCrmInbound(inbound);
   } catch (err) {
     console.error("[whatsapp-crm] persist", err instanceof Error ? err.message : err);
+  }
+
+  // --- Punto 4: Alta automática de lead para WhatsApp directo ---
+  // Si el mensaje es entrante de un número que no está en leads, crear el lead.
+  if (!inbound.fromMe && inbound.phone) {
+    after(async () => {
+      try {
+        const { createServiceClient: sb } = await import("@/lib/supabase/server");
+        const supabase = sb();
+        const cleanPhone = normalizeArPhone(inbound.phone);
+        if (!cleanPhone) return;
+        const last8 = cleanPhone.slice(-8);
+        // Buscar si ya existe un lead con este teléfono
+        const { data: existing } = await supabase
+          .from("leads")
+          .select("id")
+          .or(`celular.ilike.%${last8}`)
+          .limit(1);
+        if (existing && existing.length > 0) return; // ya existe
+        // Resolver nombre del contacto
+        const chatName = inbound.pushName || null;
+        const nombre = chatName?.trim() || "Contacto WhatsApp";
+        // Crear lead directo
+        const { data: newLead } = await supabase
+          .from("leads")
+          .insert({
+            nombre,
+            celular: cleanPhone,
+            origen: "whatsapp",
+            origen_detalle: "whatsapp_directo",
+            tags: ["whatsapp_directo"],
+            estado: "nuevo",
+            producto: "general",
+            prioridad: "media",
+            notas_iniciales: "Lead creado automáticamente desde WhatsApp directo.",
+          })
+          .select("id")
+          .single();
+        if (newLead?.id) {
+          await supabase.from("actividades").insert({
+            lead_id: newLead.id,
+            tipo: "sistema",
+            titulo: "Lead creado automáticamente desde WhatsApp directo",
+            detalle: `Primer mensaje entrante de ${cleanPhone}`,
+            autor: "sistema",
+          });
+        }
+      } catch (e) {
+        console.warn("[whatsapp-crm] auto-lead:", e instanceof Error ? e.message : e);
+      }
+    });
   }
 
   // Si el mensaje es entrante y no tiene push_name, buscar el nombre

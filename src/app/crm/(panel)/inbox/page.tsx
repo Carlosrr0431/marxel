@@ -130,14 +130,25 @@ export default async function InboxPage() {
                       {relativeTime(l.created_at)}
                     </p>
                   </div>
-                  <WhatsAppLogLink
-                    leadId={l.id}
-                    celular={l.celular}
-                    text={wa}
-                    className="shrink-0 rounded-lg bg-[#25D366] px-2.5 py-1.5 text-[11px] font-bold text-white"
-                  >
-                    WA
-                  </WhatsAppLogLink>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {l.celular ? (
+                      <Link
+                        href={`/crm/chats?phone=${l.celular.replace(/\D/g, "")}`}
+                        className="rounded-lg border border-line bg-white px-2 py-1.5 text-[11px] font-semibold text-navy hover:bg-mist transition"
+                        title="Ver chat en CRM"
+                      >
+                        Chat
+                      </Link>
+                    ) : null}
+                    <WhatsAppLogLink
+                      leadId={l.id}
+                      celular={l.celular}
+                      text={wa}
+                      className="rounded-lg bg-[#25D366] px-2.5 py-1.5 text-[11px] font-bold text-white hover:opacity-90 transition"
+                    >
+                      WA
+                    </WhatsAppLogLink>
+                  </div>
                 </li>
               );
             })}
@@ -178,6 +189,8 @@ export default async function InboxPage() {
                       afiliadoId={s.afiliado_id}
                       celular={persona?.celular}
                       nombre={persona?.nombre}
+                      titulo={s.titulo}
+                      programadoPara={s.programado_para}
                       showSnooze
                     />
                   </div>
@@ -208,14 +221,25 @@ export default async function InboxPage() {
                       {l.plan_interes || l.producto} · {relativeTime(l.created_at)}
                     </p>
                   </div>
-                  <WhatsAppLogLink
-                    leadId={l.id}
-                    celular={l.celular}
-                    text={`Hola ${l.nombre.split(" ")[0] || l.nombre}, te escribo de MARXEN. Recibimos tu consulta. ¿Seguimos?`}
-                    className="rounded-lg bg-[#25D366] px-2.5 py-1.5 text-[11px] font-bold text-white"
-                  >
-                    WA
-                  </WhatsAppLogLink>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {l.celular ? (
+                      <Link
+                        href={`/crm/chats?phone=${l.celular.replace(/\D/g, "")}`}
+                        className="rounded-lg border border-line bg-white px-2 py-1.5 text-[11px] font-semibold text-navy hover:bg-mist transition"
+                        title="Ver chat en CRM"
+                      >
+                        Chat
+                      </Link>
+                    ) : null}
+                    <WhatsAppLogLink
+                      leadId={l.id}
+                      celular={l.celular}
+                      text={`Hola ${l.nombre.split(" ")[0] || l.nombre}, te escribo de MARXEN. Recibimos tu consulta. ¿Seguimos?`}
+                      className="rounded-lg bg-[#25D366] px-2.5 py-1.5 text-[11px] font-bold text-white hover:opacity-90 transition"
+                    >
+                      WA
+                    </WhatsAppLogLink>
+                  </div>
                 </li>
               ))}
               {!newLeads.length ? (
