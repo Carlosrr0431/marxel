@@ -15,6 +15,7 @@ const links = [
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
   { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
+  { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const },
   { href: "/crm/seguimientos", label: "Agenda", icon: "calendar" as const },
   { href: "/crm/plantillas", label: "Plantillas", icon: "chat" as const },
   { href: "/crm/mailing", label: "Mailing", icon: "mail" as const },

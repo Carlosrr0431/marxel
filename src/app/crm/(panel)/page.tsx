@@ -219,9 +219,14 @@ export default async function CrmDashboardPage() {
         <div className="crm-card p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-navy">Agenda 24 hs</h2>
-            <Link href="/crm/seguimientos" className="text-sm font-semibold text-teal hover:underline">
-              Ver agenda →
-            </Link>
+            <span className="flex gap-3">
+              <Link href="/crm/calendario" className="text-sm font-semibold text-teal hover:underline">
+                Calendario
+              </Link>
+              <Link href="/crm/seguimientos" className="text-sm font-semibold text-teal hover:underline">
+                Lista
+              </Link>
+            </span>
           </div>
           {(dueFollowups as Seguimiento[] | null)?.length ? (
             <ul className="space-y-3">

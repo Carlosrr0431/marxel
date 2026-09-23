@@ -66,6 +66,7 @@ function revalidateCrm() {
   revalidatePath("/crm/pipeline");
   revalidatePath("/crm/afiliados");
   revalidatePath("/crm/seguimientos");
+  revalidatePath("/crm/calendario");
   revalidatePath("/crm/inbox");
   revalidatePath("/crm/chats");
 }
@@ -221,6 +222,19 @@ export async function cancelSeguimiento(id: string) {
   await requireCrm();
   const supabase = createServiceClient();
   await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
+  revalidateCrm();
+}
+
+export async function rescheduleSeguimiento(id: string, programadoPara: string) {
+  await requireCrm();
+  const when = new Date(programadoPara);
+  if (Number.isNaN(when.getTime())) throw new Error("Fecha inválida");
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("seguimientos")
+    .update({ programado_para: when.toISOString(), estado: "pendiente" })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
   revalidateCrm();
 }
 
