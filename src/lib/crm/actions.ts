@@ -16,6 +16,7 @@ import type {
 import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
+import { upsertGoogleEvent } from "@/lib/crm/google-calendar";
 
 const COOKIE = "marxel_crm_session";
 
@@ -57,6 +58,35 @@ export async function logoutCrm() {
 async function requireCrm() {
   if (!(await isCrmAuthenticated())) {
     redirect("/crm/login");
+  }
+}
+
+async function mirrorSeguimientoToGoogle(id: string) {
+  try {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("seguimientos")
+      .select("id,titulo,descripcion,programado_para")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return;
+    const linked = await supabase
+      .from("seguimientos")
+      .select("google_event_id")
+      .eq("id", id)
+      .maybeSingle();
+    const currentId = linked.error ? null : (linked.data?.google_event_id as string | null);
+    const googleId = await upsertGoogleEvent({
+      eventId: currentId,
+      title: String(data.titulo),
+      description: data.descripcion ? String(data.descripcion) : null,
+      start: String(data.programado_para),
+    });
+    if (googleId && googleId !== currentId && !linked.error) {
+      await supabase.from("seguimientos").update({ google_event_id: googleId }).eq("id", id);
+    }
+  } catch {
+    // La conexión de Gmail es opcional.
   }
 }
 
@@ -179,8 +209,9 @@ export async function createSeguimiento(formData: FormData) {
   if (!payload.titulo || (!leadId && !afiliadoId)) {
     throw new Error("Datos incompletos");
   }
-  const { error } = await supabase.from("seguimientos").insert(payload);
+  const { data, error } = await supabase.from("seguimientos").insert(payload).select("id").single();
   if (error) throw new Error(error.message);
+  if (data?.id) await mirrorSeguimientoToGoogle(String(data.id));
   revalidateCrm();
 }
 
@@ -235,6 +266,7 @@ export async function rescheduleSeguimiento(id: string, programadoPara: string) 
     .update({ programado_para: when.toISOString(), estado: "pendiente" })
     .eq("id", id);
   if (error) throw new Error(error.message);
+  await mirrorSeguimientoToGoogle(id);
   revalidateCrm();
 }
 
@@ -246,6 +278,7 @@ export async function snoozeSeguimiento(id: string, hours = 24) {
     .from("seguimientos")
     .update({ programado_para: when, estado: "pendiente" })
     .eq("id", id);
+  await mirrorSeguimientoToGoogle(id);
   revalidateCrm();
 }
 

@@ -1,9 +1,15 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { calendarFeedUrl } from "@/lib/crm/calendar-feed";
+import { googleConfigured, listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
 
-export default async function CalendarioPage() {
+export default async function CalendarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ google?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = createServiceClient();
   const from = new Date();
   from.setMonth(from.getMonth() - 2);
@@ -51,6 +57,30 @@ export default async function CalendarioPage() {
     };
   });
 
+  const googleAccount = await readGoogleConnection().catch(() => null);
+  const googleItems = googleAccount ? await listGoogleEvents(from, to).catch(() => []) : [];
+  const linkedIds = new Set(
+    ((rows || []) as Array<Seguimiento & { google_event_id?: string | null }>)
+      .map((row) => row.google_event_id)
+      .filter(Boolean),
+  );
+  for (const item of googleItems) {
+    if (linkedIds.has(item.id)) continue;
+    events.push({
+      id: `google:${item.id}`,
+      title: item.title,
+      start: item.start,
+      tipo: "otro",
+      estado: "pendiente",
+      person: googleAccount?.email || "Google",
+      phone: null,
+      href: item.htmlLink,
+      leadId: null,
+      afiliadoId: null,
+      source: "google",
+    });
+  }
+
   const people: CalendarPerson[] = [
     ...(leads || []).map((lead) => ({
       id: lead.id,
@@ -66,5 +96,14 @@ export default async function CalendarioPage() {
     })),
   ];
 
-  return <CrmCalendar events={events} people={people} feedUrl={calendarFeedUrl()} />;
+  return (
+    <CrmCalendar
+      events={events}
+      people={people}
+      feedUrl={calendarFeedUrl()}
+      googleEmail={googleAccount?.email || null}
+      googleReady={googleConfigured()}
+      googleStatus={params.google}
+    />
+  );
 }

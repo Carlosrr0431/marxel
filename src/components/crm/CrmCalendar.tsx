@@ -39,6 +39,7 @@ export type CalendarEvent = {
   href: string;
   leadId: string | null;
   afiliadoId: string | null;
+  source?: "crm" | "google";
 };
 
 export type CalendarPerson = {
@@ -86,10 +87,16 @@ export function CrmCalendar({
   events,
   people,
   feedUrl,
+  googleEmail,
+  googleReady,
+  googleStatus,
 }: {
   events: CalendarEvent[];
   people: CalendarPerson[];
   feedUrl: string;
+  googleEmail: string | null;
+  googleReady: boolean;
+  googleStatus?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -101,7 +108,7 @@ export function CrmCalendar({
   const [personId, setPersonId] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [googleOpen, setGoogleOpen] = useState(false);
+  const [googleOpen, setGoogleOpen] = useState(Boolean(googleStatus) || !googleEmail);
 
   const selected = events.find((event) => event.id === selectedId) || null;
   const weekStart = startOfWeek(anchor);
@@ -171,7 +178,9 @@ export function CrmCalendar({
             {heading}
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm text-muted">
-            Seguimientos del CRM. Conectalo a Google Calendar para verlos en el celular.
+            {googleEmail
+              ? `Gmail conectado: ${googleEmail}. Los eventos de Google se ven en azul.`
+              : "Entrá con Gmail para ver y editar tu Google Calendar desde el CRM."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -213,9 +222,36 @@ export function CrmCalendar({
 
       {googleOpen ? (
         <section className="crm-card space-y-3 p-4">
-          <p className="text-sm text-navy">
-            En Google Calendar: <strong>Otros calendarios → + → Desde URL</strong> y pegá este enlace.
-            Google lo actualiza solo; puede tardar unas horas.
+          {googleStatus === "ok" ? (
+            <p className="text-sm text-emerald-800">Gmail conectado. Ya podés ver el calendario de esa cuenta.</p>
+          ) : null}
+          {googleStatus === "denegado" ? (
+            <p className="text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p>
+          ) : null}
+          {googleStatus === "config" ? (
+            <p className="text-sm text-rose-700">
+              Faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor.
+            </p>
+          ) : null}
+          {googleEmail ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-navy">Conectado como {googleEmail}. Permiso de Google Calendar activo.</p>
+              <a href="/api/crm/google/disconnect" className="crm-btn crm-btn-ghost">
+                Desconectar
+              </a>
+            </div>
+          ) : googleReady ? (
+            <a href="/api/crm/google/start" className="crm-btn crm-btn-primary inline-flex">
+              Entrar con Gmail
+            </a>
+          ) : (
+            <p className="text-sm text-navy">
+              En Google Cloud, en URLs de redireccionamiento, pegá{" "}
+              <strong>https://www.marxen.com.ar/api/crm/google/callback</strong>
+            </p>
+          )}
+          <p className="text-xs text-muted">
+            También podés suscribir el calendario del CRM por URL. Google lo actualiza solo.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input readOnly value={feedUrl} className="crm-input min-w-0 flex-1 font-mono text-xs" />
@@ -228,7 +264,7 @@ export function CrmCalendar({
             >
               {copied ? "Copiado" : "Copiar enlace"}
             </button>
-            <a href={googleHref} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-primary shrink-0">
+            <a href={googleHref} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-ghost shrink-0">
               Abrir Google Calendar
             </a>
           </div>
@@ -302,9 +338,11 @@ export function CrmCalendar({
                           setSelectedId(event.id);
                           setError("");
                         }}
-                        className={`absolute inset-x-1 z-20 overflow-hidden rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight ${TIPO_CLASS[event.tipo]} ${
-                          event.estado === "hecho" ? "opacity-55" : ""
-                        }`}
+                        className={`absolute inset-x-1 z-20 overflow-hidden rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight ${
+                          event.source === "google"
+                            ? "border-blue-300 bg-blue-50 text-blue-950"
+                            : TIPO_CLASS[event.tipo]
+                        } ${event.estado === "hecho" ? "opacity-55" : ""}`}
                         style={{ top: ((clamped - START_HOUR * 60) / 60) * HOUR_PX, height: 36 }}
                       >
                         <span className="block truncate font-semibold">
@@ -361,7 +399,9 @@ export function CrmCalendar({
                           setDraftAt(null);
                           setSelectedId(event.id);
                         }}
-                        className={`block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium ${TIPO_CLASS[event.tipo]}`}
+                        className={`block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium ${
+                          event.source === "google" ? "border-blue-300 bg-blue-50 text-blue-950" : TIPO_CLASS[event.tipo]
+                        }`}
                       >
                         {timeLabel.format(new Date(event.start))} {event.person}
                       </button>
@@ -480,6 +520,12 @@ export function CrmCalendar({
               Cerrar
             </button>
           </div>
+          {selected.source === "google" ? (
+            <a href={selected.href} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-primary inline-flex">
+              Abrir en Google Calendar
+            </a>
+          ) : (
+          <>
           <form
             className="flex flex-wrap items-end gap-2"
             action={(formData) => {
@@ -541,6 +587,8 @@ export function CrmCalendar({
               </>
             ) : null}
           </div>
+          </>
+          )}
           {error ? <p className="text-sm text-rose-700">{error}</p> : null}
         </section>
       ) : null}
