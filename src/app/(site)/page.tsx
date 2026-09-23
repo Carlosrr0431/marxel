@@ -13,7 +13,7 @@ import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
 const HOME_TITLE = "Seguro de auto, prepaga y viajero en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "Productor asesor en Salta Capital: cotizá seguro de auto, moto y hogar con San Cristóbal, compará prepagas Prevención Salud (A2 y A4) y contratá seguro de viaje / asistencia al viajero.";
+  "MARXEN es la aplicación de productor asesor en Salta: cotizá seguro de auto, prepagas y asistencia al viajero, y conectá Google Calendar para agendar seguimientos.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
@@ -68,9 +68,10 @@ export default function HomePage() {
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
             <p className="hero-lede animate-rise-delay-2" data-seo-lede>
-              Cotizá seguro de auto, moto y hogar, compará prepagas y armá tu
-              asistencia al viajero. Asesoramiento claro, humano y a tu medida
-              en Salta.
+              MARXEN es la aplicación de productor asesor en Salta: cotizá seguro
+              de auto, moto y hogar, compará prepagas y armá tu asistencia al
+              viajero. El asesor conecta Google Calendar para ver su agenda y
+              agendar seguimientos con clientes.
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
