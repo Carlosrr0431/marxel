@@ -33,6 +33,8 @@ export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/guias", changeFrequency: "monthly", priority: 0.7 },
   { path: "/preguntas-frecuentes", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contacto", changeFrequency: "monthly", priority: 0.65 },
+  { path: "/privacidad", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/terminos", changeFrequency: "yearly", priority: 0.3 },
 ];
 
 export function sitemapEntries(lastModified: string | Date = SITEMAP_LASTMOD): MetadataRoute.Sitemap {

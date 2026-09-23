@@ -147,6 +147,12 @@ export function Footer() {
               .
             </p>
             <p className="flex flex-wrap gap-3">
+              <Link href="/privacidad" className="footer-link">
+                Privacidad
+              </Link>
+              <Link href="/terminos" className="footer-link">
+                Términos
+              </Link>
               <a href={site.instagram} className="footer-link" target="_blank" rel="noopener noreferrer">
                 Instagram
               </a>
