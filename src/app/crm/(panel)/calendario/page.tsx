@@ -1,6 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { calendarFeedUrl } from "@/lib/crm/calendar-feed";
-import { googleConfigured, listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
+import { listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
 
@@ -100,9 +99,7 @@ export default async function CalendarioPage({
     <CrmCalendar
       events={events}
       people={people}
-      feedUrl={calendarFeedUrl()}
       googleEmail={googleAccount?.email || null}
-      googleReady={googleConfigured()}
       googleStatus={params.google}
     />
   );

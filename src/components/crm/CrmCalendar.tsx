@@ -86,16 +86,12 @@ const timeLabel = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2
 export function CrmCalendar({
   events,
   people,
-  feedUrl,
   googleEmail,
-  googleReady,
   googleStatus,
 }: {
   events: CalendarEvent[];
   people: CalendarPerson[];
-  feedUrl: string;
   googleEmail: string | null;
-  googleReady: boolean;
   googleStatus?: string;
 }) {
   const router = useRouter();
@@ -107,8 +103,6 @@ export function CrmCalendar({
   const [query, setQuery] = useState("");
   const [personId, setPersonId] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [googleOpen, setGoogleOpen] = useState(Boolean(googleStatus) || !googleEmail);
 
   const selected = events.find((event) => event.id === selectedId) || null;
   const weekStart = startOfWeek(anchor);
@@ -166,8 +160,8 @@ export function CrmCalendar({
     })
     .slice(0, 8);
 
-  const googleHref = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}`;
   const heading = view === "mes" ? monthTitle.format(anchor) : `${weekTitle.format(weekStart)} – ${weekTitle.format(addDays(weekStart, 6))}`;
+  const locked = !googleEmail;
 
   return (
     <div className="space-y-4">
@@ -177,12 +171,16 @@ export function CrmCalendar({
           <h1 className="font-display text-[1.65rem] font-semibold capitalize tracking-tight text-navy sm:text-[2rem]">
             {heading}
           </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted">
-            {googleEmail
-              ? `Gmail conectado: ${googleEmail}. Los eventos de Google se ven en azul.`
-              : "Entrá con Gmail para ver y editar tu Google Calendar desde el CRM."}
-          </p>
+          {googleEmail ? (
+            <p className="mt-1.5 max-w-2xl text-sm text-muted">
+              {googleEmail}{" "}
+              <a href="/api/crm/google/disconnect" className="font-semibold text-teal hover:underline">
+                Salir
+              </a>
+            </p>
+          ) : null}
         </div>
+        {locked ? null : (
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="crm-btn crm-btn-ghost" onClick={() => setAnchor(new Date())}>
             Hoy
@@ -207,9 +205,6 @@ export function CrmCalendar({
               </button>
             ))}
           </div>
-          <button type="button" className="crm-btn crm-btn-primary" onClick={() => setGoogleOpen((open) => !open)}>
-            Google Calendar
-          </button>
           <button
             type="button"
             className="crm-btn crm-btn-primary"
@@ -218,59 +213,11 @@ export function CrmCalendar({
             + Turno
           </button>
         </div>
+        )}
       </header>
 
-      {googleOpen ? (
-        <section className="crm-card space-y-3 p-4">
-          {googleStatus === "ok" ? (
-            <p className="text-sm text-emerald-800">Gmail conectado. Ya podés ver el calendario de esa cuenta.</p>
-          ) : null}
-          {googleStatus === "denegado" ? (
-            <p className="text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p>
-          ) : null}
-          {googleStatus === "config" ? (
-            <p className="text-sm text-rose-700">
-              Faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor.
-            </p>
-          ) : null}
-          {googleEmail ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm text-navy">Conectado como {googleEmail}. Permiso de Google Calendar activo.</p>
-              <a href="/api/crm/google/disconnect" className="crm-btn crm-btn-ghost">
-                Desconectar
-              </a>
-            </div>
-          ) : googleReady ? (
-            <a href="/api/crm/google/start" className="crm-btn crm-btn-primary inline-flex">
-              Entrar con Gmail
-            </a>
-          ) : (
-            <p className="text-sm text-navy">
-              En Google Cloud, en URLs de redireccionamiento, pegá{" "}
-              <strong>https://www.marxen.com.ar/api/crm/google/callback</strong>
-            </p>
-          )}
-          <p className="text-xs text-muted">
-            También podés suscribir el calendario del CRM por URL. Google lo actualiza solo.
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input readOnly value={feedUrl} className="crm-input min-w-0 flex-1 font-mono text-xs" />
-            <button
-              type="button"
-              className="crm-btn crm-btn-ghost shrink-0"
-              onClick={() => {
-                void navigator.clipboard.writeText(feedUrl).then(() => setCopied(true));
-              }}
-            >
-              {copied ? "Copiado" : "Copiar enlace"}
-            </button>
-            <a href={googleHref} target="_blank" rel="noopener noreferrer" className="crm-btn crm-btn-ghost shrink-0">
-              Abrir Google Calendar
-            </a>
-          </div>
-        </section>
-      ) : null}
-
+      <div className="relative">
+      <div className={locked ? "pointer-events-none select-none blur-[1.5px]" : undefined} aria-hidden={locked}>
       {view === "semana" ? (
         <div className="crm-card overflow-x-auto">
           <div className="min-w-[760px]">
@@ -416,8 +363,27 @@ export function CrmCalendar({
           </div>
         </div>
       )}
+      </div>
+      {locked ? (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/80 p-6">
+          <div className="crm-card w-full max-w-sm space-y-4 p-8 text-center shadow-[0_20px_50px_rgba(15,23,42,0.12)]">
+            <h2 className="font-display text-2xl font-semibold text-navy">Google Calendar</h2>
+            <p className="text-sm text-muted">Entrá con Gmail para ver y editar tu agenda.</p>
+            {googleStatus === "denegado" ? (
+              <p className="text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p>
+            ) : null}
+            {googleStatus === "config" || googleStatus === "error" || googleStatus === "estado" ? (
+              <p className="text-sm text-rose-700">No se pudo conectar con Google. Intentá de nuevo.</p>
+            ) : null}
+            <a href="/api/crm/google/start" className="crm-btn crm-btn-primary inline-flex">
+              Entrar con Gmail
+            </a>
+          </div>
+        </div>
+      ) : null}
+      </div>
 
-      {draftAt ? (
+      {draftAt && !locked ? (
         <form
           className="crm-card space-y-3 p-4"
           action={(formData) => {
