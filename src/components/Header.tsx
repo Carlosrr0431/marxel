@@ -48,9 +48,6 @@ export function Header() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Link href="/crm/login" className="btn btn-secondary !min-h-10 !px-3.5 text-xs">
-              CRM
-            </Link>
             <Link href="/cotizar" className="btn btn-primary !min-h-10 !px-5">
               Cotizar
             </Link>
@@ -106,9 +103,6 @@ export function Header() {
             <div className="mt-4 grid gap-2">
               <Link href="/cotizar" className="btn btn-primary w-full py-3.5">
                 Cotizar ahora
-              </Link>
-              <Link href="/crm/login" className="btn btn-secondary w-full py-3.5">
-                Entrar al CRM
               </Link>
             </div>
           </nav>
