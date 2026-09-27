@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ContactLeadForm } from "@/components/ContactLeadForm";
 import { PageHero } from "@/components/SectionHeading";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { JsonLd } from "@/components/JsonLd";
@@ -16,7 +17,12 @@ export const metadata: Metadata = pageMetadata({
   path: "/contacto",
 });
 
-export default function ContactoPage() {
+export default async function ContactoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ enviado?: string; error?: string }>;
+}) {
+  const params = await searchParams;
   const wa = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
     "Hola MARXEN, quiero asesoramiento."
   )}`;
@@ -47,6 +53,9 @@ export default function ContactoPage() {
 
       <section className="bg-cloud">
         <div className="container-mx py-14 sm:py-16">
+          <div className="mx-auto mb-10 max-w-xl">
+            <ContactLeadForm sent={params.enviado === "1"} invalid={params.error === "1"} />
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             <a
               href={`mailto:${site.email}`}
