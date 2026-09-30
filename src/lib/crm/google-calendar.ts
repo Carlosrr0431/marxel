@@ -171,17 +171,28 @@ export async function upsertGoogleEvent(input: {
   title: string;
   description?: string | null;
   start: string;
+  reminderMinutes?: number;
 }) {
   const connection = await readGoogleConnection();
   if (!connection || !googleConfigured()) return null;
   const token = await accessToken(connection.refreshToken);
   const start = new Date(input.start);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const minutes = input.reminderMinutes ?? 0;
   const payload = {
     summary: input.title,
     description: input.description || "Seguimiento MARXEN CRM",
     start: { dateTime: start.toISOString(), timeZone: TZ },
     end: { dateTime: end.toISOString(), timeZone: TZ },
+    reminders: minutes
+      ? {
+          useDefault: false,
+          overrides: [
+            { method: "popup", minutes },
+            { method: "email", minutes },
+          ],
+        }
+      : { useDefault: false, overrides: [] },
   };
   const path = input.eventId
     ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(input.eventId)}`
@@ -194,4 +205,14 @@ export async function upsertGoogleEvent(input: {
   if (!res.ok) return null;
   const json = (await res.json()) as { id?: string };
   return json.id || null;
+}
+
+export async function deleteGoogleEvent(eventId: string) {
+  const connection = await readGoogleConnection();
+  if (!connection || !googleConfigured() || !eventId) return;
+  const token = await accessToken(connection.refreshToken);
+  await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+  ).catch(() => null);
 }

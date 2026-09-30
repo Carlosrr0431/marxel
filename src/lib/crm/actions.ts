@@ -16,7 +16,13 @@ import type {
 import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
-import { upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { deleteGoogleEvent, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import {
+  CALENDAR_NOTIFY_COOKIE,
+  NOTIFY_MINUTES,
+  readCalendarNotify,
+  type CalendarNotify,
+} from "@/lib/crm/calendar-notify";
 
 const COOKIE = "marxel_crm_session";
 
@@ -76,11 +82,13 @@ async function mirrorSeguimientoToGoogle(id: string) {
       .eq("id", id)
       .maybeSingle();
     const currentId = linked.error ? null : (linked.data?.google_event_id as string | null);
+    const notify = await readCalendarNotify();
     const googleId = await upsertGoogleEvent({
       eventId: currentId,
       title: String(data.titulo),
       description: data.descripcion ? String(data.descripcion) : null,
       start: String(data.programado_para),
+      reminderMinutes: notify.googleMinutes,
     });
     if (googleId && googleId !== currentId && !linked.error) {
       await supabase.from("seguimientos").update({ google_event_id: googleId }).eq("id", id);
@@ -212,7 +220,92 @@ export async function createSeguimiento(formData: FormData) {
   const { data, error } = await supabase.from("seguimientos").insert(payload).select("id").single();
   if (error) throw new Error(error.message);
   if (data?.id) await mirrorSeguimientoToGoogle(String(data.id));
+  await notifySeguimientoWhatsapp({
+    titulo: payload.titulo,
+    fecha: payload.programado_para,
+    leadId,
+    afiliadoId,
+    notas: payload.descripcion,
+  });
   revalidateCrm();
+}
+
+function localDateTime(value: string) {
+  if (value && !value.includes("Z") && value.length === 16) return new Date(value).toISOString();
+  return value;
+}
+
+export async function updateSeguimiento(formData: FormData) {
+  await requireCrm();
+  const id = String(formData.get("id") || "");
+  const leadId = String(formData.get("lead_id") || "") || null;
+  const afiliadoId = String(formData.get("afiliado_id") || "") || null;
+  const titulo = String(formData.get("titulo") || "").trim();
+  const programado = localDateTime(String(formData.get("programado_para") || ""));
+  if (!id || !titulo || !programado || (!leadId && !afiliadoId)) {
+    throw new Error("Datos incompletos");
+  }
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("seguimientos")
+    .update({
+      lead_id: leadId,
+      afiliado_id: afiliadoId,
+      titulo,
+      descripcion: String(formData.get("descripcion") || "") || null,
+      tipo: String(formData.get("tipo") || "whatsapp") as SeguimientoTipo,
+      prioridad: String(formData.get("prioridad") || "media") as Prioridad,
+      programado_para: programado,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  await mirrorSeguimientoToGoogle(id);
+  revalidateCrm();
+}
+
+export async function saveCalendarNotify(formData: FormData) {
+  await requireCrm();
+  const minutes = Number(formData.get("google_minutes"));
+  const prefs: CalendarNotify = {
+    googleMinutes: NOTIFY_MINUTES.includes(minutes as CalendarNotify["googleMinutes"])
+      ? (minutes as CalendarNotify["googleMinutes"])
+      : 30,
+    whatsapp: formData.get("whatsapp") === "1",
+  };
+  const store = await cookies();
+  store.set(CALENDAR_NOTIFY_COOKIE, JSON.stringify(prefs), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/crm/calendario");
+}
+
+async function notifySeguimientoWhatsapp(input: {
+  titulo: string;
+  fecha: string;
+  leadId: string | null;
+  afiliadoId: string | null;
+  notas: string | null;
+}) {
+  const prefs = await readCalendarNotify();
+  if (!prefs.whatsapp) return;
+  const supabase = createServiceClient();
+  const person = input.leadId
+    ? await supabase.from("leads").select("nombre,celular").eq("id", input.leadId).maybeSingle()
+    : input.afiliadoId
+      ? await supabase.from("afiliados").select("nombre,celular").eq("id", input.afiliadoId).maybeSingle()
+      : { data: null };
+  await notificarSeguimientoAgente({
+    titulo: input.titulo,
+    nombre: person.data?.nombre,
+    celular: person.data?.celular,
+    fecha: input.fecha,
+    leadId: input.leadId,
+    notas: input.notas,
+  });
 }
 
 export async function completeSeguimiento(id: string, resultado?: string) {
@@ -252,7 +345,10 @@ export async function completeSeguimiento(id: string, resultado?: string) {
 export async function cancelSeguimiento(id: string) {
   await requireCrm();
   const supabase = createServiceClient();
+  const linked = await supabase.from("seguimientos").select("google_event_id").eq("id", id).maybeSingle();
   await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
+  const googleId = linked.error ? null : (linked.data?.google_event_id as string | null);
+  if (googleId) await deleteGoogleEvent(googleId).catch(() => null);
   revalidateCrm();
 }
 

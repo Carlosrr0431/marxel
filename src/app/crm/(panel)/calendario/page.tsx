@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
+import { readCalendarNotify } from "@/lib/crm/calendar-notify";
 
 export default async function CalendarioPage({
   searchParams,
@@ -46,6 +47,8 @@ export default async function CalendarioPage({
       estado: row.estado,
       person: persona?.nombre || "Sin contacto",
       phone: persona?.celular || null,
+      descripcion: row.descripcion,
+      prioridad: row.prioridad,
       href: row.lead_id
         ? `/crm/leads/${row.lead_id}`
         : row.afiliado_id
@@ -73,6 +76,8 @@ export default async function CalendarioPage({
       estado: "pendiente",
       person: googleAccount?.email || "Google",
       phone: null,
+      descripcion: null,
+      prioridad: "media",
       href: item.htmlLink,
       leadId: null,
       afiliadoId: null,
@@ -95,12 +100,15 @@ export default async function CalendarioPage({
     })),
   ];
 
+  const notify = await readCalendarNotify();
+
   return (
     <CrmCalendar
       events={events}
       people={people}
       googleEmail={googleAccount?.email || null}
       googleStatus={params.google}
+      notify={notify}
     />
   );
 }
