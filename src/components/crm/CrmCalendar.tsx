@@ -462,16 +462,16 @@ function EventModal({
   const initialPerson = event?.leadId ? `lead:${event.leadId}` : event?.afiliadoId ? `afiliado:${event.afiliadoId}` : "";
   const [personId, setPersonId] = useState(initialPerson);
   const [query, setQuery] = useState("");
+  const [openList, setOpenList] = useState(false);
   const [tipo, setTipo] = useState<SeguimientoTipo>(event?.tipo || "whatsapp");
   const [when, setWhen] = useState(at);
   const [date, time] = when.split("T");
-  const matches = people
-    .filter((person) => {
-      const text = query.trim().toLowerCase();
-      if (!text) return true;
-      return person.nombre.toLowerCase().includes(text) || person.celular.includes(text);
-    })
-    .slice(0, 6);
+  const text = query.trim().toLowerCase();
+  const matches = text.length < 2
+    ? []
+    : people
+        .filter((person) => person.nombre.toLowerCase().includes(text) || person.celular.includes(text))
+        .slice(0, 8);
   const chosen = people.find((person) => `${person.kind}:${person.id}` === personId) || null;
   const googleOnly = event?.source === "google";
 
@@ -539,26 +539,53 @@ function EventModal({
             </label>
             <div className="space-y-2">
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Lead o afiliado</span>
-                <input value={query} onChange={(input) => setQuery(input.target.value)} placeholder="Buscar nombre o celular" className="crm-input" />
+                <span className="mb-1 block font-medium">Contacto (opcional)</span>
+                <input
+                  value={query}
+                  onChange={(input) => {
+                    setQuery(input.target.value);
+                    setOpenList(true);
+                  }}
+                  onFocus={() => setOpenList(true)}
+                  placeholder="Buscar por nombre o celular"
+                  className="crm-input"
+                  autoComplete="off"
+                />
               </label>
               {chosen ? (
-                <p className="rounded-2xl bg-aqua px-3 py-2 text-sm text-navy">
-                  {chosen.nombre} · {chosen.kind === "lead" ? "lead" : "afiliado"}{chosen.celular ? ` · ${chosen.celular}` : ""}
-                </p>
-              ) : (
-                <p className="text-xs text-rose-700">Elegí un contacto para guardar el seguimiento.</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {matches.map((person) => {
-                  const active = personId === `${person.kind}:${person.id}`;
-                  return (
-                    <button key={`${person.kind}:${person.id}`} type="button" onClick={() => setPersonId(`${person.kind}:${person.id}`)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? "border-navy bg-navy text-white" : "border-line bg-white text-navy"}`}>
-                      {person.nombre}
-                    </button>
-                  );
-                })}
-              </div>
+                <div className="flex items-center justify-between gap-2 rounded-2xl bg-aqua px-3 py-2 text-sm text-navy">
+                  <span>
+                    {chosen.nombre} · {chosen.kind === "lead" ? "lead" : "afiliado"}
+                    {chosen.celular ? ` · ${chosen.celular}` : ""}
+                  </span>
+                  <button type="button" className="text-xs font-semibold text-muted" onClick={() => setPersonId("")}>
+                    Quitar
+                  </button>
+                </div>
+              ) : null}
+              {openList && text.length >= 2 ? (
+                <div className="max-h-44 overflow-y-auto rounded-2xl border border-line bg-white">
+                  {matches.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-muted">Ningún contacto con ese dato.</p>
+                  ) : (
+                    matches.map((person) => (
+                      <button
+                        key={`${person.kind}:${person.id}`}
+                        type="button"
+                        onClick={() => {
+                          setPersonId(`${person.kind}:${person.id}`);
+                          setQuery("");
+                          setOpenList(false);
+                        }}
+                        className="block w-full px-3 py-2 text-left text-sm text-navy hover:bg-mist"
+                      >
+                        <span className="font-semibold">{person.nombre}</span>
+                        <span className="text-muted"> · {person.kind === "lead" ? "lead" : "afiliado"} · {person.celular}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
             </div>
             <label className="block text-sm">
               <span className="mb-1 block font-medium">Nota</span>
@@ -566,7 +593,7 @@ function EventModal({
             </label>
             {error ? <p className="text-sm text-rose-700">{error}</p> : null}
             <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={pending || !personId} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              <button type="submit" disabled={pending} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 {pending ? "Guardando…" : mode === "edit" ? "Guardar" : "Agendar"}
               </button>
               {event && event.estado === "pendiente" ? (
@@ -575,7 +602,7 @@ function EventModal({
                   <button type="button" disabled={pending} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy" onClick={() => onSnooze(event.id)}>+24 h</button>
                 </>
               ) : null}
-              {event ? <Link href={event.href} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy">Ficha</Link> : null}
+              {event?.leadId || event?.afiliadoId ? <Link href={event.href} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy">Ficha</Link> : null}
               {event ? (
                 <button type="button" disabled={pending} className="rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => onDelete(event.id)}>
                   Eliminar

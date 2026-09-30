@@ -131,6 +131,7 @@ export type GoogleCalendarEvent = {
   title: string;
   start: string;
   htmlLink: string;
+  description: string;
 };
 
 export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCalendarEvent[]> {
@@ -150,7 +151,13 @@ export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCale
   );
   if (!res.ok) return [];
   const json = (await res.json()) as {
-    items?: { id?: string; summary?: string; htmlLink?: string; start?: { dateTime?: string; date?: string } }[];
+    items?: {
+      id?: string;
+      summary?: string;
+      description?: string;
+      htmlLink?: string;
+      start?: { dateTime?: string; date?: string };
+    }[];
   };
   return (json.items || [])
     .map((item) => {
@@ -161,6 +168,7 @@ export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCale
         title: item.summary || "(Sin título)",
         start,
         htmlLink: item.htmlLink || "https://calendar.google.com",
+        description: item.description || "",
       };
     })
     .filter((item): item is GoogleCalendarEvent => Boolean(item));

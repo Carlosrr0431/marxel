@@ -4,6 +4,18 @@ import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/componen
 import type { Seguimiento } from "@/lib/crm/types";
 import { readCalendarNotify } from "@/lib/crm/calendar-notify";
 
+function slotKey(title: string, start: string) {
+  const date = new Date(start);
+  return [
+    title.trim().toLowerCase(),
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+  ].join("|");
+}
+
 export default async function CalendarioPage({
   searchParams,
 }: {
@@ -29,12 +41,12 @@ export default async function CalendarioPage({
       .from("leads")
       .select("id,nombre,celular")
       .order("created_at", { ascending: false })
-      .limit(200),
+      .limit(800),
     supabase
       .from("afiliados")
       .select("id,nombre,celular")
       .order("created_at", { ascending: false })
-      .limit(120),
+      .limit(400),
   ]);
 
   const events: CalendarEvent[] = ((rows || []) as Seguimiento[]).map((row) => {
@@ -66,8 +78,13 @@ export default async function CalendarioPage({
       .map((row) => row.google_event_id)
       .filter(Boolean),
   );
+  const crmSlots = new Set(
+    events.map((event) => slotKey(event.title, event.start)),
+  );
   for (const item of googleItems) {
     if (linkedIds.has(item.id)) continue;
+    if (item.description.includes("[MARXEN:")) continue;
+    if (crmSlots.has(slotKey(item.title, item.start))) continue;
     events.push({
       id: `google:${item.id}`,
       title: item.title,

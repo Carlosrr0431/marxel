@@ -83,10 +83,11 @@ async function mirrorSeguimientoToGoogle(id: string) {
       .maybeSingle();
     const currentId = linked.error ? null : (linked.data?.google_event_id as string | null);
     const notify = await readCalendarNotify();
+    const note = data.descripcion ? String(data.descripcion) : "";
     const googleId = await upsertGoogleEvent({
       eventId: currentId,
       title: String(data.titulo),
-      description: data.descripcion ? String(data.descripcion) : null,
+      description: [note, `[MARXEN:${id}]`].filter(Boolean).join("\n"),
       start: String(data.programado_para),
       reminderMinutes: notify.googleMinutes,
     });
@@ -214,8 +215,20 @@ export async function createSeguimiento(formData: FormData) {
     estado: "pendiente" as SeguimientoEstado,
     creado_por: "asesor",
   };
-  if (!payload.titulo || (!leadId && !afiliadoId)) {
-    throw new Error("Datos incompletos");
+  if (!payload.titulo) {
+    throw new Error("El título es obligatorio");
+  }
+  if (!leadId && !afiliadoId) {
+    const notify = await readCalendarNotify();
+    const googleId = await upsertGoogleEvent({
+      title: payload.titulo,
+      description: payload.descripcion,
+      start: payload.programado_para,
+      reminderMinutes: notify.googleMinutes,
+    });
+    if (!googleId) throw new Error("Conectá Gmail para agendar sin contacto");
+    revalidateCrm();
+    return;
   }
   const { data, error } = await supabase.from("seguimientos").insert(payload).select("id").single();
   if (error) throw new Error(error.message);
@@ -242,7 +255,7 @@ export async function updateSeguimiento(formData: FormData) {
   const afiliadoId = String(formData.get("afiliado_id") || "") || null;
   const titulo = String(formData.get("titulo") || "").trim();
   const programado = localDateTime(String(formData.get("programado_para") || ""));
-  if (!id || !titulo || !programado || (!leadId && !afiliadoId)) {
+  if (!id || !titulo || !programado) {
     throw new Error("Datos incompletos");
   }
   const supabase = createServiceClient();
