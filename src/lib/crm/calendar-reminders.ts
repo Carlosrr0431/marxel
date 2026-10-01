@@ -88,6 +88,51 @@ export async function syncCalendarReminders(events: ReminderEvent[]) {
   }
 }
 
+/** Clave título + minuto local: detecta la copia en Google de un seguimiento del CRM. */
+export function slotKey(title: string, start: string) {
+  const date = new Date(start);
+  return [
+    title.trim().toLowerCase(),
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+  ].join("|");
+}
+
+/**
+ * Cancela los avisos pendientes de eventos que ya no existen (borrados en Google,
+ * completados o cancelados por otro camino). `scope` limita qué origen se revisa,
+ * para no tocar el que no se pudo consultar.
+ */
+export async function reconcileCalendarReminders(
+  desiredKeys: Set<string>,
+  scope: { crm: boolean; google: boolean },
+) {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("whatsapp_outbound_queue")
+    .select("id,meta")
+    .eq("status", "pending")
+    .contains("meta", { source: "calendar_reminder" })
+    .limit(500);
+  const stale = (data || [])
+    .filter((row) => {
+      const key = String((row.meta as { calendarEventKey?: string } | null)?.calendarEventKey || "");
+      if (desiredKeys.has(key)) return false;
+      return (scope.crm && key.startsWith("crm:")) || (scope.google && key.startsWith("google:"));
+    })
+    .map((row) => row.id as string);
+  if (!stale.length) return 0;
+  await supabase
+    .from("whatsapp_outbound_queue")
+    .update({ status: "failed", last_error: "calendar_reminder_cancelled", claimed_at: null, claimed_by: null })
+    .in("id", stale)
+    .eq("status", "pending");
+  return stale.length;
+}
+
 /** Cancela el aviso pendiente de un evento (al borrarlo, completarlo o moverlo). */
 export async function cancelCalendarReminders(eventKey: string) {
   try {

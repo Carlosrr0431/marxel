@@ -1,6 +1,7 @@
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, scryptSync } from "crypto";
 import { cookies } from "next/headers";
 import { SITE_URL } from "@/lib/seo";
+import { createServiceClient } from "@/lib/supabase/server";
 
 const CONNECTION_COOKIE = "marxel_google_cal";
 const STATE_COOKIE = "marxel_google_oauth";
@@ -17,19 +18,19 @@ function secretKey() {
   return createHash("sha256").update(process.env.CRM_PASSWORD || "marxel").digest();
 }
 
-function seal(value: string) {
+function seal(value: string, key: Buffer = secretKey()) {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", secretKey(), iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64url");
 }
 
-function open(value: string) {
+function open(value: string, key: Buffer = secretKey()) {
   const raw = Buffer.from(value, "base64url");
   const iv = raw.subarray(0, 12);
   const tag = raw.subarray(12, 28);
   const encrypted = raw.subarray(28);
-  const decipher = createDecipheriv("aes-256-gcm", secretKey(), iv);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
@@ -64,6 +65,67 @@ export async function readGoogleConnection(): Promise<Connection | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Copia cifrada de la conexión en la base, para que el cron pueda leer el calendario
+ * sin que haya una sesión abierta. La clave mezcla CRM_PASSWORD y GOOGLE_CLIENT_SECRET,
+ * que solo existen en el servidor: leer la fila con la clave pública no alcanza.
+ * Sigue la misma convención que la fila "__agent__" de whatsapp_conversations.
+ */
+const SERVER_ROW = "__google_calendar__";
+
+function serverKey() {
+  return scryptSync(
+    `${process.env.CRM_PASSWORD || "marxel"}|${process.env.GOOGLE_CLIENT_SECRET || ""}`,
+    "marxel-google-server",
+    32,
+  );
+}
+
+export async function readServerConnection(): Promise<Connection | null> {
+  if (!process.env.GOOGLE_CLIENT_SECRET) return null;
+  const { data } = await createServiceClient()
+    .from("whatsapp_conversations")
+    .select("quote_state")
+    .eq("phone", SERVER_ROW)
+    .maybeSingle();
+  const sealed = (data?.quote_state as { sealed?: string } | null)?.sealed;
+  if (!sealed) return null;
+  try {
+    const parsed = JSON.parse(open(sealed, serverKey())) as Connection;
+    return parsed.email && parsed.refreshToken ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveServerConnection(connection: Connection) {
+  if (!process.env.GOOGLE_CLIENT_SECRET) return;
+  const { error } = await createServiceClient().from("whatsapp_conversations").upsert(
+    {
+      phone: SERVER_ROW,
+      quote_state: { sealed: seal(JSON.stringify(connection), serverKey()) },
+      history: [],
+      pending_poll: null,
+      last_message_id: null,
+      last_event: "google:calendar",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "phone" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+export async function clearServerConnection() {
+  await createServiceClient().from("whatsapp_conversations").delete().eq("phone", SERVER_ROW);
+}
+
+/** Guarda la conexión del navegador en la base si todavía no está o cambió. */
+export async function persistGoogleConnection(connection: Connection) {
+  const saved = await readServerConnection();
+  if (saved?.email === connection.email && saved.refreshToken === connection.refreshToken) return;
+  await saveServerConnection(connection);
 }
 
 export function connectionCookie(email: string, refreshToken: string) {
@@ -134,8 +196,12 @@ export type GoogleCalendarEvent = {
   description: string;
 };
 
-export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCalendarEvent[]> {
-  const connection = await readGoogleConnection();
+export async function listGoogleEvents(
+  from: Date,
+  to: Date,
+  options: { connection?: Connection | null; strict?: boolean } = {},
+): Promise<GoogleCalendarEvent[]> {
+  const connection = options.connection ?? (await readGoogleConnection());
   if (!connection || !googleConfigured()) return [];
   const token = await accessToken(connection.refreshToken);
   const params = new URLSearchParams({
@@ -149,7 +215,10 @@ export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCale
     `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
     { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
   );
-  if (!res.ok) return [];
+  if (!res.ok) {
+    if (options.strict) throw new Error(`Google respondió ${res.status}`);
+    return [];
+  }
   const json = (await res.json()) as {
     items?: {
       id?: string;

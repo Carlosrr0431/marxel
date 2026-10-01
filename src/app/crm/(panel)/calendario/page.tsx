@@ -1,23 +1,11 @@
 import { after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/seo";
-import { syncCalendarReminders } from "@/lib/crm/calendar-reminders";
-import { listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
+import { slotKey, syncCalendarReminders } from "@/lib/crm/calendar-reminders";
+import { listGoogleEvents, persistGoogleConnection, readGoogleConnection } from "@/lib/crm/google-calendar";
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
 import { readCalendarNotify } from "@/lib/crm/calendar-notify";
-
-function slotKey(title: string, start: string) {
-  const date = new Date(start);
-  return [
-    title.trim().toLowerCase(),
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    date.getHours(),
-    date.getMinutes(),
-  ].join("|");
-}
 
 export default async function CalendarioPage({
   searchParams,
@@ -122,6 +110,7 @@ export default async function CalendarioPage({
 
   const notify = await readCalendarNotify();
 
+  if (googleAccount) after(() => persistGoogleConnection(googleAccount).catch(() => null));
   after(() =>
     syncCalendarReminders(
       events
