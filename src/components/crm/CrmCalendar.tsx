@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   cancelSeguimiento,
@@ -338,60 +338,41 @@ export function CrmCalendar({
         </div>
 
         {locked ? (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/75 p-6 backdrop-blur-[2px]">
-            <div className="w-full max-w-sm space-y-4 rounded-[1.4rem] border border-line bg-white p-8 text-center shadow-[0_24px_60px_rgba(26,16,56,0.12)]">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal">Agenda</p>
-              <h2 className="font-display text-2xl font-semibold text-navy">Google Calendar</h2>
-              <p className="text-sm text-muted">Entrá con Gmail para ver y editar los seguimientos.</p>
-              {googleStatus === "denegado" ? <p className="text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p> : null}
-              {googleStatus === "config" || googleStatus === "error" || googleStatus === "estado" ? (
-                <p className="text-sm text-rose-700">No se pudo conectar con Google. Intentá de nuevo.</p>
-              ) : null}
-              <a href="/api/crm/google/start" className="inline-flex rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-deep">
-                Entrar con Gmail
-              </a>
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#1a1038]/25 p-6 backdrop-blur-[3px]">
+            <div className="w-full max-w-sm overflow-hidden rounded-[1.6rem] border border-white/70 bg-white text-center shadow-[0_30px_80px_rgba(26,16,56,0.22)]">
+              <div className="bg-[linear-gradient(135deg,#352872_0%,#3ab4d9_160%)] px-6 py-5 text-white">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">Agenda</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold">Google Calendar</h2>
+              </div>
+              <div className="space-y-4 px-6 py-5">
+                <p className="text-sm leading-relaxed text-muted">Entrá con Gmail para ver y editar los seguimientos desde acá.</p>
+                {googleStatus === "denegado" ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p> : null}
+                {googleStatus === "config" || googleStatus === "error" || googleStatus === "estado" ? (
+                  <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">No se pudo conectar con Google. Intentá de nuevo.</p>
+                ) : null}
+                <a href="/api/crm/google/start" className="inline-flex rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(53,40,114,0.28)] hover:bg-navy-deep">
+                  Entrar con Gmail
+                </a>
+              </div>
             </div>
           </div>
         ) : null}
       </div>
 
       {notifyOpen && !locked ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-navy-deep/35 p-4" onClick={() => setNotifyOpen(false)}>
-          <form
-            className="w-full max-w-md space-y-4 rounded-[1.4rem] border border-line bg-white p-6 shadow-[0_24px_60px_rgba(26,16,56,0.18)]"
-            onClick={(event) => event.stopPropagation()}
-            action={(formData) => {
+        <ModalFrame title="Avisos" kicker="Notificaciones" onClose={() => setNotifyOpen(false)}>
+          <NotifyForm
+            notify={notify}
+            pending={pending}
+            onSave={(formData) => {
               start(async () => {
                 await saveCalendarNotify(formData);
                 setNotifyOpen(false);
                 router.refresh();
               });
             }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-navy">Avisos</h2>
-                <p className="mt-1 text-sm text-muted">Google avisa en el calendario y por mail. El WhatsApp llega al crear el seguimiento.</p>
-              </div>
-              <button type="button" className="text-sm text-gray-400" onClick={() => setNotifyOpen(false)}>Cerrar</button>
-            </div>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Aviso de Google Calendar</span>
-              <select name="google_minutes" defaultValue={notify.googleMinutes} className="crm-input">
-                {NOTIFY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-sm text-navy">
-              <input type="checkbox" name="whatsapp" value="1" defaultChecked={notify.whatsapp} />
-              Avisarme por WhatsApp al crear el seguimiento
-            </label>
-            <button type="submit" disabled={pending} className="rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white">
-              {pending ? "Guardando…" : "Guardar avisos"}
-            </button>
-          </form>
-        </div>
+          />
+        </ModalFrame>
       ) : null}
 
       {sheet && !locked ? (
@@ -409,14 +390,8 @@ export function CrmCalendar({
           onUpdateGoogle={(formData) => run(() => updateGoogleCalendarEvent(formData))}
           onDone={(id) => run(() => completeSeguimiento(id))}
           onSnooze={(id) => run(() => snoozeSeguimiento(id, 24))}
-          onDelete={(id) => {
-            if (!window.confirm("¿Eliminar este seguimiento?")) return;
-            run(() => cancelSeguimiento(id));
-          }}
-          onDeleteGoogle={(id) => {
-            if (!window.confirm("¿Eliminar este evento del calendario?")) return;
-            run(() => deleteGoogleCalendarEvent(id));
-          }}
+          onDelete={(id) => run(() => cancelSeguimiento(id))}
+          onDeleteGoogle={(id) => run(() => deleteGoogleCalendarEvent(id))}
         />
       ) : null}
     </div>
@@ -431,6 +406,89 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: "blu
       <span className={`text-[10px] font-semibold ${labelClass}`}>{label}</span>
       <span className="text-xs font-semibold tabular-nums">{value}</span>
     </div>
+  );
+}
+
+function ModalFrame({
+  title,
+  kicker,
+  onClose,
+  children,
+}: {
+  title: string;
+  kicker: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#1a1038]/45 p-3 backdrop-blur-sm sm:items-center" onClick={onClose}>
+      <div
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[1.6rem] border border-white/70 bg-white shadow-[0_30px_80px_rgba(26,16,56,0.28)]"
+        onClick={(click) => click.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 bg-[linear-gradient(135deg,#352872_0%,#2a4f8f_55%,#3ab4d9_160%)] px-5 py-4 text-white">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">{kicker}</p>
+            <h2 className="font-display text-xl font-semibold">{title}</h2>
+          </div>
+          <button type="button" aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-lg leading-none text-white hover:bg-white/25" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function NotifyForm({
+  notify,
+  pending,
+  onSave,
+}: {
+  notify: CalendarNotify;
+  pending: boolean;
+  onSave: (formData: FormData) => void;
+}) {
+  const [minutes, setMinutes] = useState(notify.googleMinutes);
+  return (
+    <form className="flex flex-col gap-4 overflow-y-auto px-5 py-4" action={onSave}>
+      <input type="hidden" name="google_minutes" value={minutes} />
+      <p className="text-sm leading-relaxed text-muted">Google avisa en el calendario y por mail. El WhatsApp llega al crear el seguimiento.</p>
+      <div>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Aviso de Google</p>
+        <div className="flex flex-wrap gap-2">
+          {NOTIFY_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setMinutes(option.value as CalendarNotify["googleMinutes"])}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${minutes === option.value ? "bg-navy text-white shadow-sm" : "bg-mist text-navy hover:bg-aqua"}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <label className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-[#f7f8fc] px-3 py-3">
+        <span>
+          <span className="block text-sm font-semibold text-navy">WhatsApp</span>
+          <span className="block text-xs text-muted">Avisarme al crear el seguimiento</span>
+        </span>
+        <input type="checkbox" name="whatsapp" value="1" defaultChecked={notify.whatsapp} className="h-4 w-4 accent-[#352872]" />
+      </label>
+      <button type="submit" disabled={pending} className="rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(53,40,114,0.22)] disabled:opacity-60">
+        {pending ? "Guardando…" : "Guardar avisos"}
+      </button>
+    </form>
   );
 }
 
@@ -470,6 +528,8 @@ function EventModal({
   const [query, setQuery] = useState("");
   const [openList, setOpenList] = useState(false);
   const [tipo, setTipo] = useState<SeguimientoTipo>(event?.tipo || "whatsapp");
+  const [prioridad, setPrioridad] = useState<Prioridad>(event?.prioridad || "media");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [when, setWhen] = useState(at);
   const [date, time] = when.split("T");
   const text = query.trim().toLowerCase();
@@ -481,71 +541,68 @@ function EventModal({
   const chosen = people.find((person) => `${person.kind}:${person.id}` === personId) || null;
   const googleOnly = event?.source === "google";
 
+  const title = googleOnly || mode === "edit" ? "Editar evento" : "Nuevo seguimiento";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/40 p-3" onClick={onClose}>
+    <ModalFrame title={title} kicker={googleOnly ? "Google Calendar" : "Agenda"} onClose={onClose}>
       <form
-        className="flex max-h-[88vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-[1.4rem] border border-line bg-white p-5 shadow-[0_24px_60px_rgba(26,16,56,0.2)]"
-        onClick={(click) => click.stopPropagation()}
+        className="flex min-h-0 flex-1 flex-col"
         action={(formData) => {
           if (googleOnly) onUpdateGoogle(formData);
           else if (mode === "edit") onUpdate(formData);
           else onCreate(formData);
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-700">Seguimiento</p>
-            <h2 className="font-display text-xl font-semibold text-navy">{googleOnly || mode === "edit" ? "Editar evento" : "Nuevo seguimiento"}</h2>
-          </div>
-          <button type="button" className="text-sm text-gray-400" onClick={onClose}>Cerrar</button>
-        </div>
-
-        {googleOnly && event ? <input type="hidden" name="google_event_id" value={event.id.replace(/^google:/, "")} /> : null}
-        {event && !googleOnly ? <input type="hidden" name="id" value={event.id} /> : null}
-            <input type="hidden" name="tipo" value={tipo} />
-            <input type="hidden" name="programado_para" value={when} />
-            <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
-            <input type="hidden" name="afiliado_id" value={personId.startsWith("afiliado:") ? personId.slice(9) : ""} />
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Título</span>
-              <input name="titulo" required defaultValue={event?.title || ""} className="crm-input" placeholder="Llamar, cotizar, pedir docs…" />
+        <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">
+          {googleOnly && event ? <input type="hidden" name="google_event_id" value={event.id.replace(/^google:/, "")} /> : null}
+          {event && !googleOnly ? <input type="hidden" name="id" value={event.id} /> : null}
+          <input type="hidden" name="tipo" value={tipo} />
+          <input type="hidden" name="prioridad" value={prioridad} />
+          <input type="hidden" name="programado_para" value={when} />
+          <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
+          <input type="hidden" name="afiliado_id" value={personId.startsWith("afiliado:") ? personId.slice(9) : ""} />
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Título</span>
+            <input name="titulo" required defaultValue={event?.title || ""} className="crm-input" placeholder="Llamar, cotizar, pedir docs…" />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Día</span>
+              <input type="date" required value={date || ""} onChange={(input) => setWhen(`${input.target.value}T${time || "09:00"}`)} className="crm-input" />
             </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">Día</span>
-                <input type="date" required value={date || ""} onChange={(input) => setWhen(`${input.target.value}T${time || "09:00"}`)} className="crm-input" />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">Hora</span>
-                <input type="time" required value={(time || "09:00").slice(0, 5)} onChange={(input) => setWhen(`${date}T${input.target.value}`)} className="crm-input" />
-              </label>
-            </div>
-            {googleOnly ? null : (
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Hora</span>
+              <input type="time" required value={(time || "09:00").slice(0, 5)} onChange={(input) => setWhen(`${date}T${input.target.value}`)} className="crm-input" />
+            </label>
+          </div>
+          {googleOnly ? null : (
             <div>
-              <p className="mb-2 text-sm font-medium">Tipo</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Tipo</p>
               <div className="flex flex-wrap gap-2">
                 {SEGUIMIENTO_TIPOS.map((item) => (
-                  <button key={item.value} type="button" onClick={() => setTipo(item.value)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${tipo === item.value ? "border-navy bg-navy text-white" : "border-line bg-white text-navy"}`}>
+                  <button key={item.value} type="button" onClick={() => setTipo(item.value)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${tipo === item.value ? "bg-navy text-white shadow-sm" : "bg-mist text-navy hover:bg-aqua"}`}>
                     {item.label}
                   </button>
                 ))}
               </div>
             </div>
-            )}
-            {googleOnly ? null : (
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Prioridad</span>
-              <select name="prioridad" defaultValue={event?.prioridad || "media"} className="crm-input">
+          )}
+          {googleOnly ? null : (
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Prioridad</p>
+              <div className="flex flex-wrap gap-2">
                 {PRIORIDADES.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <button key={item.value} type="button" onClick={() => setPrioridad(item.value)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${prioridad === item.value ? "bg-navy text-white shadow-sm" : "bg-mist text-navy hover:bg-aqua"}`}>
+                    {item.label}
+                  </button>
                 ))}
-              </select>
-            </label>
-            )}
-            {googleOnly ? null : (
+              </div>
+            </div>
+          )}
+          {googleOnly ? null : (
             <div className="space-y-2">
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">Contacto (opcional)</span>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Contacto (opcional)</span>
                 <input
                   value={query}
                   onChange={(input) => {
@@ -570,7 +627,7 @@ function EventModal({
                 </div>
               ) : null}
               {openList && text.length >= 2 ? (
-                <div className="max-h-44 overflow-y-auto rounded-2xl border border-line bg-white">
+                <div className="max-h-44 overflow-y-auto rounded-2xl border border-line bg-white shadow-sm">
                   {matches.length === 0 ? (
                     <p className="px-3 py-2 text-sm text-muted">Ningún contacto con ese dato.</p>
                   ) : (
@@ -593,35 +650,55 @@ function EventModal({
                 </div>
               ) : null}
             </div>
-            )}
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Nota</span>
-              <textarea name="descripcion" rows={3} defaultValue={event?.descripcion || ""} className="crm-input" placeholder="Qué hay que hacer" />
-            </label>
-            {error ? <p className="text-sm text-rose-700">{error}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={pending} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                {pending ? "Guardando…" : mode === "edit" || googleOnly ? "Guardar" : "Agendar"}
-              </button>
-              {event && !googleOnly && event.estado === "pendiente" ? (
-                <>
-                  <button type="button" disabled={pending} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy" onClick={() => onDone(event.id)}>Hecho</button>
-                  <button type="button" disabled={pending} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy" onClick={() => onSnooze(event.id)}>+24 h</button>
-                </>
-              ) : null}
-              {event?.leadId || event?.afiliadoId ? <Link href={event.href} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy">Ficha</Link> : null}
-              {event ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  className="rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700"
-                  onClick={() => (googleOnly ? onDeleteGoogle(event.id.replace(/^google:/, "")) : onDelete(event.id))}
-                >
-                  Eliminar
-                </button>
-              ) : null}
-            </div>
+          )}
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Nota</span>
+            <textarea name="descripcion" rows={3} defaultValue={event?.descripcion || ""} className="crm-input" placeholder="Qué hay que hacer" />
+          </label>
+          {error ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line/80 bg-[#f7f8fc] px-5 py-3">
+          <button type="submit" disabled={pending} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(53,40,114,0.22)] disabled:opacity-60">
+            {pending ? "Guardando…" : mode === "edit" || googleOnly ? "Guardar" : "Agendar"}
+          </button>
+          {event && !googleOnly && event.estado === "pendiente" ? (
+            <>
+              <button type="button" disabled={pending} className="rounded-full border border-line bg-white px-3 py-2 text-sm font-semibold text-navy" onClick={() => onDone(event.id)}>Hecho</button>
+              <button type="button" disabled={pending} className="rounded-full border border-line bg-white px-3 py-2 text-sm font-semibold text-navy" onClick={() => onSnooze(event.id)}>+24 h</button>
+            </>
+          ) : null}
+          {event?.leadId || event?.afiliadoId ? <Link href={event.href} className="rounded-full border border-line bg-white px-3 py-2 text-sm font-semibold text-navy">Ficha</Link> : null}
+          {event ? (
+            <button type="button" disabled={pending} className="ml-auto rounded-full border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => setConfirmDelete(true)}>
+              Eliminar
+            </button>
+          ) : null}
+        </div>
       </form>
-    </div>
+      {confirmDelete && event ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#1a1038]/40 p-5 backdrop-blur-[2px]">
+          <div className="w-full max-w-sm rounded-[1.4rem] bg-white p-5 shadow-[0_24px_60px_rgba(26,16,56,0.28)]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-500">Confirmar</p>
+            <h3 className="mt-1 font-display text-lg font-semibold text-navy">Eliminar este evento</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              {googleOnly ? "Se borra de Google Calendar." : "Se cancela el seguimiento y también el evento de Google, si existe."}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-navy" onClick={() => setConfirmDelete(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                onClick={() => (googleOnly ? onDeleteGoogle(event.id.replace(/^google:/, "")) : onDelete(event.id))}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </ModalFrame>
   );
 }
