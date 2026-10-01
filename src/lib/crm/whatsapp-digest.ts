@@ -20,6 +20,10 @@ const CONTEXT_MESSAGES = 12;
 const NEW_MAX_MESSAGES = 200;
 const BODY_MAX = 500;
 const ACTION_LOG_MAX = 15;
+const DAY_MS = 86_400_000;
+// Seguimiento a largo plazo cuando un contacto no se mueve: se revisa a los 3, 7, 14, 30 y 30 días
+// y después se corta hasta que haya actividad nueva.
+const FOLLOW_UP_DAYS = [3, 7, 14, 30, 30];
 
 type Supabase = ReturnType<typeof createServiceClient>;
 
@@ -67,9 +71,12 @@ type State = {
   lastAction: string | null;
   lastActionHash: string | null;
   lastNotifiedAt: string | null;
+  /** Revisiones por tiempo ya hechas desde la última actividad (0 si hubo movimiento). */
+  nudges?: number;
+  lastNudgeAt?: string | null;
 };
 
-type ActionLog = { at: string; accion: string; urgencia: string };
+type ActionLog = { at: string; accion: string; urgencia: string; tipo?: "aviso" | "insistencia" };
 
 type Urgencia = "alta" | "media" | "baja";
 
@@ -82,6 +89,8 @@ export type Analysis = {
   motivo: string;
   mensaje_sugerido: string | null;
   novedad: boolean;
+  /** Solo en seguimiento por tiempo: conviene dejar de insistir y cerrar el contacto. */
+  descartar: boolean;
 };
 
 const dateTimeFmt = new Intl.DateTimeFormat("es-AR", {
@@ -92,6 +101,7 @@ const dateTimeFmt = new Intl.DateTimeFormat("es-AR", {
   minute: "2-digit",
   hour12: false,
 });
+const dayOnlyFmt = new Intl.DateTimeFormat("es-AR", { timeZone: TZ, day: "2-digit", month: "2-digit" });
 const dayFmt = new Intl.DateTimeFormat("es-AR", {
   timeZone: TZ,
   weekday: "long",
@@ -131,7 +141,13 @@ Reglas:
 - "etapa": una de ${ETAPAS.join(", ")}.
 - Privacidad: no copies DNI, CBU, números de tarjeta ni claves en ningún campo.
 
-Respondé SOLO un JSON con las claves: resumen, etapa, oportunidad, urgencia, accion, motivo, mensaje_sugerido, novedad.`;
+Modo "seguimiento por tiempo" (no hay mensajes nuevos; pasaron días sin novedades desde el último aviso):
+- Pensá a largo plazo. Proponé una acción DISTINTA a las ya avisadas (están en "ACCIONES YA AVISADAS") y adaptada a los días transcurridos y al número de recordatorio: 1.º recordatorio simple y amable; 2.º otro enfoque (resolver dudas, ofrecer una fecha o una llamada); 3.º último intento con una propuesta concreta; 4.º en adelante, una reactivación espaciada.
+- Tené en cuenta la ficha (estado, seguimientos, último contacto) y el momento: no insistas si la conversación ya estaba resuelta o si el cliente dijo que no le interesa.
+- Si tras varios intentos el contacto no responde y no hay señales de interés, poné descartar=true y en "accion" sugerí cerrarlo (marcarlo como perdido o frío en el CRM) en lugar de seguir insistiendo.
+- "descartar" es true solo en este modo y solo cuando conviene dejar de insistir; en cualquier otro caso es false. "novedad" es false.
+
+Respondé SOLO un JSON con las claves: resumen, etapa, oportunidad, urgencia, accion, motivo, mensaje_sugerido, novedad, descartar.`;
 
 function displayPhone(phone: string) {
   const n = normalizeArPhone(phone);
@@ -228,6 +244,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): Analysis | null {
     motivo: clean(raw.motivo, 240),
     mensaje_sugerido: suggested || null,
     novedad: raw.novedad === true,
+    descartar: raw.descartar === true,
   };
 }
 
@@ -375,6 +392,10 @@ async function saveState(supabase: Supabase, key: string, state: State, log: Act
   if (error) throw new Error(error.message);
 }
 
+// Los avisos que manda este mismo cron (y los recordatorios del calendario) no son parte de la conversación.
+const OWN_NOTICE = /^(☀️ \*Resumen diario MARXEN|🧪 \*VISTA PREVIA|(🔁 )?(🔴|🟡|🟢) \*(Alta|Media|Baja)\* — |⏰ \*Evento en 30 minutos\*)/;
+const withoutNotices = (messages: Msg[]) => messages.filter((m) => !OWN_NOTICE.test(String(m.body || "").trim()));
+
 async function loadMessages(supabase: Supabase, chatId: string, mode: "full" | "incremental", cursor: string | null) {
   if (mode === "full" || !cursor) {
     const { data } = await supabase
@@ -383,7 +404,7 @@ async function loadMessages(supabase: Supabase, chatId: string, mode: "full" | "
       .eq("chat_id", chatId)
       .order("created_at", { ascending: false })
       .limit(FULL_MAX_MESSAGES);
-    return ((data || []) as Msg[]).reverse();
+    return withoutNotices(((data || []) as Msg[]).reverse());
   }
   const [fresh, before] = await Promise.all([
     supabase
@@ -401,22 +422,64 @@ async function loadMessages(supabase: Supabase, chatId: string, mode: "full" | "
       .order("created_at", { ascending: false })
       .limit(CONTEXT_MESSAGES),
   ]);
-  return [...(((before.data || []) as Msg[]).reverse()), ...((fresh.data || []) as Msg[])];
+  return withoutNotices([...(((before.data || []) as Msg[]).reverse()), ...((fresh.data || []) as Msg[])]);
+}
+
+type Mode = "full" | "incremental" | "seguimiento";
+type Follow = { n: number; quietDays: number };
+
+function ts(iso: string | null | undefined) {
+  return iso ? new Date(iso).getTime() : 0;
+}
+
+/**
+ * ¿Toca revisar este contacto por tiempo aunque no haya mensajes nuevos? Devuelve el número de
+ * recordatorio y los días sin novedades, o null si no corresponde.
+ * - Se frena si el lead ya está ganado/perdido, si la conversación quedó cerrada o sin oportunidad,
+ *   si ya se hicieron todas las revisiones, o si Marcos tiene un seguimiento agendado a futuro.
+ * - Si Marcos registró un contacto después del último análisis, la cuenta de intervalos empieza de nuevo.
+ */
+function followUpDue(
+  item: Item,
+  state: State,
+  followups: Array<{ programado_para: string }>,
+  nowMs: number,
+): Follow | null {
+  if (item.lead && ["ganado", "perdido"].includes(item.lead.estado)) return null;
+  if (["cerrado", "sin_oportunidad"].includes(state.etapa)) return null;
+  if (followups.some((f) => ts(f.programado_para) > nowMs)) return null;
+  const contactedAt = ts(item.lead?.ultimo_contacto_at);
+  const analyzedAt = ts(state.analyzedAt);
+  const done = contactedAt > analyzedAt ? 0 : state.nudges || 0;
+  if (done >= FOLLOW_UP_DAYS.length) return null;
+  const baseline = Math.max(analyzedAt, ts(state.lastNotifiedAt), ts(state.lastNudgeAt), contactedAt);
+  if (nowMs - baseline < FOLLOW_UP_DAYS[done] * DAY_MS) return null;
+  return { n: done + 1, quietDays: Math.max(1, Math.floor((nowMs - ts(item.signal)) / DAY_MS)) };
 }
 
 function buildPrompt(
   item: Item,
-  mode: "full" | "incremental",
+  mode: Mode,
   messages: Msg[],
   prev: { state: State; log: ActionLog[] } | null,
   followups: Array<{ titulo: string; programado_para: string }>,
   nowMs: number,
+  follow?: Follow,
 ) {
   const cursorMs = mode === "incremental" && prev ? new Date(prev.state.cursor).getTime() : null;
   const label = item.lead?.nombre || item.name || displayPhone(item.phone);
+  const modeLine =
+    mode === "full"
+      ? "primer análisis (historial completo)"
+      : mode === "incremental"
+        ? "incremental (hay mensajes nuevos)"
+        : `seguimiento por tiempo: no hay mensajes nuevos y el contacto lleva ${follow?.quietDays ?? "varios"} días sin novedades. Es el recordatorio n.º ${follow?.n ?? 1} de ${FOLLOW_UP_DAYS.length}.`;
+  const past = (prev?.log || [])
+    .slice(-4)
+    .map((entry) => `- ${dateTimeFmt.format(new Date(entry.at))} (${entry.tipo === "insistencia" ? "insistencia" : "aviso"}): ${entry.accion}`);
   return [
     `AHORA (Salta): ${dayFmt.format(new Date(nowMs))}`,
-    `MODO: ${mode === "full" ? "primer análisis (historial completo)" : "incremental (hay mensajes nuevos)"}`,
+    `MODO: ${modeLine}`,
     `CONTACTO: ${label}${item.phone ? ` · ${displayPhone(item.phone)}` : ""}`,
     `\nFICHA CRM:\n${leadSheet(item.lead, followups, nowMs)}`,
     `\nDATOS CALCULADOS:\n${conversationFacts(messages, nowMs)}`,
@@ -428,6 +491,10 @@ function buildPrompt(
       : prev
         ? "\nNo hay una acción pendiente avisada."
         : null,
+    past.length ? `\nACCIONES YA AVISADAS (de la más antigua a la más reciente):\n${past.join("\n")}` : null,
+    prev && mode !== "seguimiento" && (prev.state.nudges || 0) > 0
+      ? `\nOJO: este contacto ya tuvo ${prev.state.nudges} recordatorio(s) por falta de novedades. Si en los mensajes nuevos el cliente volvió a escribir, es una novedad importante: retomó el contacto, y conviene avisarlo aunque la acción siga siendo la misma.`
+      : null,
     `\nCONVERSACIÓN${messages.length ? "" : " (vacía)"}:\n${renderMessages(messages, cursorMs)}`,
   ]
     .filter((part) => part !== null)
@@ -437,7 +504,7 @@ function buildPrompt(
 const URGENCY_ORDER: Record<Urgencia, number> = { alta: 0, media: 1, baja: 2 };
 const URGENCY_LABEL: Record<Urgencia, string> = { alta: "🔴 *Alta*", media: "🟡 *Media*", baja: "🟢 *Baja*" };
 
-function formatNotification(item: Item, a: Analysis) {
+function formatNotification(item: Item, a: Analysis, follow?: Follow, noticeAt?: string | null) {
   const name = item.lead?.nombre || item.name || displayPhone(item.phone);
   const ficha = item.lead
     ? [item.lead.estado, item.lead.producto, item.lead.plan_interes].filter(Boolean).join(" · ")
@@ -448,11 +515,17 @@ function formatNotification(item: Item, a: Analysis) {
       ? `${SITE_URL}/crm/chats?phone=${encodeURIComponent(item.phone)}`
       : `${SITE_URL}/crm`;
   return [
-    `${URGENCY_LABEL[a.urgencia]} — *${name}*`,
+    follow
+      ? `🔁 ${URGENCY_LABEL[a.urgencia]} — *${name}* · seguimiento ${follow.n}.º`
+      : `${URGENCY_LABEL[a.urgencia]} — *${name}*`,
     item.phone ? `📱 ${displayPhone(item.phone)} · wa.me/${item.phone}` : null,
     `🏷 ${ficha}`,
+    follow
+      ? `⏳ Sin novedades hace ${follow.quietDays} ${follow.quietDays === 1 ? "día" : "días"}${noticeAt ? ` · último aviso ${dayOnlyFmt.format(new Date(noticeAt))}` : ""}`
+      : null,
     `\n🧠 ${a.resumen}`,
-    `\n✅ *Acción:* ${a.accion}`,
+    a.accion ? `\n✅ *Acción:* ${a.accion}` : null,
+    a.descartar ? "💤 *Sugerencia:* dejar de insistir y marcarlo como perdido o frío en el CRM." : null,
     a.motivo ? `⏱ ${a.motivo}` : null,
     a.mensaje_sugerido ? `\n💬 Sugerido: «${a.mensaje_sugerido}»` : null,
     `\n🔗 ${link}`,
@@ -478,8 +551,9 @@ async function pool<T, R>(list: T[], size: number, run: (value: T) => Promise<R>
 
 type Todo = {
   item: Item;
-  mode: "full" | "incremental";
+  mode: Mode;
   prev: { state: State; log: ActionLog[] } | null;
+  follow?: Follow;
 };
 
 type Outcome = Todo & {
@@ -533,8 +607,15 @@ function salta(date: Date) {
  * Es seguro correrlo varias veces: lo ya analizado se saltea, lo que falló o no llegó a tiempo se
  * retoma, y un candado evita dos corridas a la vez.
  */
-export async function runWhatsappDigest({ dry = false, onlyPhone }: { dry?: boolean; onlyPhone?: string } = {}) {
-  if (dry) return runDigest({ dry, onlyPhone }, { lockUntil: null, headerDay: null });
+export async function runWhatsappDigest({
+  dry = false,
+  onlyPhone,
+  deliverTo,
+  preview = false,
+}: { dry?: boolean; onlyPhone?: string; deliverTo?: string; preview?: boolean } = {}) {
+  // Vista previa: envía de verdad a `deliverTo`, pero no guarda estado ni usa el candado,
+  // así la corrida real de Marcos sigue siendo la primera.
+  if (dry || preview) return runDigest({ dry, onlyPhone, deliverTo, preview }, { lockUntil: null, headerDay: null });
 
   const supabase = createServiceClient();
   const meta = await readMeta(supabase).catch(() => ({ lockUntil: null, headerDay: null }) as Meta);
@@ -544,7 +625,7 @@ export async function runWhatsappDigest({ dry = false, onlyPhone }: { dry?: bool
   await writeMeta(supabase, { ...meta, lockUntil: new Date(Date.now() + LOCK_MS).toISOString() }).catch(() => null);
   let headerDay = meta.headerDay;
   try {
-    const result = await runDigest({ dry, onlyPhone }, meta);
+    const result = await runDigest({ dry, onlyPhone, deliverTo }, meta);
     if (result.headerSent) headerDay = salta(new Date());
     return result;
   } finally {
@@ -552,11 +633,18 @@ export async function runWhatsappDigest({ dry = false, onlyPhone }: { dry?: bool
   }
 }
 
-async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string }, meta: Meta) {
+async function runDigest(
+  { dry, onlyPhone, deliverTo, preview = false }: { dry: boolean; onlyPhone?: string; deliverTo?: string; preview?: boolean },
+  meta: Meta,
+) {
   const started = Date.now();
   const supabase = createServiceClient();
   const producer = getProducerWhatsapp();
   if (!producer) throw new Error("Sin número del productor");
+  // El productor sigue excluido del análisis; solo cambia a quién se le entregan los mensajes.
+  const destination = (deliverTo && normalizeArPhone(deliverTo)) || producer;
+  const persist = (key: string, state: State, log: ActionLog[]) =>
+    preview ? Promise.resolve() : saveState(supabase, key, state, log).catch(() => null);
   const agentCode = getWhatsmeowAgentCode();
 
   const [{ items, followupsByLead }, states] = await Promise.all([
@@ -565,11 +653,16 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
   ]);
 
   const todo: Todo[] = [];
+  const reviewAt = Date.now();
   for (const item of items) {
     const prev = states.get(item.key) || null;
+    const followups = item.lead ? followupsByLead.get(item.lead.id) || [] : [];
     if (!prev) todo.push({ item, mode: "full", prev });
-    else if (new Date(item.signal).getTime() > new Date(prev.state.cursor).getTime()) {
-      todo.push({ item, mode: "incremental", prev });
+    else if (ts(item.signal) > ts(prev.state.cursor)) todo.push({ item, mode: "incremental", prev });
+    else {
+      // Sin mensajes nuevos: seguimiento a largo plazo por tiempo transcurrido.
+      const follow = followUpDue(item, prev.state, followups, reviewAt);
+      if (follow) todo.push({ item, mode: "seguimiento", prev, follow });
     }
   }
 
@@ -577,14 +670,14 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
     await pool(
       todo,
       CONCURRENCY,
-      async ({ item, mode, prev }: Todo): Promise<Outcome> => {
+      async ({ item, mode, prev, follow }: Todo): Promise<Outcome> => {
         const nowMs = Date.now();
         const messages = item.chatId
-          ? await loadMessages(supabase, item.chatId, mode, prev?.state.cursor || null)
+          ? await loadMessages(supabase, item.chatId, mode === "full" ? "full" : "incremental", prev?.state.cursor || null)
           : [];
         const followups = item.lead ? followupsByLead.get(item.lead.id) || [] : [];
-        const analysis = await askAi(buildPrompt(item, mode, messages, prev, followups, nowMs));
-        return { item, mode, prev, analysis, messages: messages.length };
+        const analysis = await askAi(buildPrompt(item, mode, messages, prev, followups, nowMs, follow));
+        return { item, mode, prev, follow, analysis, messages: messages.length };
       },
       started + DEADLINE_MS,
     )
@@ -599,8 +692,16 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
     const a = outcome.analysis;
     if (!a) continue;
     const hash = actionHash(a.accion);
-    const repeated = Boolean(hash) && hash === outcome.prev?.state.lastActionHash;
-    const wants = a.oportunidad && !repeated && (outcome.mode === "full" || a.novedad);
+    // Un contacto que ya tuvo recordatorios y vuelve a escribir siempre es una novedad para avisar,
+    // aunque la acción recomendada sea la misma.
+    const reengaged = outcome.mode === "incremental" && (outcome.prev?.state.nudges || 0) > 0;
+    const repeated = !reengaged && Boolean(hash) && hash === outcome.prev?.state.lastActionHash;
+    // En el seguimiento por tiempo insistir es justamente el objetivo: se avisa si hay algo para
+    // hacer o si conviene cerrar el contacto; en los demás modos solo si hay una novedad real.
+    const wants =
+      outcome.mode === "seguimiento"
+        ? a.oportunidad || a.descartar
+        : a.oportunidad && !repeated && (outcome.mode === "full" || a.novedad || reengaged);
     if (wants) wanting.push({ ...outcome, analysis: a, hash });
     else quiet.push({ ...outcome, analysis: a });
   }
@@ -611,17 +712,25 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
       new Date(y.item.signal).getTime() - new Date(x.item.signal).getTime(),
   );
 
-  const stateFor = (o: Outcome & { analysis: Analysis }, notified: boolean, hash: string): State => ({
-    v: 1,
-    summary: o.analysis.resumen,
-    etapa: o.analysis.etapa,
-    cursor: o.item.signal,
-    analyzedAt: nowIso,
-    // Si ya no hay nada para accionar se limpia: la misma acción podrá volver a avisarse más adelante.
-    lastAction: notified ? o.analysis.accion : o.analysis.oportunidad ? o.prev?.state.lastAction || null : null,
-    lastActionHash: notified ? hash : o.analysis.oportunidad ? o.prev?.state.lastActionHash || null : null,
-    lastNotifiedAt: notified ? nowIso : o.prev?.state.lastNotifiedAt || null,
-  });
+  const stateFor = (o: Outcome & { analysis: Analysis }, notified: boolean, hash: string): State => {
+    const a = o.analysis;
+    const follow = o.mode === "seguimiento" ? o.follow : undefined;
+    const withAction = notified && Boolean(a.accion);
+    return {
+      v: 1,
+      summary: a.resumen,
+      etapa: a.etapa,
+      cursor: o.item.signal,
+      analyzedAt: nowIso,
+      // Si ya no hay nada para accionar se limpia: la misma acción podrá volver a avisarse más adelante.
+      lastAction: withAction ? a.accion : a.oportunidad ? o.prev?.state.lastAction || null : null,
+      lastActionHash: withAction ? hash : a.oportunidad ? o.prev?.state.lastActionHash || null : null,
+      lastNotifiedAt: notified ? nowIso : o.prev?.state.lastNotifiedAt || null,
+      // Con movimiento nuevo la cuenta de recordatorios vuelve a cero; si se sugirió cerrar, se corta.
+      nudges: follow ? (a.descartar ? FOLLOW_UP_DAYS.length : follow.n) : 0,
+      lastNudgeAt: follow ? nowIso : null,
+    };
+  };
 
   let sent = 0;
   let skippedOverCap = 0;
@@ -630,13 +739,14 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
 
   if (!dry) {
     for (const o of quiet) {
-      await saveState(supabase, o.item.key, stateFor(o, false, ""), o.prev?.log || []).catch(() => null);
+      await persist(o.item.key, stateFor(o, false, ""), o.prev?.log || []);
     }
 
     const today = new Intl.DateTimeFormat("es-AR", { timeZone: TZ, day: "2-digit", month: "2-digit" }).format(new Date());
     const toSend = wanting.slice(0, MAX_NOTIFY);
     skippedOverCap = wanting.length - toSend.length;
     const leftover = todo.length - outcomes.length;
+    const followCount = toSend.filter((o) => o.mode === "seguimiento").length;
     // Encabezado: siempre que haya oportunidades; y una sola vez por día cuando no hay nada (o falló algo),
     // para saber que el cron corrió. En las pasadas de continuación no se repite.
     const withHeader =
@@ -645,10 +755,14 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
 
     if (withHeader) {
       const header = [
+        preview ? `🧪 *VISTA PREVIA* — así le llega mañana a las 7 a Marcos. No se guardó nada.\n` : null,
         `☀️ *Resumen diario MARXEN* · ${today}`,
         toSend.length
           ? `${toSend.length} ${toSend.length === 1 ? "oportunidad para accionar" : "oportunidades para accionar"} · ${items.length} conversaciones y leads revisados.\nTe las mando de a una por minuto, las urgentes primero.`
           : `Sin novedades para accionar hoy · ${items.length} conversaciones y leads revisados.`,
+        followCount > 0
+          ? `🔁 ${followCount} ${followCount === 1 ? "es un seguimiento" : "son seguimientos"} de contactos sin novedades.`
+          : null,
         failed > 0 ? `⚠️ ${failed} no se pudieron analizar; se reintenta en los próximos minutos.` : null,
         leftover > 0 ? `Quedan ${leftover} por analizar; si hay algo, te llega a continuación.` : null,
       ]
@@ -656,11 +770,11 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
         .join("\n");
       await enqueueWhatsappOutbound({
         agentCode,
-        to: producer,
+        to: destination,
         kind: "text",
         payload: { text: header },
         unique: true,
-        dedupKey: `digest:head:${sha(`${today}|${toSend.length}|${items.length}|${nowIso.slice(0, 13)}`)}`,
+        dedupKey: `digest:${preview ? "preview:" : ""}head:${sha(`${today}|${toSend.length}|${items.length}|${preview ? nowIso : nowIso.slice(0, 13)}`)}`,
         delayMs: 0,
         wake: true,
         meta: { source: "whatsapp_digest", kind: "header" },
@@ -671,22 +785,31 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
 
     for (const o of toSend) {
       // Una sola notificación por contacto y por novedad, aunque dos corridas redacten distinto la acción.
-      const dedupKey = `digest:${sha(`${o.item.key}|${o.item.signal}`)}`;
-      if (await alreadyQueued(supabase, agentCode, dedupKey)) {
-        await saveState(supabase, o.item.key, stateFor(o, true, o.hash), [...(o.prev?.log || [])]).catch(() => null);
+      // La vista previa usa claves propias y únicas para no bloquear el envío real de mañana.
+      const base =
+        o.mode === "seguimiento"
+          ? `${o.item.key}|seg${o.follow?.n}|${o.prev?.state.analyzedAt}`
+          : `${o.item.key}|${o.item.signal}`;
+      const dedupKey = preview ? `digest:preview:${sha(`${base}|${nowIso}`)}` : `digest:${sha(base)}`;
+      if (!preview && (await alreadyQueued(supabase, agentCode, dedupKey))) {
+        await persist(o.item.key, stateFor(o, true, o.hash), [...(o.prev?.log || [])]);
         continue;
       }
       const delayMs = slot * STAGGER_MS;
       const result = await enqueueWhatsappOutbound({
         agentCode,
-        to: producer,
+        to: destination,
         kind: "text",
-        payload: { text: formatNotification(o.item, o.analysis) },
+        payload: { text: formatNotification(o.item, o.analysis, o.follow, o.prev?.state.lastNotifiedAt) },
         unique: true,
         dedupKey,
         delayMs,
         wake: delayMs === 0,
-        meta: { source: "whatsapp_digest", kind: "oportunidad", key: o.item.key },
+        meta: {
+          source: "whatsapp_digest",
+          kind: o.mode === "seguimiento" ? "seguimiento" : "oportunidad",
+          key: o.item.key,
+        },
       });
       if (!result.success) {
         // No se guarda el estado: queda pendiente y se vuelve a intentar en la próxima corrida.
@@ -695,8 +818,16 @@ async function runDigest({ dry, onlyPhone }: { dry: boolean; onlyPhone?: string 
       }
       slot += 1;
       sent += 1;
-      const log: ActionLog[] = [...(o.prev?.log || []), { at: nowIso, accion: o.analysis.accion, urgencia: o.analysis.urgencia }];
-      await saveState(supabase, o.item.key, stateFor(o, true, o.hash), log).catch(() => null);
+      const log: ActionLog[] = [
+        ...(o.prev?.log || []),
+        {
+          at: nowIso,
+          accion: o.analysis.accion || "Sugerencia: cerrar el contacto",
+          urgencia: o.analysis.urgencia,
+          tipo: o.mode === "seguimiento" ? "insistencia" : "aviso",
+        },
+      ];
+      await persist(o.item.key, stateFor(o, true, o.hash), log);
     }
   }
 
