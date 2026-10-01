@@ -2148,17 +2148,11 @@ body:has(.crm-shell) {
   display: none;
 }
 
-.crm-nav-group {
-  margin: 0.85rem 0.75rem 0.3rem;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.34);
-}
-
-.crm-nav-group:first-child {
-  margin-top: 0.2rem;
+.crm-nav-sep {
+  display: block;
+  height: 1px;
+  margin: 0.3rem 0.75rem;
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .crm-sidebar__foot {
@@ -2194,9 +2188,9 @@ body:has(.crm-shell) {
   position: relative;
   align-items: center;
   gap: 0.7rem;
-  min-height: 2.3rem;
+  min-height: clamp(1.85rem, 4.6vh, 2.3rem);
   border-radius: 0.8rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 550;
   color: rgba(255, 255, 255, 0.64);
@@ -2239,15 +2233,6 @@ body:has(.crm-shell) {
 
 .crm-nav-link--quiet {
   color: rgba(255, 255, 255, 0.48);
-}
-
-.crm-shell.is-sidebar-collapsed .crm-nav-group {
-  height: 1px;
-  margin: 0.55rem 0.7rem;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
-  color: transparent;
-  font-size: 0;
 }
 
 .crm-nav-badge {

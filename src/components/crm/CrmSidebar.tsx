@@ -200,7 +200,7 @@ export function CrmSidebar({
 
             return (
               <Fragment key={link.href}>
-                {"group" in link && link.group ? <p className="crm-nav-group">{link.group}</p> : null}
+                {"group" in link && link.group && link.href !== "/crm" ? <span className="crm-nav-sep" aria-hidden="true" /> : null}
                 <Link
                   href={link.href}
                   title={link.label}
