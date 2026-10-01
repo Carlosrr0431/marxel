@@ -1,23 +1,24 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
 import { Logo } from "@/components/Logo";
 
 const links = [
-  { href: "/crm", label: "Dashboard", exact: true, icon: "grid" as const },
+  { href: "/crm", label: "Dashboard", exact: true, icon: "grid" as const, group: "Resumen" },
   { href: "/crm/inbox", label: "Inbox", icon: "inbox" as const },
-  { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true, icon: "spark" as const },
+  { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true, icon: "spark" as const, group: "Conversaciones" },
   { href: "/crm/whatsapp", label: "WhatsApp", icon: "phone" as const },
   { href: "/crm/chats", label: "Chats", icon: "bubbles" as const },
-  { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const },
+  { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const, group: "Ventas" },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
   { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
-  { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const },
+  { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
   { href: "/crm/seguimientos", label: "Agenda", icon: "calendar" as const },
-  { href: "/crm/plantillas", label: "Plantillas", icon: "chat" as const },
+  { href: "/crm/plantillas", label: "Plantillas", icon: "chat" as const, group: "Herramientas" },
   { href: "/crm/mailing", label: "Mailing", icon: "mail" as const },
 ];
 
@@ -198,18 +199,20 @@ export function CrmSidebar({
                     : undefined;
 
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                title={link.label}
-                className={`crm-nav-link ${active ? "is-active" : ""}`}
-              >
-                <NavIcon name={link.icon} />
-                <span className="crm-nav-link__label min-w-0 flex-1 truncate">{link.label}</span>
-                {badge && badge > 0 ? (
-                  <span className="crm-nav-badge">{badge > 99 ? "99+" : badge}</span>
-                ) : null}
-              </Link>
+              <Fragment key={link.href}>
+                {"group" in link && link.group ? <p className="crm-nav-group">{link.group}</p> : null}
+                <Link
+                  href={link.href}
+                  title={link.label}
+                  className={`crm-nav-link ${active ? "is-active" : ""}`}
+                >
+                  <NavIcon name={link.icon} />
+                  <span className="crm-nav-link__label min-w-0 flex-1 truncate">{link.label}</span>
+                  {badge && badge > 0 ? (
+                    <span className="crm-nav-badge">{badge > 99 ? "99+" : badge}</span>
+                  ) : null}
+                </Link>
+              </Fragment>
             );
           })}
         </nav>

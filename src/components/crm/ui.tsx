@@ -17,11 +17,12 @@ export function PageHeader({
     <header className="mb-5 flex flex-col gap-3 sm:mb-7 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-teal">
+          <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-aqua px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-teal">
+            <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden="true" />
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="font-display text-[1.65rem] font-semibold tracking-tight text-pretty text-navy sm:text-[2rem]">
+        <h1 className="font-display text-[1.6rem] font-bold tracking-tight text-pretty text-navy sm:text-[1.95rem]">
           {title}
         </h1>
         {description ? (
@@ -47,8 +48,8 @@ export function EmptyState({
   actionLabel?: string;
 }) {
   return (
-    <div className="crm-card flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-mist text-2xl text-teal">
+    <div className="crm-card flex flex-col items-center border-dashed bg-[linear-gradient(180deg,#ffffff_0%,#fafbfe_100%)] px-6 py-12 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f1eef8,#e7f6fb)] text-2xl text-teal shadow-[0_8px_20px_rgba(58,180,217,0.18)]">
         ◌
       </div>
       <p className="font-display text-lg font-semibold text-navy">{title}</p>
@@ -76,7 +77,7 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md"
   };
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy to-teal font-bold text-white ${sizes[size]}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy to-teal font-bold text-white shadow-[0_4px_10px_rgba(53,40,114,0.22)] ring-2 ring-white ${sizes[size]}`}
     >
       {initials || "?"}
     </span>

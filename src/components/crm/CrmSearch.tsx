@@ -39,7 +39,7 @@ export function CrmSearch({ items }: { items: SearchItem[] }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Buscar lead o afiliado…"
-        className="crm-input bg-white/90 pl-10"
+        className="crm-input rounded-full bg-white pl-10 shadow-[0_2px_10px_rgba(26,16,56,0.04)]"
         aria-label="Buscar en CRM"
         autoComplete="off"
         spellCheck={false}
@@ -48,12 +48,12 @@ export function CrmSearch({ items }: { items: SearchItem[] }) {
         ⌕
       </span>
       {open && results.length > 0 ? (
-        <ul className="absolute z-40 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-[0_20px_50px_rgba(7,31,53,0.12)]">
+        <ul className="absolute z-40 mt-2 w-full overflow-hidden rounded-3xl border border-line/80 bg-white p-1.5 shadow-[0_24px_60px_rgba(26,16,56,0.16)]">
           {results.map((r) => (
             <li key={`${r.kind}-${r.id}`}>
               <button
                 type="button"
-                className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-mist"
+                className="flex w-full items-start gap-3 rounded-2xl px-3.5 py-2.5 text-left hover:bg-mist"
                 onMouseDown={() => {
                   router.push(r.href);
                   setOpen(false);

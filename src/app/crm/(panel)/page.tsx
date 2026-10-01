@@ -380,16 +380,25 @@ function Stat({
   tone: "navy" | "teal" | "rose" | "gold";
 }) {
   const tones = {
-    navy: "from-navy/10 to-sky/10",
-    teal: "from-teal/10 to-aqua",
-    rose: "from-rose-100 to-orange-50",
-    gold: "from-amber-50 to-yellow-50",
+    navy: "from-navy/[0.07] to-white",
+    teal: "from-teal/[0.09] to-white",
+    rose: "from-rose-100/80 to-white",
+    gold: "from-amber-100/70 to-white",
+  };
+  const dots = {
+    navy: "bg-navy",
+    teal: "bg-teal",
+    rose: "bg-rose-500",
+    gold: "bg-amber-500",
   };
   return (
     <div className={`crm-card crm-card-hover bg-gradient-to-br ${tones[tone]} p-5`}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-2 font-display text-3xl font-semibold tabular-nums text-navy">{value}</p>
-      <p className="mt-1 text-xs text-muted">{hint}</p>
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+        <span className={`h-1.5 w-1.5 rounded-full ${dots[tone]}`} aria-hidden="true" />
+        {label}
+      </p>
+      <p className="mt-2.5 font-display text-[2rem] font-bold leading-none tabular-nums text-navy">{value}</p>
+      <p className="mt-2 text-xs text-muted">{hint}</p>
     </div>
   );
 }
