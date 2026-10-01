@@ -7,8 +7,10 @@ import {
   cancelSeguimiento,
   completeSeguimiento,
   createSeguimiento,
+  deleteGoogleCalendarEvent,
   saveCalendarNotify,
   snoozeSeguimiento,
+  updateGoogleCalendarEvent,
   updateSeguimiento,
 } from "@/lib/crm/actions";
 import type { CalendarNotify } from "@/lib/crm/calendar-notify";
@@ -409,11 +411,16 @@ export function CrmCalendar({
           onClose={() => setSheet(null)}
           onCreate={(formData) => run(() => createSeguimiento(formData))}
           onUpdate={(formData) => run(() => updateSeguimiento(formData))}
+          onUpdateGoogle={(formData) => run(() => updateGoogleCalendarEvent(formData))}
           onDone={(id) => run(() => completeSeguimiento(id))}
           onSnooze={(id) => run(() => snoozeSeguimiento(id, 24))}
           onDelete={(id) => {
             if (!window.confirm("¿Eliminar este seguimiento?")) return;
             run(() => cancelSeguimiento(id));
+          }}
+          onDeleteGoogle={(id) => {
+            if (!window.confirm("¿Eliminar este evento del calendario?")) return;
+            run(() => deleteGoogleCalendarEvent(id));
           }}
         />
       ) : null}
@@ -442,9 +449,11 @@ function EventModal({
   onClose,
   onCreate,
   onUpdate,
+  onUpdateGoogle,
   onDone,
   onSnooze,
   onDelete,
+  onDeleteGoogle,
 }: {
   mode: "create" | "edit";
   at: string;
@@ -455,9 +464,11 @@ function EventModal({
   onClose: () => void;
   onCreate: (formData: FormData) => void;
   onUpdate: (formData: FormData) => void;
+  onUpdateGoogle: (formData: FormData) => void;
   onDone: (id: string) => void;
   onSnooze: (id: string) => void;
   onDelete: (id: string) => void;
+  onDeleteGoogle: (id: string) => void;
 }) {
   const initialPerson = event?.leadId ? `lead:${event.leadId}` : event?.afiliadoId ? `afiliado:${event.afiliadoId}` : "";
   const [personId, setPersonId] = useState(initialPerson);
@@ -480,27 +491,22 @@ function EventModal({
       <form
         className="flex max-h-[88vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-[1.4rem] border border-line bg-white p-5 shadow-[0_24px_60px_rgba(26,16,56,0.2)]"
         onClick={(click) => click.stopPropagation()}
-        action={(formData) => (mode === "edit" ? onUpdate(formData) : onCreate(formData))}
+        action={(formData) => {
+          if (googleOnly) onUpdateGoogle(formData);
+          else if (mode === "edit") onUpdate(formData);
+          else onCreate(formData);
+        }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-teal-700">Seguimiento</p>
-            <h2 className="font-display text-xl font-semibold text-navy">{googleOnly ? "Evento de Google" : mode === "edit" ? "Editar seguimiento" : "Nuevo seguimiento"}</h2>
+            <h2 className="font-display text-xl font-semibold text-navy">{googleOnly || mode === "edit" ? "Editar evento" : "Nuevo seguimiento"}</h2>
           </div>
           <button type="button" className="text-sm text-gray-400" onClick={onClose}>Cerrar</button>
         </div>
 
-        {googleOnly && event ? (
-          <div className="space-y-3">
-            <p className="text-lg font-semibold text-navy">{event.title}</p>
-            <p className="text-sm text-muted">{timeLabel.format(new Date(event.start))} · {event.person}</p>
-            <a href={event.href} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white">
-              Abrir en Google Calendar
-            </a>
-          </div>
-        ) : (
-          <>
-            {event ? <input type="hidden" name="id" value={event.id} /> : null}
+        {googleOnly && event ? <input type="hidden" name="google_event_id" value={event.id.replace(/^google:/, "")} /> : null}
+        {event && !googleOnly ? <input type="hidden" name="id" value={event.id} /> : null}
             <input type="hidden" name="tipo" value={tipo} />
             <input type="hidden" name="programado_para" value={when} />
             <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
@@ -519,6 +525,7 @@ function EventModal({
                 <input type="time" required value={(time || "09:00").slice(0, 5)} onChange={(input) => setWhen(`${date}T${input.target.value}`)} className="crm-input" />
               </label>
             </div>
+            {googleOnly ? null : (
             <div>
               <p className="mb-2 text-sm font-medium">Tipo</p>
               <div className="flex flex-wrap gap-2">
@@ -529,6 +536,8 @@ function EventModal({
                 ))}
               </div>
             </div>
+            )}
+            {googleOnly ? null : (
             <label className="block text-sm">
               <span className="mb-1 block font-medium">Prioridad</span>
               <select name="prioridad" defaultValue={event?.prioridad || "media"} className="crm-input">
@@ -537,6 +546,8 @@ function EventModal({
                 ))}
               </select>
             </label>
+            )}
+            {googleOnly ? null : (
             <div className="space-y-2">
               <label className="block text-sm">
                 <span className="mb-1 block font-medium">Contacto (opcional)</span>
@@ -587,6 +598,7 @@ function EventModal({
                 </div>
               ) : null}
             </div>
+            )}
             <label className="block text-sm">
               <span className="mb-1 block font-medium">Nota</span>
               <textarea name="descripcion" rows={3} defaultValue={event?.descripcion || ""} className="crm-input" placeholder="Qué hay que hacer" />
@@ -594,9 +606,9 @@ function EventModal({
             {error ? <p className="text-sm text-rose-700">{error}</p> : null}
             <div className="flex flex-wrap gap-2">
               <button type="submit" disabled={pending} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                {pending ? "Guardando…" : mode === "edit" ? "Guardar" : "Agendar"}
+                {pending ? "Guardando…" : mode === "edit" || googleOnly ? "Guardar" : "Agendar"}
               </button>
-              {event && event.estado === "pendiente" ? (
+              {event && !googleOnly && event.estado === "pendiente" ? (
                 <>
                   <button type="button" disabled={pending} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy" onClick={() => onDone(event.id)}>Hecho</button>
                   <button type="button" disabled={pending} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy" onClick={() => onSnooze(event.id)}>+24 h</button>
@@ -604,13 +616,16 @@ function EventModal({
               ) : null}
               {event?.leadId || event?.afiliadoId ? <Link href={event.href} className="rounded-full border border-line px-3 py-2 text-sm font-semibold text-navy">Ficha</Link> : null}
               {event ? (
-                <button type="button" disabled={pending} className="rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700" onClick={() => onDelete(event.id)}>
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700"
+                  onClick={() => (googleOnly ? onDeleteGoogle(event.id.replace(/^google:/, "")) : onDelete(event.id))}
+                >
                   Eliminar
                 </button>
               ) : null}
             </div>
-          </>
-        )}
       </form>
     </div>
   );

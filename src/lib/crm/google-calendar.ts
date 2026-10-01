@@ -174,6 +174,26 @@ export async function listGoogleEvents(from: Date, to: Date): Promise<GoogleCale
     .filter((item): item is GoogleCalendarEvent => Boolean(item));
 }
 
+export async function findGoogleEventIdByMarker(seguimientoId: string) {
+  const connection = await readGoogleConnection();
+  if (!connection || !googleConfigured() || !seguimientoId) return null;
+  const token = await accessToken(connection.refreshToken);
+  const marker = `[MARXEN:${seguimientoId}]`;
+  const params = new URLSearchParams({
+    q: marker,
+    singleEvents: "true",
+    maxResults: "8",
+  });
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+  );
+  if (!res.ok) return null;
+  const json = (await res.json()) as { items?: { id?: string; description?: string }[] };
+  const hit = (json.items || []).find((item) => (item.description || "").includes(marker));
+  return hit?.id || null;
+}
+
 export async function upsertGoogleEvent(input: {
   eventId?: string | null;
   title: string;
@@ -219,8 +239,11 @@ export async function deleteGoogleEvent(eventId: string) {
   const connection = await readGoogleConnection();
   if (!connection || !googleConfigured() || !eventId) return;
   const token = await accessToken(connection.refreshToken);
-  await fetch(
+  const res = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
     { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
-  ).catch(() => null);
+  );
+  if (!res.ok && res.status !== 404 && res.status !== 410) {
+    throw new Error("No se pudo eliminar en Google Calendar");
+  }
 }

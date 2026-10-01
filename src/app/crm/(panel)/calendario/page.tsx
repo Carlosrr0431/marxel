@@ -93,7 +93,7 @@ export default async function CalendarioPage({
       estado: "pendiente",
       person: googleAccount?.email || "Google",
       phone: null,
-      descripcion: null,
+      descripcion: item.description.replace(/\n?\[MARXEN:[^\]]+\]/g, "").trim() || null,
       prioridad: "media",
       href: item.htmlLink,
       leadId: null,

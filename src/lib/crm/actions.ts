@@ -16,7 +16,7 @@ import type {
 import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
-import { deleteGoogleEvent, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { deleteGoogleEvent, findGoogleEventIdByMarker, upsertGoogleEvent } from "@/lib/crm/google-calendar";
 import {
   CALENDAR_NOTIFY_COOKIE,
   NOTIFY_MINUTES,
@@ -81,7 +81,9 @@ async function mirrorSeguimientoToGoogle(id: string) {
       .select("google_event_id")
       .eq("id", id)
       .maybeSingle();
-    const currentId = linked.error ? null : (linked.data?.google_event_id as string | null);
+    const currentId = linked.error
+      ? await findGoogleEventIdByMarker(id)
+      : ((linked.data?.google_event_id as string | null) || (await findGoogleEventIdByMarker(id)));
     const notify = await readCalendarNotify();
     const note = data.descripcion ? String(data.descripcion) : "";
     const googleId = await upsertGoogleEvent({
@@ -276,6 +278,31 @@ export async function updateSeguimiento(formData: FormData) {
   revalidateCrm();
 }
 
+export async function updateGoogleCalendarEvent(formData: FormData) {
+  await requireCrm();
+  const id = String(formData.get("google_event_id") || "");
+  const titulo = String(formData.get("titulo") || "").trim();
+  const programado = localDateTime(String(formData.get("programado_para") || ""));
+  if (!id || !titulo || !programado) throw new Error("Datos incompletos");
+  const notify = await readCalendarNotify();
+  const googleId = await upsertGoogleEvent({
+    eventId: id,
+    title: titulo,
+    description: String(formData.get("descripcion") || "") || null,
+    start: programado,
+    reminderMinutes: notify.googleMinutes,
+  });
+  if (!googleId) throw new Error("No se pudo guardar en Google Calendar");
+  revalidateCrm();
+}
+
+export async function deleteGoogleCalendarEvent(id: string) {
+  await requireCrm();
+  if (!id) throw new Error("Evento inválido");
+  await deleteGoogleEvent(id);
+  revalidateCrm();
+}
+
 export async function saveCalendarNotify(formData: FormData) {
   await requireCrm();
   const minutes = Number(formData.get("google_minutes"));
@@ -360,7 +387,9 @@ export async function cancelSeguimiento(id: string) {
   const supabase = createServiceClient();
   const linked = await supabase.from("seguimientos").select("google_event_id").eq("id", id).maybeSingle();
   await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
-  const googleId = linked.error ? null : (linked.data?.google_event_id as string | null);
+  const googleId = linked.error
+    ? await findGoogleEventIdByMarker(id)
+    : ((linked.data?.google_event_id as string | null) || (await findGoogleEventIdByMarker(id)));
   if (googleId) await deleteGoogleEvent(googleId).catch(() => null);
   revalidateCrm();
 }
