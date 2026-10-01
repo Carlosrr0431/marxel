@@ -160,53 +160,33 @@ export function CrmCalendar({
   }
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] min-h-[560px] flex-col overflow-hidden rounded-[1.4rem] border border-line bg-white shadow-[0_18px_50px_rgba(26,16,56,0.06)]">
-      <div className="space-y-2 border-b border-line bg-[linear-gradient(180deg,#ffffff_0%,#f7f8fc_100%)] px-3 py-3 sm:px-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-navy hover:bg-mist" onClick={() => setAnchor(addDays(weekStart, -7))} aria-label="Semana anterior">
-              ‹
-            </button>
-            <div className="min-w-[148px] px-1 text-center">
-              <h3 className="font-display text-base font-semibold capitalize leading-tight text-navy">{monthLabel.format(weekStart)}</h3>
-              <p className="text-[11px] leading-tight text-muted">
-                {rangeLabel.format(weekStart)} – {rangeLabel.format(addDays(weekStart, 6))}
-              </p>
-            </div>
-            <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-navy hover:bg-mist" onClick={() => setAnchor(addDays(weekStart, 7))} aria-label="Semana siguiente">
-              ›
-            </button>
-            <button
-              type="button"
-              onClick={() => setAnchor(new Date())}
-              className={`ml-1 rounded-full px-3 py-1.5 text-[11px] font-semibold ${
-                sameDay(weekStart, startOfWeek(today)) ? "bg-aqua text-navy" : "bg-navy text-white"
-              }`}
-            >
-              Hoy
-            </button>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/80 bg-white shadow-[0_20px_50px_rgba(26,16,56,0.08)]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line/70 bg-[linear-gradient(180deg,#ffffff_0%,#f4f7fb_100%)] px-3 py-2.5 sm:px-4">
+        <div className="flex items-center gap-1">
+          <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-navy hover:bg-mist" onClick={() => setAnchor(addDays(weekStart, -7))} aria-label="Semana anterior">
+            ‹
+          </button>
+          <div className="min-w-[132px] px-1 text-center">
+            <h3 className="font-display text-[15px] font-semibold capitalize leading-tight text-navy">{monthLabel.format(weekStart)}</h3>
+            <p className="text-[10px] leading-tight text-muted">
+              {rangeLabel.format(weekStart)} – {rangeLabel.format(addDays(weekStart, 6))}
+            </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Stat label="Semana" value={weekVisible.length} tone="blue" />
-            <Stat label="Hoy" value={todayCount} tone="green" />
-            <Stat label="Vencidos" value={overdueCount} tone="red" />
-          </div>
-
-          <div className="ml-auto flex items-center gap-1.5">
-            <button type="button" disabled={locked} onClick={() => openCreate(new Date())} className="rounded-full bg-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-navy-deep disabled:opacity-50">
-              + Seguimiento
-            </button>
-            <button type="button" disabled={locked} onClick={() => { setSheet(null); setNotifyOpen(true); }} className="rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-navy hover:bg-mist disabled:opacity-50">
-              Avisos
-            </button>
-            <button type="button" onClick={() => router.refresh()} className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:bg-mist hover:text-navy" title="Actualizar" aria-label="Actualizar">
-              ↻
-            </button>
-          </div>
+          <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-navy hover:bg-mist" onClick={() => setAnchor(addDays(weekStart, 7))} aria-label="Semana siguiente">
+            ›
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnchor(new Date())}
+            className={`ml-1 rounded-full px-3 py-1.5 text-[11px] font-semibold ${
+              sameDay(weekStart, startOfWeek(today)) ? "bg-aqua text-navy" : "bg-navy text-white"
+            }`}
+          >
+            Hoy
+          </button>
         </div>
 
-        <div className="flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-full bg-mist p-1">
+        <div className="flex items-center gap-0.5 overflow-x-auto rounded-full bg-mist/80 p-0.5">
           {(
             [
               { key: "", label: "Todas" },
@@ -219,13 +199,13 @@ export function CrmCalendar({
               key={item.key}
               type="button"
               onClick={() => setFilter(item.key)}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 filter === item.key
                   ? item.key === "hecho"
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-emerald-600 text-white shadow-sm"
                     : item.key === "vencido"
-                      ? "bg-rose-600 text-white"
-                      : "bg-navy text-white"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "bg-navy text-white shadow-sm"
                   : "text-muted hover:text-navy"
               }`}
             >
@@ -233,14 +213,29 @@ export function CrmCalendar({
             </button>
           ))}
         </div>
-        {googleEmail ? (
-          <p className="text-[11px] text-muted">
-            Conectado como {googleEmail}{" "}
-            <a href="/api/crm/google/disconnect" className="font-semibold text-teal hover:underline">
-              Salir
+
+        <div className="flex items-center gap-1.5">
+          <Stat label="Semana" value={weekVisible.length} tone="blue" />
+          <Stat label="Hoy" value={todayCount} tone="green" />
+          <Stat label="Vencidos" value={overdueCount} tone="red" />
+        </div>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          {googleEmail ? (
+            <a href="/api/crm/google/disconnect" className="hidden max-w-[11rem] truncate rounded-full bg-mist px-2.5 py-1 text-[10px] font-semibold text-teal hover:underline lg:inline" title={`Salir de ${googleEmail}`}>
+              {googleEmail}
             </a>
-          </p>
-        ) : null}
+          ) : null}
+          <button type="button" disabled={locked} onClick={() => openCreate(new Date())} className="rounded-full bg-navy px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_8px_18px_rgba(53,40,114,0.22)] hover:bg-navy-deep disabled:opacity-50">
+            + Seguimiento
+          </button>
+          <button type="button" disabled={locked} onClick={() => { setSheet(null); setNotifyOpen(true); }} className="rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-navy hover:bg-mist disabled:opacity-50">
+            Avisos
+          </button>
+          <button type="button" onClick={() => router.refresh()} className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:bg-mist hover:text-navy" title="Actualizar" aria-label="Actualizar">
+            ↻
+          </button>
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1">
@@ -255,10 +250,10 @@ export function CrmCalendar({
             return (
               <section
                 key={day.toISOString()}
-                className={`flex min-w-[220px] flex-1 flex-col border-r border-line/80 last:border-r-0 ${isToday ? "bg-aqua/40" : "bg-white"}`}
+                className={`flex min-w-[168px] flex-1 flex-col border-r border-line/60 last:border-r-0 ${isToday ? "bg-[linear-gradient(180deg,rgba(58,180,217,0.14)_0%,rgba(255,255,255,0.4)_28%)]" : "bg-white"}`}
               >
-                <div className={`border-b ${isToday ? "border-sky/40 bg-white/70" : "border-line/70 bg-cloud/80"}`}>
-                  <div className="flex flex-col items-center gap-1.5 py-3">
+                <div className={`border-b ${isToday ? "border-sky/30 bg-white/50" : "border-line/60 bg-[#f8fafc]"}`}>
+                  <div className="flex flex-col items-center gap-1 py-2">
                     <span className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${isSunday ? "text-rose-400" : isToday ? "text-teal" : isPast ? "text-muted/60" : "text-muted"}`}>
                       {dayName.format(day)}
                     </span>
@@ -302,7 +297,7 @@ export function CrmCalendar({
                       return (
                         <article
                           key={event.id}
-                          className={`overflow-hidden rounded-2xl border border-line/80 shadow-[0_8px_20px_rgba(26,16,56,0.04)] ${done ? "bg-cloud opacity-60" : "bg-white"}`}
+                          className={`overflow-hidden rounded-xl border border-line/70 shadow-[0_6px_16px_rgba(26,16,56,0.05)] ${done ? "bg-cloud/80 opacity-70" : "bg-white"}`}
                           style={{ borderLeftWidth: 3, borderLeftColor: done ? "#dddce6" : overdue ? "#e11d48" : style.bar }}
                         >
                           <button type="button" className="w-full px-3 py-2.5 text-left" onClick={() => { setError(""); setSheet({ mode: "edit", id: event.id }); }}>

@@ -4492,6 +4492,41 @@ body:has(.crm-shell) {
   margin: 0;
 }
 
+.crm-shell.is-calendar .crm-main {
+  position: relative;
+}
+
+.crm-shell.is-calendar .crm-content {
+  padding: 0.55rem;
+  overflow: hidden;
+}
+
+.crm-shell.is-calendar .crm-content > * {
+  max-width: none;
+  height: 100%;
+  margin: 0;
+}
+
+.crm-cal-mobiletoggle {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  top: 0.7rem;
+  left: 0.7rem;
+}
+
+@media (min-width: 1024px) {
+  .crm-shell.is-calendar .crm-content {
+    padding: 0.7rem 0.85rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .crm-shell.is-calendar.is-sidebar-collapsed .crm-cal-mobiletoggle {
+    display: block;
+  }
+}
+
 /* Botón hamburguesa flotante sobre el chat (mobile / sidebar collapsed) */
 .crm-chats-mobiletoggle {
   display: none;

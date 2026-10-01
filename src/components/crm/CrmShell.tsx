@@ -50,6 +50,7 @@ export function CrmShell({
   const pathname = usePathname();
   const search = useSearchParams();
   const isChatsPage = pathname === "/crm/chats";
+  const isCalendarPage = pathname === "/crm/calendario";
   const isMailingPage = pathname.startsWith("/crm/mailing");
   const isChatbotPage = pathname === "/crm/leads" && search.get("origen") === "chatbot";
   const exportHref = pathname.startsWith("/crm/afiliados")
@@ -57,7 +58,7 @@ export function CrmShell({
     : "/api/crm/export?type=leads";
 
   return (
-    <div className={`crm-shell${collapsed ? " is-sidebar-collapsed" : ""}${isChatsPage ? " is-fullchat" : ""}`}>
+    <div className={`crm-shell${collapsed ? " is-sidebar-collapsed" : ""}${isChatsPage ? " is-fullchat" : ""}${isCalendarPage ? " is-calendar" : ""}`}>
       <a href="#crm-content" className="crm-skip">
         Saltar al contenido
       </a>
@@ -67,7 +68,7 @@ export function CrmShell({
         onCollapsedChange={onCollapsedChange}
       />
       <div className="crm-main">
-        {!isChatsPage && !isMailingPage && !isChatbotPage && (
+        {!isChatsPage && !isMailingPage && !isChatbotPage && !isCalendarPage && (
           <header className="crm-topbar">
             <button
               type="button"
@@ -127,6 +128,22 @@ export function CrmShell({
             </button>
           </header>
         )}
+        {isCalendarPage ? (
+          <div className="crm-cal-mobiletoggle">
+            <button
+              type="button"
+              className="crm-icon-btn crm-icon-btn--light"
+              aria-label={collapsed ? "Expandir menú" : "Replegar menú"}
+              aria-expanded={!collapsed}
+              aria-controls="crm-sidebar"
+              onClick={() => onCollapsedChange(!collapsed)}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
         {isChatsPage && (
           <div className="crm-chats-mobiletoggle">
             <button
