@@ -1,4 +1,7 @@
+import { after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { SITE_URL } from "@/lib/seo";
+import { syncCalendarReminders } from "@/lib/crm/calendar-reminders";
 import { listGoogleEvents, readGoogleConnection } from "@/lib/crm/google-calendar";
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
@@ -118,6 +121,21 @@ export default async function CalendarioPage({
   ];
 
   const notify = await readCalendarNotify();
+
+  after(() =>
+    syncCalendarReminders(
+      events
+        .filter((event) => event.estado === "pendiente")
+        .map((event) => ({
+          key: event.source === "google" ? event.id : `crm:${event.id}`,
+          title: event.title,
+          start: event.start,
+          person: event.source === "google" ? null : event.person,
+          note: event.descripcion,
+          link: event.source === "google" ? null : `${SITE_URL}${event.href}`,
+        })),
+    ).catch(() => null),
+  );
 
   return (
     <CrmCalendar

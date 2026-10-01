@@ -3,6 +3,10 @@
     {
       "path": "/api/whatsapp-queue-worker",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/crm/calendar-reminders",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

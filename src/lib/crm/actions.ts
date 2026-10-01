@@ -17,6 +17,7 @@ import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
 import { deleteGoogleEvent, findGoogleEventIdByMarker, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { cancelCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
   CALENDAR_NOTIFY_COOKIE,
   NOTIFY_MINUTES,
@@ -300,6 +301,7 @@ export async function deleteGoogleCalendarEvent(id: string) {
   await requireCrm();
   if (!id) throw new Error("Evento inválido");
   await deleteGoogleEvent(id);
+  await cancelCalendarReminders(`google:${id}`);
   revalidateCrm();
 }
 
@@ -362,6 +364,7 @@ export async function completeSeguimiento(id: string, resultado?: string) {
     })
     .eq("id", id);
   if (error) throw new Error(error.message);
+  await cancelCalendarReminders(`crm:${id}`);
 
   if (seg) {
     await supabase.from("actividades").insert({
@@ -387,6 +390,7 @@ export async function cancelSeguimiento(id: string) {
   const supabase = createServiceClient();
   const linked = await supabase.from("seguimientos").select("google_event_id").eq("id", id).maybeSingle();
   await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", id);
+  await cancelCalendarReminders(`crm:${id}`);
   const googleId = linked.error
     ? await findGoogleEventIdByMarker(id)
     : ((linked.data?.google_event_id as string | null) || (await findGoogleEventIdByMarker(id)));
