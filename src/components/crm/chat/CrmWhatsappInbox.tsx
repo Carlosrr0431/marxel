@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { canResetWhatsappChat, normalizeArPhone } from "@/lib/whatsmeow/config";
 import { relativeTime } from "@/lib/crm/utils";
@@ -576,6 +577,11 @@ function Bubble({ message }: { message: CrmChatMessage }) {
 }
 
 export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string }) {
+  const router = useRouter();
+  const search = useSearchParams();
+  const urlPhone = normalizeArPhone(search.get("phone") || "");
+  const openedFromList = useRef(false);
+  const seededBack = useRef(false);
   const [chats, setChats] = useState<CrmChat[]>([]);
   const [messages, setMessages] = useState<CrmChatMessage[]>([]);
   const [selected, setSelected] = useState(() => normalizeArPhone(initialPhone || ""));
@@ -728,10 +734,37 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
     }
   }, []);
 
+  // La lista queda debajo del chat en el historial, así el botón Atrás del celular vuelve a los chats.
+  useLayoutEffect(() => {
+    if (!urlPhone || openedFromList.current || seededBack.current) return;
+    if (window.history.state?.marxelChat) return;
+    seededBack.current = true;
+    const chatUrl = `/crm/chats?phone=${encodeURIComponent(urlPhone)}`;
+    const state = window.history.state || {};
+    window.history.replaceState({ ...state, marxelChat: false }, "", "/crm/chats");
+    window.history.pushState({ ...state, marxelChat: true }, "", chatUrl);
+  }, [urlPhone]);
+
   useEffect(() => {
-    const phone = normalizeArPhone(initialPhone || "");
-    if (phone) void openChat(phone);
-  }, [initialPhone, openChat]);
+    if (!urlPhone) {
+      setSelected("");
+      setLeadOpen(false);
+      return;
+    }
+    void openChat(urlPhone);
+  }, [urlPhone, openChat]);
+
+  function selectChat(phone: string) {
+    const normalized = normalizeArPhone(phone);
+    if (!normalized || normalized === urlPhone) return;
+    openedFromList.current = true;
+    router.push(`/crm/chats?phone=${encodeURIComponent(normalized)}`);
+  }
+
+  function backToList() {
+    setLeadOpen(false);
+    router.back();
+  }
 
   useEffect(() => {
     loadChats().finally(() => setLoadingChats(false));
@@ -894,7 +927,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
         ...prev,
       ]);
     }
-    await openChat(phone);
+    selectChat(phone);
   }
 
   async function sendMessage(event?: React.FormEvent) {
@@ -1009,7 +1042,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                 key={chat.id}
                 type="button"
                 className={`crm-wa-item${active ? " is-active" : ""}`}
-                onClick={() => void openChat(chat.phone)}
+                onClick={() => selectChat(chat.phone)}
               >
                 <AvatarImg
                   initials={initials(chat.name, chat.phone)}
@@ -1066,10 +1099,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                 type="button"
                 className="crm-wa-back"
                 aria-label="Volver a los chats"
-                onClick={() => {
-                  setSelected("");
-                  setLeadOpen(false);
-                }}
+                onClick={backToList}
               >
                 ‹
               </button>
