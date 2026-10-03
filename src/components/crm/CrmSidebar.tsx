@@ -146,6 +146,10 @@ export function CrmSidebar({
   const search = useSearchParams();
   const origen = search.get("origen");
 
+  function closeOnMobile() {
+    if (window.matchMedia("(max-width: 1023px)").matches) onCollapsedChange(true);
+  }
+
   return (
     <aside
       id="crm-sidebar"
@@ -156,6 +160,7 @@ export function CrmSidebar({
           <Link
             href="/crm"
             className="crm-sidebar__brand-copy block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-soft/70"
+            onClick={closeOnMobile}
           >
             <Logo href={null} light size="xs" />
           </Link>
@@ -205,6 +210,7 @@ export function CrmSidebar({
                   href={link.href}
                   title={link.label}
                   className={`crm-nav-link ${active ? "is-active" : ""}`}
+                  onClick={closeOnMobile}
                 >
                   <NavIcon name={link.icon} />
                   <span className="crm-nav-link__label min-w-0 flex-1 truncate">{link.label}</span>
