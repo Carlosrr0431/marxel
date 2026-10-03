@@ -957,7 +957,7 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
   const attachedKind = file ? fileKind(file) : null;
 
   return (
-    <div className="crm-wa">
+    <div className={`crm-wa${selected ? " is-open" : ""}`}>
       <aside className="crm-wa-list">
         <div className="crm-wa-list__head">
           <div>
@@ -1062,6 +1062,17 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
         ) : (
           <>
             <header className="crm-wa-thread__head">
+              <button
+                type="button"
+                className="crm-wa-back"
+                aria-label="Volver a los chats"
+                onClick={() => {
+                  setSelected("");
+                  setLeadOpen(false);
+                }}
+              >
+                ‹
+              </button>
               <AvatarImg
                 initials={initials(activeChat?.name || null, selected)}
                 src={profilePics[selected] ?? activeChat?.profile_pic_url}

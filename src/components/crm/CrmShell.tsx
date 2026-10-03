@@ -67,6 +67,14 @@ export function CrmShell({
         collapsed={collapsed}
         onCollapsedChange={onCollapsedChange}
       />
+      {!collapsed ? (
+        <button
+          type="button"
+          className="crm-sidebar-backdrop"
+          aria-label="Cerrar menú"
+          onClick={() => onCollapsedChange(true)}
+        />
+      ) : null}
       <div className="crm-main">
         {!isChatsPage && !isMailingPage && !isChatbotPage && !isCalendarPage && (
           <header className="crm-topbar">

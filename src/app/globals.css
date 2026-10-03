@@ -4641,6 +4641,14 @@ body:has(.crm-shell) {
   .crm-shell.is-fullchat.is-sidebar-collapsed .crm-chats-mobiletoggle {
     display: block;
   }
+
+  .crm-shell.is-fullchat.is-sidebar-collapsed .crm-wa-list__head {
+    padding-left: 3.3rem;
+  }
+
+  .crm-shell.is-fullchat:has(.crm-wa.is-open) .crm-chats-mobiletoggle {
+    display: none;
+  }
 }
 
 .crm-wa {
@@ -6039,13 +6047,48 @@ button.crm-wa-file {
 
 @media (max-width: 860px) {
   .crm-wa {
-    flex-direction: column;
+    flex-direction: row;
   }
 
-  .crm-wa-list {
+  .crm-wa-list,
+  .crm-wa-thread {
     width: 100%;
     min-width: 0;
-    max-height: 40%;
+    max-height: none;
+    flex: 1;
+  }
+
+  .crm-wa-thread {
+    display: none;
+  }
+
+  .crm-wa.is-open .crm-wa-list {
+    display: none;
+  }
+
+  .crm-wa.is-open .crm-wa-thread {
+    display: flex;
+  }
+
+  .crm-wa-back {
+    display: inline-flex;
+  }
+
+  .crm-wa-thread__head {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .crm-wa-thread__actions {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scrollbar-width: none;
+  }
+
+  .crm-wa-thread__actions::-webkit-scrollbar {
+    display: none;
   }
 
   .crm-wa-bubble {
@@ -6054,6 +6097,75 @@ button.crm-wa-file {
 
   .crm-wa-lead {
     width: 100%;
+    border-left: 0;
+  }
+
+  .crm-wa-composer {
+    gap: 0.4rem;
+    padding: 0.55rem 0.55rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .crm-wa-clip,
+  .crm-wa-send {
+    height: 2.7rem;
+    width: 2.7rem;
+  }
+}
+
+.crm-wa-back {
+  display: none;
+  height: 2.2rem;
+  width: 2.2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fff;
+  color: #111b21;
+  font-size: 1.45rem;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.crm-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .crm-shell .crm-sidebar,
+  .crm-shell.is-sidebar-collapsed .crm-sidebar {
+    position: fixed;
+    z-index: 40;
+    height: 100dvh;
+    width: min(17.5rem, 88vw);
+  }
+
+  .crm-shell.is-sidebar-collapsed .crm-sidebar {
+    transform: translateX(-110%);
+    pointer-events: none;
+  }
+
+  .crm-shell:not(.is-sidebar-collapsed) .crm-sidebar {
+    box-shadow: 16px 0 40px rgba(10, 5, 30, 0.32);
+  }
+
+  .crm-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    border: 0;
+    background: rgba(26, 16, 56, 0.46);
+  }
+
+  .crm-content {
+    padding: 0.75rem 0.65rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .crm-topbar {
+    gap: 0.4rem;
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
   }
 }
 
