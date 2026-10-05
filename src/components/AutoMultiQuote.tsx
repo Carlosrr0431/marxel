@@ -84,9 +84,11 @@ export function AutoMultiQuote() {
 
   return (
     <form className="auto-quote" onSubmit={onSubmit}>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal">Multi cotizador de autos</p>
-      <h2 className="mt-1 font-display text-2xl font-semibold text-navy">Compará tu seguro de auto</h2>
-      <p className="mt-1 text-sm text-muted">Un solo pedido. Marcos lo cotiza en las compañías.</p>
+      <div className="auto-quote__head">
+        <p className="auto-quote__kicker">Multi cotizador de autos</p>
+        <h2>Compará tu seguro de auto</h2>
+        <p className="auto-quote__lede">Un solo pedido. Marcos lo cotiza en las compañías.</p>
+      </div>
 
       <div className="auto-quote__tabs" role="tablist">
         <button type="button" role="tab" aria-selected={mode === "patente"} onClick={() => setMode("patente")}>
@@ -138,7 +140,7 @@ export function AutoMultiQuote() {
 
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
-      <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+      <button type="submit" className="btn btn-primary auto-quote__submit" disabled={loading}>
         {loading ? "Enviando…" : "Cotizar mi auto"}
       </button>
       <Link className="auto-quote__phone" href="/contacto">

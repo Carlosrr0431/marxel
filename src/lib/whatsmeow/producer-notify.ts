@@ -85,6 +85,10 @@ export function formatProducerQuoteMessage(input: {
     `🔔 *Lead MARXEN*`,
     contactLine || null,
     celular ? `wa.me/${celular}` : null,
+    input.email ? `✉️ ${String(input.email).trim()}` : null,
+    input.dni ? `DNI ${String(input.dni).trim()}` : null,
+    input.edad != null && String(input.edad).trim() !== "" ? `Edad: ${input.edad}` : null,
+    input.provincia ? `Provincia: ${String(input.provincia).trim()}` : null,
     input.localidad ? `📍 ${input.localidad}` : null,
     input.interes ? `📌 ${input.interes}` : null,
     detailLines.length > 0 ? detailLines.join("\n") : null,
@@ -214,8 +218,12 @@ export async function notifyProducerWhatsappInterest(input: {
       message: input.message,
       leadId: conv.quote_state.leadId,
     });
-    const sent = await sendToProducer(text);
-    if (!sent.ok) return;
+    const sent = await sendToProducer(text, {
+      source: "producer_interest",
+      leadId: conv.quote_state.leadId || null,
+      phone: customer,
+    });
+    if (!sent.ok || sent.queued) return;
 
     if (conv.quote_state.leadId) {
       const supabase = createServiceClient();
@@ -266,16 +274,94 @@ async function addLeadTag(leadId: string, tag: string) {
   await supabase.from("leads").update({ tags: [...tags, tag] }).eq("id", leadId);
 }
 
-async function sendToProducer(text: string) {
+async function sendToProducer(text: string, meta: Record<string, unknown> = {}) {
   const producer = getProducerWhatsapp();
-  if (!producer) return { ok: false as const, error: "sin productor" };
+  if (!producer) return { ok: false as const, queued: false as const, error: "sin productor" };
   const agent = getWhatsmeowAgentCode();
-  const sent = await sendWhatsmeowText(agent, producer, text, { wake: true });
+  try {
+    const { enqueueWhatsappOutbound, isWhatsappOutboundQueueEnabled } = await import(
+      "@/lib/whatsmeow/outbound-queue"
+    );
+    if (isWhatsappOutboundQueueEnabled()) {
+      const queued = await enqueueWhatsappOutbound({
+        agentCode: agent,
+        to: producer,
+        kind: "text",
+        payload: { text },
+        wake: true,
+        meta: { ...meta, producer },
+      });
+      if (queued.success) {
+        return { ok: true as const, queued: true as const, queueId: queued.queueId };
+      }
+      if (!queued.missingTable) {
+        console.error("[productor][whatsapp]", queued.error);
+        return { ok: false as const, queued: false as const, error: queued.error };
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "[productor][cola]",
+      err instanceof Error ? err.message : err
+    );
+  }
+  const sent = await sendWhatsmeowText(agent, producer, text, { bypassQueue: true, wake: true });
   if (!sent.success) {
     console.error("[productor][whatsapp]", sent.error);
-    return { ok: false as const, error: sent.error };
+    return { ok: false as const, queued: false as const, error: sent.error };
   }
-  return { ok: true as const };
+  return { ok: true as const, queued: false as const };
+}
+
+/** La etiqueta y la actividad se escriben al confirmar el envío, no al encolar. */
+export async function confirmProducerQueueDelivery(meta: Record<string, unknown>) {
+  const source = String(meta.source || "");
+  const leadId = String(meta.leadId || "").trim();
+  const producer = String(meta.producer || getProducerWhatsapp() || "");
+  if (!leadId || !producer) return;
+
+  if (source === "producer_notify") {
+    const kind = meta.kind === "actualizacion" ? "actualizacion" : "nuevo";
+    if (await alreadySentKind(leadId, kind)) return;
+    await addLeadTag(leadId, "productor_avisado");
+    const supabase = createServiceClient();
+    await supabase.from("actividades").insert({
+      lead_id: leadId,
+      tipo: "whatsapp",
+      titulo:
+        kind === "actualizacion"
+          ? "Actualización enviada al productor"
+          : "Lead enviado al productor",
+      detalle: `Aviso a ${displayPhone(producer)}`,
+      autor: "sistema",
+      meta: { source: "producer_notify", kind, producer },
+    });
+    return;
+  }
+
+  if (source === "producer_interest") {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("actividades")
+      .select("id")
+      .eq("lead_id", leadId)
+      .contains("meta", { source: "producer_interest" })
+      .limit(1);
+    if (data?.length) return;
+    await supabase.from("actividades").insert({
+      lead_id: leadId,
+      tipo: "whatsapp",
+      titulo: "Interés de WhatsApp avisado al productor",
+      detalle: `Aviso a ${displayPhone(producer)}`,
+      autor: "sistema",
+      meta: {
+        source: "producer_interest",
+        kind: "interes",
+        producer,
+        phone: meta.phone || null,
+      },
+    });
+  }
 }
 
 export async function notifyProducerQuoteReady(input: {
@@ -312,8 +398,12 @@ export async function notifyProducerQuoteReady(input: {
     const header =
       kind === "actualizacion" ? "🔄 *Actualización de cotización*\n" : "";
     const text = `${header}${formatProducerQuoteMessage(input)}`.trim();
-    const sent = await sendToProducer(text);
-    if (!sent.ok) return;
+    const sent = await sendToProducer(text, {
+      source: "producer_notify",
+      leadId: input.leadId || null,
+      kind,
+    });
+    if (!sent.ok || sent.queued) return;
 
     if (input.leadId) {
       await addLeadTag(input.leadId, "productor_avisado");
@@ -429,7 +519,7 @@ export async function notifyProducerPausedFollowup(input: {
     ]
       .filter((line) => line != null && String(line).trim() !== "")
       .join("\n");
-    await sendToProducer(text);
+    await sendToProducer(text, { source: "producer_paused" });
   } catch (err) {
     console.error("[productor][paused]", err instanceof Error ? err.message : err);
   }

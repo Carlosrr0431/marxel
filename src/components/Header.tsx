@@ -30,7 +30,7 @@ export function Header() {
         <div className="container-mx site-header__bar">
           <Logo />
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
+          <nav className="site-header__nav hidden items-center gap-1 lg:flex" aria-label="Principal">
             <NavMenu label="Seguros">
               <ul className="nav-menu__list">
                 {seguros.map((item) => (
@@ -67,7 +67,7 @@ export function Header() {
             </TopLink>
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="site-header__cta">
             <Link href="/#cotizar-auto" className="btn btn-primary hidden !min-h-10 !px-5 lg:inline-flex">
               Cotizar auto
             </Link>

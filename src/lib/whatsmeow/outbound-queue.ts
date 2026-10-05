@@ -318,11 +318,15 @@ async function markSent(id: string, messageId: string | null) {
 async function markRetryOrFailed(
   row: QueueRow,
   errorMessage: string,
-  { forceFailed = false, pauseMs = 0 }: { forceFailed?: boolean; pauseMs?: number } = {}
+  {
+    forceFailed = false,
+    pauseMs = 0,
+    keepPending = false,
+  }: { forceFailed?: boolean; pauseMs?: number; keepPending?: boolean } = {}
 ) {
   const attempts = Number(row.attempts || 0);
   const maxAttempts = Number(row.max_attempts || 5);
-  const permanent = forceFailed || attempts >= maxAttempts;
+  const permanent = !keepPending && (forceFailed || attempts >= maxAttempts);
   const backoffMs =
     pauseMs > 0
       ? pauseMs
@@ -332,6 +336,8 @@ async function markRetryOrFailed(
     .from("whatsapp_outbound_queue")
     .update({
       status: permanent ? "failed" : "pending",
+      // La sesión caída no gasta intentos: el aviso sigue pendiente hasta que haya línea.
+      ...(keepPending ? { attempts: 0 } : {}),
       last_error: String(errorMessage || "send_failed").slice(0, 500),
       available_at: permanent
         ? new Date().toISOString()
@@ -421,6 +427,14 @@ async function afterQueueAttempt(
   messageId?: string | null
 ) {
   const meta = queueMeta(row);
+  if (status === "sent" && String(meta.source || "").startsWith("producer_")) {
+    try {
+      const { confirmProducerQueueDelivery } = await import("@/lib/whatsmeow/producer-notify");
+      await confirmProducerQueueDelivery(meta);
+    } catch (err) {
+      console.warn("[productor][confirm]", err instanceof Error ? err.message : err);
+    }
+  }
   const body = String(row.payload?.caption || row.payload?.text || "");
   const messageType = row.kind === "media" ? String(row.payload?.type || "document") : "text";
   try {
@@ -558,7 +572,10 @@ export async function processOneWhatsappOutbound({ claimer = "worker" } = {}) {
   }
   if (isWhatsappTransientDisconnect(failError)) {
     await pauseWhatsappLine(WHATSAPP_DISCONNECT_PAUSE_MS);
-    const fail = await markRetryOrFailed(row, failError, { pauseMs: WHATSAPP_DISCONNECT_PAUSE_MS });
+    const fail = await markRetryOrFailed(row, failError, {
+      pauseMs: WHATSAPP_DISCONNECT_PAUSE_MS,
+      keepPending: true,
+    });
     if (fail.permanent) await afterQueueAttempt(row, "failed");
     return {
       claimed: true as const,
