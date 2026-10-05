@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { companias, site } from "@/lib/content";
 import { CompanyMark } from "./CompanyMark";
@@ -70,11 +71,7 @@ export function AutoMultiQuote() {
       <div className="auto-quote">
         <p className="font-display text-xl font-semibold text-navy">Pedido recibido</p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Marcos compara tu auto con estas compañías y te escribe al WhatsApp. Si no se abrió, llamalo al{" "}
-          <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="font-semibold text-navy">
-            {site.phone}
-          </a>
-          .
+          Marcos compara tu auto con estas compañías y te escribe al WhatsApp.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {companias.map((company) => (
@@ -136,7 +133,7 @@ export function AutoMultiQuote() {
       </label>
       <label>
         <span>Celular</span>
-        <input name="celular" type="tel" required placeholder="387 572-4473" />
+        <input name="celular" type="tel" required placeholder="Tu celular" />
       </label>
 
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
@@ -144,9 +141,9 @@ export function AutoMultiQuote() {
       <button type="submit" className="btn btn-primary w-full" disabled={loading}>
         {loading ? "Enviando…" : "Cotizar mi auto"}
       </button>
-      <a className="auto-quote__phone" href={`tel:${site.phone.replace(/\s/g, "")}`}>
-        O llamá a Marcos: {site.phone}
-      </a>
+      <Link className="auto-quote__phone" href="/contacto">
+        Contactar para más información
+      </Link>
     </form>
   );
 }

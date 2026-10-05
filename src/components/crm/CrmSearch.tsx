@@ -38,7 +38,7 @@ export function CrmSearch({ items }: { items: SearchItem[] }) {
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Buscar lead o afiliado…"
+        placeholder="Buscar lead…"
         className="crm-input rounded-full bg-white pl-10 shadow-[0_2px_10px_rgba(26,16,56,0.04)]"
         aria-label="Buscar en CRM"
         autoComplete="off"

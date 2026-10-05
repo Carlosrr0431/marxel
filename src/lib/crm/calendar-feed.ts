@@ -76,9 +76,7 @@ export function buildCalendarIcs(events: FeedEvent[]) {
     const who = event.persona ? ` · ${event.persona}` : "";
     const href = event.lead_id
       ? `${SITE_URL}/crm/leads/${event.lead_id}`
-      : event.afiliado_id
-        ? `${SITE_URL}/crm/afiliados/${event.afiliado_id}`
-        : `${SITE_URL}/crm/calendario`;
+      : `${SITE_URL}/crm/calendario`;
     const detail = [
       event.descripcion || "",
       event.celular ? `Celular: ${event.celular}` : "",

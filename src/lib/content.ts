@@ -16,22 +16,30 @@ export const site = {
 };
 
 export const companias = [
-  { slug: "alba", name: "Alba Caución", mark: "ALBA", line: "Caución", color: "#1B3A6B", accent: "#C4A35A" },
-  { slug: "cnp", name: "CNP", mark: "CNP", line: "Seguros", color: "#C8102E", accent: "#1A1A1A" },
-  { slug: "smg", name: "SMG Vida", mark: "SMG", line: "Vida", color: "#0E7C66", accent: "#14342C" },
-  { slug: "caruso", name: "Caruso", mark: "CARUSO", line: "Seguros", color: "#1E3A5F", accent: "#E8A317" },
-  { slug: "prevencion", name: "Prevención Retiro", mark: "PR", line: "Retiro", color: "#0B6B3A", accent: "#123524" },
-  { slug: "mista", name: "Mista Seguros", mark: "MISTA", line: "Seguros", color: "#5B2C83", accent: "#F4C430" },
-  { slug: "sancor", name: "Sancor Seguros", mark: "SANCOR", line: "Seguros", color: "#007A33", accent: "#F4C400" },
-  { slug: "sancristobal", name: "San Cristóbal", mark: "SC", line: "Seguros", color: "#003DA5", accent: "#E10600" },
-  { slug: "nivel", name: "Nivel Seguros", mark: "NIVEL", line: "Seguros", color: "#F15A22", accent: "#1F2933" },
-  { slug: "go", name: "Go Assistance", mark: "GO", line: "Assistance", color: "#0AA3A8", accent: "#102A43" },
+  { slug: "alba", name: "Alba Caución", logo: "/companias/alba.png" },
+  { slug: "cnp", name: "CNP", logo: "/companias/cnp.jpg" },
+  { slug: "smg", name: "SMG Vida", logo: "/companias/smg.svg" },
+  { slug: "caruso", name: "Caruso", logo: "/companias/caruso.svg" },
+  { slug: "prevencion", name: "Prevención Retiro", logo: "/companias/prevencion.svg" },
+  { slug: "mista", name: "Mista Seguros", logo: "/companias/mista.png" },
+  { slug: "sancor", name: "Sancor Seguros", logo: "/companias/sancor.svg" },
+  { slug: "sancristobal", name: "San Cristóbal", logo: "/companias/sancristobal.svg" },
+  { slug: "nivel", name: "Nivel Seguros", logo: "/companias/nivel.png" },
+  { slug: "go", name: "Go Assistance", logo: "/companias/go.svg" },
 ] as const;
+
+export const productor = {
+  nombre: "Marcos González",
+  rol: "Productor asesor de seguros",
+  matricula: "100282",
+  foto: "/equipo/marcos-gonzalez.jpg",
+};
 
 export const navLinks = [
   { href: "/seguros", label: "Seguros" },
   { href: "/salud", label: "Salud" },
   { href: "/viajero", label: "Viajero" },
+  { href: "/quienes-somos", label: "Quiénes somos" },
   { href: "/cotizar", label: "Cotizar" },
   { href: "/contacto", label: "Contacto" },
 ];

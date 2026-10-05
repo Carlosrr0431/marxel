@@ -2,24 +2,20 @@
 
 import { Fragment } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { logoutCrm } from "@/lib/crm/actions";
 import { Logo } from "@/components/Logo";
 
 const links = [
   { href: "/crm", label: "Dashboard", exact: true, icon: "grid" as const, group: "Resumen" },
   { href: "/crm/inbox", label: "Inbox", icon: "inbox" as const },
-  { href: "/crm/leads?origen=chatbot", label: "Chatbot", chatbot: true, icon: "spark" as const, group: "Conversaciones" },
-  { href: "/crm/whatsapp", label: "WhatsApp", icon: "phone" as const },
+  { href: "/crm/whatsapp", label: "WhatsApp", icon: "phone" as const, group: "Conversaciones" },
   { href: "/crm/chats", label: "Chats", icon: "bubbles" as const },
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const, group: "Ventas" },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
-  { href: "/crm/afiliados", label: "Afiliados", icon: "badge" as const },
   { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
   { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
-  { href: "/crm/seguimientos", label: "Agenda", icon: "calendar" as const },
-  { href: "/crm/plantillas", label: "Plantillas", icon: "chat" as const, group: "Herramientas" },
-  { href: "/crm/mailing", label: "Mailing", icon: "mail" as const },
+  { href: "/crm/mailing", label: "Mailing", icon: "mail" as const, group: "Herramientas" },
 ];
 
 function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
@@ -52,14 +48,6 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       </svg>
     );
   }
-  if (name === "spark") {
-    return (
-      <svg {...props}>
-        <path d="M12 3.5l1.2 4.3 4.3 1.2-4.3 1.2L12 14.5l-1.2-4.3L6.5 9l4.3-1.2L12 3.5z" />
-        <path d="M18 14.5l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3z" />
-      </svg>
-    );
-  }
   if (name === "kanban") {
     return (
       <svg {...props}>
@@ -76,14 +64,6 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
         <path d="M3.5 18.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" />
         <circle cx="16.5" cy="8.5" r="2.3" />
         <path d="M16 13.6c1.9.4 3.4 1.8 4 4.4" />
-      </svg>
-    );
-  }
-  if (name === "badge") {
-    return (
-      <svg {...props}>
-        <circle cx="12" cy="11" r="7.5" />
-        <path d="M9.2 11.2l1.8 1.8 3.8-4" />
       </svg>
     );
   }
@@ -138,13 +118,11 @@ export function CrmSidebar({
   collapsed,
   onCollapsedChange,
 }: {
-  badges?: { inbox?: number; seguimientos?: number; chatbot?: number; chats?: number };
+  badges?: { inbox?: number; chats?: number };
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const pathname = usePathname();
-  const search = useSearchParams();
-  const origen = search.get("origen");
 
   function closeOnMobile() {
     if (window.matchMedia("(max-width: 1023px)").matches) onCollapsedChange(true);
@@ -184,24 +162,18 @@ export function CrmSidebar({
 
         <nav className="crm-sidebar__nav">
           {links.map((link) => {
-            const isChatbot = "chatbot" in link && link.chatbot;
-            const active = isChatbot
-              ? pathname === "/crm/leads" && origen === "chatbot"
-              : link.href === "/crm/leads"
-                ? (pathname === "/crm/leads" && origen !== "chatbot") ||
-                  pathname.startsWith("/crm/leads/")
+            const active =
+              link.href === "/crm/leads"
+                ? pathname === "/crm/leads" || pathname.startsWith("/crm/leads/")
                 : link.exact
                   ? pathname === link.href
                   : pathname === link.href || pathname.startsWith(`${link.href}/`);
-            const badge = isChatbot
-              ? badges?.chatbot
-              : link.href === "/crm/inbox"
+            const badge =
+              link.href === "/crm/inbox"
                 ? badges?.inbox
-                : link.href === "/crm/seguimientos"
-                  ? badges?.seguimientos
-                  : link.href === "/crm/chats"
-                    ? badges?.chats
-                    : undefined;
+                : link.href === "/crm/chats"
+                  ? badges?.chats
+                  : undefined;
 
             return (
               <Fragment key={link.href}>

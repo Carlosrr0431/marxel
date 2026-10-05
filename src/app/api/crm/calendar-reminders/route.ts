@@ -58,11 +58,7 @@ export async function GET(request: Request) {
       start: row.programado_para,
       person: row.leads?.nombre || row.afiliados?.nombre || null,
       note: row.descripcion,
-      link: row.lead_id
-        ? `${SITE_URL}/crm/leads/${row.lead_id}`
-        : row.afiliado_id
-          ? `${SITE_URL}/crm/afiliados/${row.afiliado_id}`
-          : `${SITE_URL}/crm/calendario`,
+      link: row.lead_id ? `${SITE_URL}/crm/leads/${row.lead_id}` : `${SITE_URL}/crm/calendario`,
     }));
   const crmCount = events.length;
 

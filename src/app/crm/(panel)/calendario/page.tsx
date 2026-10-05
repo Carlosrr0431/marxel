@@ -52,11 +52,7 @@ export default async function CalendarioPage({
       phone: persona?.celular || null,
       descripcion: row.descripcion,
       prioridad: row.prioridad,
-      href: row.lead_id
-        ? `/crm/leads/${row.lead_id}`
-        : row.afiliado_id
-          ? `/crm/afiliados/${row.afiliado_id}`
-          : "/crm/calendario",
+      href: row.lead_id ? `/crm/leads/${row.lead_id}` : "/crm/calendario",
       leadId: row.lead_id,
       afiliadoId: row.afiliado_id,
     };

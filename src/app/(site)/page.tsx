@@ -8,12 +8,12 @@ import { Reveal } from "@/components/Reveal";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { CartillaMedicaSection } from "@/components/CartillaMedicaSection";
 import { JsonLd } from "@/components/JsonLd";
-import { faqHome, site, seguros } from "@/lib/content";
+import { faqHome, productor, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
 const HOME_TITLE = "Seguro de auto, prepaga y viajero en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "MARXEN, productor asesor en Salta. Cotizá tu auto con varias compañías y hablá directo con Marcos al 387 572-4473.";
+  "MARXEN, productor asesor en Salta. Cotizá tu auto con varias compañías y contactanos para más información.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
@@ -57,8 +57,9 @@ export default function HomePage() {
         })}
       />
       {/* ——— HERO ——— */}
-      <section className="hero-section">
-        <div className="hero-bg" aria-hidden />
+      <section className="hero-section hero-section--cover">
+        <img className="hero-cover" src="/brand/marxen-portada.jpg" alt="" />
+        <div className="hero-cover-scrim" aria-hidden />
         <div className="container-mx hero-section__inner">
           <div className="hero-copy">
             <p className="animate-rise eyebrow">Seguros de auto, prepaga y viajero en Salta</p>
@@ -74,9 +75,9 @@ export default function HomePage() {
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
-              <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="btn btn-primary btn-lg">
-                Llamar a Marcos · {site.phoneLocal}
-              </a>
+              <Link href="/contacto" className="btn btn-primary btn-lg">
+                Contactar para más información
+              </Link>
               <Link href="/salud" className="btn btn-secondary btn-lg">
                 Prepagas A2 / A4
               </Link>
@@ -99,6 +100,24 @@ export default function HomePage() {
       </section>
 
       <CompanyMarquee />
+
+      <section className="about-band">
+        <div className="container-mx about-band__inner">
+          <img src={productor.foto} alt={productor.nombre} />
+          <div>
+            <p className="eyebrow">Quiénes somos</p>
+            <h2 className="font-display text-2xl font-semibold text-navy sm:text-3xl">
+              {productor.nombre}
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {productor.rol} · Matrícula {productor.matricula}
+            </p>
+          </div>
+          <Link href="/quienes-somos" className="btn btn-outline">
+            Conocer al productor
+          </Link>
+        </div>
+      </section>
 
       {/* ——— QUÉ HACEMOS ——— */}
       <section className="section-pillars">
@@ -297,13 +316,13 @@ export default function HomePage() {
 
           <Reveal delay={100}>
             <div className="surface p-6 sm:p-8">
-              <p className="font-display text-2xl font-semibold text-navy">Hablá directo con Marcos</p>
+              <p className="font-display text-2xl font-semibold text-navy">¿Necesitás otra cobertura?</p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                El cotizador de esta página es solo para autos. Para el resto, llamalo o escribile.
+                El cotizador de esta página es solo para autos. Para el resto, escribinos y te orientamos.
               </p>
-              <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="btn btn-primary mt-6">
-                {site.phone}
-              </a>
+              <Link href="/contacto" className="btn btn-primary mt-6">
+                Contactar para más información
+              </Link>
             </div>
           </Reveal>
         </div>

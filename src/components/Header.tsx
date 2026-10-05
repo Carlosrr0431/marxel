@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "./Logo";
 import { CompanyMark } from "./CompanyMark";
-import { companias, seguros, site } from "@/lib/content";
-
-const tel = `tel:${site.phone.replace(/\s/g, "")}`;
+import { companias, seguros } from "@/lib/content";
 
 export function Header() {
   const pathname = usePathname();
@@ -61,15 +59,18 @@ export function Header() {
             <TopLink href="/viajero" pathname={pathname}>
               Viajero
             </TopLink>
+            <TopLink href="/quienes-somos" pathname={pathname}>
+              Quiénes somos
+            </TopLink>
             <TopLink href="/contacto" pathname={pathname}>
               Contacto
             </TopLink>
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
-            <a href={tel} className="header-phone">
-              {site.phoneLocal}
-            </a>
+            <Link href="/contacto" className="btn btn-secondary hidden !min-h-10 !px-4 lg:inline-flex">
+              Contactar
+            </Link>
             <Link href="/#cotizar-auto" className="btn btn-primary hidden !min-h-10 !px-5 lg:inline-flex">
               Cotizar auto
             </Link>
@@ -103,9 +104,9 @@ export function Header() {
               if ((event.target as HTMLElement).closest("a")) setOpen(false);
             }}
           >
-            <a href={tel} className="header-phone header-phone--block">
-              Llamar a Marcos · {site.phoneLocal}
-            </a>
+            <Link href="/contacto" className="btn btn-primary mx-1 mb-2">
+              Contactar para más información
+            </Link>
             <button type="button" className="mobile-acc" onClick={() => setPanel(panel === "seguros" ? null : "seguros")}>
               Seguros
             </button>
@@ -135,6 +136,9 @@ export function Header() {
             </Link>
             <Link href="/viajero" className="rounded-xl px-4 py-3.5 text-base font-medium text-navy">
               Viajero
+            </Link>
+            <Link href="/quienes-somos" className="rounded-xl px-4 py-3.5 text-base font-medium text-navy">
+              Quiénes somos
             </Link>
             <Link href="/contacto" className="rounded-xl px-4 py-3.5 text-base font-medium text-navy">
               Contacto
