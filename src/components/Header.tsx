@@ -68,9 +68,6 @@ export function Header() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/contacto" className="btn btn-secondary hidden !min-h-10 !px-4 lg:inline-flex">
-              Contactar
-            </Link>
             <Link href="/#cotizar-auto" className="btn btn-primary hidden !min-h-10 !px-5 lg:inline-flex">
               Cotizar auto
             </Link>
@@ -104,9 +101,6 @@ export function Header() {
               if ((event.target as HTMLElement).closest("a")) setOpen(false);
             }}
           >
-            <Link href="/contacto" className="btn btn-primary mx-1 mb-2">
-              Contactar para más información
-            </Link>
             <button type="button" className="mobile-acc" onClick={() => setPanel(panel === "seguros" ? null : "seguros")}>
               Seguros
             </button>
