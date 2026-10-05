@@ -29,7 +29,7 @@ const A4 =
   "El A4 suma cartilla de mayor prestigio, vademécum más amplio y reintegros superadores: más óptica, odontología, kinesio/fisioterapia (40 sesiones) y cubre cirugías estéticas. Prótesis e implantes con menos espera que el A2, y ortodoncia al 100% hasta los 35 años en prestadores designados. También tiene asistencia al viajero nacional e internacional.";
 
 const FOOTER =
-  "Cartilla completa: https://www.marxen.com.ar/salud/cartilla-medica\nSi querés, te armo la cotización. Un asesor confirma el detalle de tu caso (387 634-8199).";
+  "Cartilla completa: https://www.marxen.com.ar/salud/cartilla-medica\nSi querés, te armo la cotización. Un asesor confirma el detalle de tu caso (387 572-4473).";
 
 export function answerHealthPlanQuestion(text: string): string | null {
   if (!looksLikeHealthPlanQuestion(text)) return null;

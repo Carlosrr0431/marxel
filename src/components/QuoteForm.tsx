@@ -213,7 +213,7 @@ export function QuoteForm({ defaultInterest = "", compact = false }: QuoteFormPr
             type="tel"
             required
             autoComplete="tel"
-            placeholder="Ej. 387 634-8199"
+            placeholder="Ej. 387 572-4473"
             className="field"
           />
         </label>

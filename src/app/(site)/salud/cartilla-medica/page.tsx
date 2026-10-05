@@ -4,6 +4,7 @@ import { CartillaBuscador } from "./CartillaBuscador";
 import { JsonLd } from "@/components/JsonLd";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 import { PRESTADORES, FARMACIAS } from "@/data/cartilla-prestadores";
+import { site } from "@/lib/content";
 
 const TITLE = "Cartilla médica Salta — Planes A2 y A4";
 const DESCRIPTION =
@@ -103,7 +104,7 @@ export default function CartillaMedicaPage() {
           </p>
           <div className="cartilla-cta-actions">
             <a
-              href="https://wa.me/543876348199?text=Hola%2C+quiero+consultar+sobre+los+planes+de+salud+y+la+cartilla+m%C3%A9dica."
+              href={`https://wa.me/${site.whatsapp}?text=${encodeURIComponent("Hola, quiero consultar sobre los planes de salud y la cartilla médica.")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="cartilla-cta-btn cartilla-cta-btn--wa"

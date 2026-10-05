@@ -5,15 +5,28 @@ export const site = {
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
     "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá seguro de viaje / asistencia al viajero.",
-  phone: "+54 9 387 634-8199",
-  phoneLocal: "0387 634-8199",
+  phone: "+54 9 387 572-4473",
+  phoneLocal: "0387 572-4473",
   email: "comercial@marxen.com.ar",
-  whatsapp: "5493876348199",
+  whatsapp: "5493875724473",
   location: "Salta Capital (CP 4400), Salta, Argentina.",
   mapsUrl: "https://share.google/lzKEp4xPQDnOpkqcB",
   instagram: "https://www.instagram.com/marxen.ok/",
   facebook: "https://www.facebook.com/profile.php?id=61593725283104",
 };
+
+export const companias = [
+  { slug: "alba", name: "Alba Caución", mark: "ALBA", line: "Caución", color: "#1B3A6B", accent: "#C4A35A" },
+  { slug: "cnp", name: "CNP", mark: "CNP", line: "Seguros", color: "#C8102E", accent: "#1A1A1A" },
+  { slug: "smg", name: "SMG Vida", mark: "SMG", line: "Vida", color: "#0E7C66", accent: "#14342C" },
+  { slug: "caruso", name: "Caruso", mark: "CARUSO", line: "Seguros", color: "#1E3A5F", accent: "#E8A317" },
+  { slug: "prevencion", name: "Prevención Retiro", mark: "PR", line: "Retiro", color: "#0B6B3A", accent: "#123524" },
+  { slug: "mista", name: "Mista Seguros", mark: "MISTA", line: "Seguros", color: "#5B2C83", accent: "#F4C430" },
+  { slug: "sancor", name: "Sancor Seguros", mark: "SANCOR", line: "Seguros", color: "#007A33", accent: "#F4C400" },
+  { slug: "sancristobal", name: "San Cristóbal", mark: "SC", line: "Seguros", color: "#003DA5", accent: "#E10600" },
+  { slug: "nivel", name: "Nivel Seguros", mark: "NIVEL", line: "Seguros", color: "#F15A22", accent: "#1F2933" },
+  { slug: "go", name: "Go Assistance", mark: "GO", line: "Assistance", color: "#0AA3A8", accent: "#102A43" },
+] as const;
 
 export const navLinks = [
   { href: "/seguros", label: "Seguros" },
@@ -148,11 +161,11 @@ export const faqHome: FaqItem[] = [
   },
   {
     q: "¿Puedo cotizar un seguro de auto en Salta por internet?",
-    a: "Sí. En marxen.com.ar/seguro-de-auto cotizás online con San Cristóbal Seguros: año, marca, modelo y versión. También podés hacerlo por WhatsApp al +54 9 387 634-8199 o en el chat del sitio.",
+    a: "Sí. En marxen.com.ar cotizás tu auto y un asesor compara las compañías. También podés llamar o escribir por WhatsApp al +54 9 387 572-4473.",
   },
   {
     q: "¿Con qué compañías trabajan?",
-    a: "En seguros cotizamos con San Cristóbal. En salud asesoramos planes de Prevención Salud (A2, A4 y el resto de la grilla). En viajero trabajamos con asistencias como GoAssistance y New Travel.",
+    a: "Trabajamos con Alba Caución, CNP, SMG Vida, Caruso, Prevención Retiro, Mista Seguros, Sancor Seguros, San Cristóbal, Nivel Seguros y Go Assistance. En salud asesoramos planes de Prevención Salud.",
   },
   {
     q: "¿También ayudan con prepaga y aportes?",
@@ -190,7 +203,7 @@ export const faqViajero: FaqItem[] = [
   },
   {
     q: "¿Puedo contratar seguro de viaje desde Salta?",
-    a: "Sí. MARXEN arma el plan desde Salta Capital para turismo nacional e internacional (incluye Schengen). Cotizá en /viajero o por WhatsApp +54 9 387 634-8199.",
+    a: "Sí. MARXEN arma el plan desde Salta Capital para turismo nacional e internacional (incluye Schengen). Cotizá en /viajero o por WhatsApp +54 9 387 572-4473.",
   },
   {
     q: "¿El seguro de viaje es obligatorio para Europa?",
@@ -205,7 +218,7 @@ export const faqViajero: FaqItem[] = [
 export const faqContacto: FaqItem[] = [
   {
     q: "¿Cómo contacto a MARXEN en Salta?",
-    a: "WhatsApp 0387 634-8199, email comercial@marxen.com.ar o el formulario de cotización en marxen.com.ar. Atendemos consultas de seguros, prepagas y viajero.",
+    a: "Teléfono y WhatsApp de Marcos: 0387 572-4473. También por email comercial@marxen.com.ar o el formulario de marxen.com.ar.",
   },
   {
     q: "¿Dónde está MARXEN en Google Maps?",
@@ -213,7 +226,7 @@ export const faqContacto: FaqItem[] = [
   },
   {
     q: "¿Tienen chat o cotizador en el sitio?",
-    a: "Sí. El asistente del sitio cotiza autos paso a paso y deriva el resto de ramos. El cotizador de San Cristóbal está en /seguros y /cotizar.",
+    a: "El cotizador de autos está en el inicio y en /cotizar. Para el resto de los ramos, llamá o escribinos al 0387 572-4473.",
   },
 ];
 

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     title,
     body: text,
     ctaLabel: String(body.ctaLabel || "Hablar por WhatsApp"),
-    ctaUrl: String(body.ctaUrl || "https://wa.me/5493876348199"),
+    ctaUrl: String(body.ctaUrl || "https://wa.me/5493875724473"),
     theme: String(body.templateId || "institucional"),
   });
   const greetings = recipients.map((r) => greetingFor(r.name));

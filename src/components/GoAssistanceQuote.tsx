@@ -373,7 +373,7 @@ export function GoAssistanceQuote() {
               <input
                 type="tel"
                 inputMode="tel"
-                placeholder="+54 9 387 634-8199"
+                placeholder="+54 9 387 572-4473"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required

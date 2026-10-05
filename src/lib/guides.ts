@@ -129,7 +129,7 @@ export const GUIDES: Guide[] = [
     faqs: [
       {
         q: "¿Puedo comprar el seguro de viaje en Salta?",
-        a: "Sí. MARXEN cotiza asistencia al viajero desde Salta Capital. Usá /viajero o WhatsApp 0387 634-8199.",
+        a: "Sí. MARXEN cotiza asistencia al viajero desde Salta Capital. Usá /viajero o WhatsApp 0387 572-4473.",
       },
     ],
     related: [

@@ -143,7 +143,7 @@ export function organizationNode(): JsonLd {
       {
         "@type": "ContactPoint",
         contactType: "customer service",
-        telephone: "+5493876348199",
+        telephone: "+5493875724473",
         email: site.email,
         areaServed: "AR",
         availableLanguage: ["Spanish"],

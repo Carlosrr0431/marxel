@@ -388,7 +388,7 @@ export async function runChatTurn(input: {
     return {
       answer:
         planReply ||
-        "Odontología y prótesis entran en los planes de salud, con diferencias entre A2 y A4 y según auditoría odontológica. Un asesor de MARXEN te confirma el detalle de tu caso (387 634-8199).",
+        "Odontología y prótesis entran en los planes de salud, con diferencias entre A2 y A4 y según auditoría odontológica. Un asesor de MARXEN te confirma el detalle de tu caso (387 572-4473).",
       quoteState: prevState,
       quickReplies: prevState.active ? [] : menuForChannel(input.channel),
       mode: "rag",

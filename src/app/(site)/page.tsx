@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { QuoteForm } from "@/components/QuoteForm";
-import { HeroProtectionVisual } from "@/components/HeroProtectionVisual";
+import { AutoMultiQuote } from "@/components/AutoMultiQuote";
+import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/Reveal";
@@ -13,7 +13,7 @@ import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
 const HOME_TITLE = "Seguro de auto, prepaga y viajero en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "MARXEN es la aplicación de productor asesor en Salta: cotizá seguro de auto, prepagas y asistencia al viajero, y conectá Google Calendar para agendar seguimientos.";
+  "MARXEN, productor asesor en Salta. Cotizá tu auto con varias compañías y hablá directo con Marcos al 387 572-4473.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
@@ -68,16 +68,15 @@ export default function HomePage() {
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
             <p className="hero-lede animate-rise-delay-2" data-seo-lede>
-              MARXEN es la aplicación de productor asesor en Salta: cotizá seguro
-              de auto, moto y hogar, compará prepagas y armá tu asistencia al
-              viajero. El asesor conecta Google Calendar para ver su agenda y
-              agendar seguimientos con clientes.
+              Compará el seguro de tu auto con las compañías y hablá directo
+              con Marcos. También asesoramos prepagas y asistencia al viajero
+              en Salta.
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
-              <Link href="/seguro-de-auto" className="btn btn-primary btn-lg">
-                Cotizar seguro de auto
-              </Link>
+              <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="btn btn-primary btn-lg">
+                Llamar a Marcos · {site.phoneLocal}
+              </a>
               <Link href="/salud" className="btn btn-secondary btn-lg">
                 Prepagas A2 / A4
               </Link>
@@ -93,28 +92,13 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="hero-visual animate-rise-delay-2">
-            <div className="hero-card animate-float">
-              <div className="hero-card__inner">
-                <div className="hero-card__badge">
-                  <span className="hero-card__badge-icon">
-                    <Icon name="star" className="h-3.5 w-3.5" />
-                  </span>
-                  <span>Confianza personal</span>
-                </div>
-                <div className="flex flex-1 items-center justify-center py-2">
-                  <HeroProtectionVisual />
-                </div>
-                <p className="hero-card__title">
-                  Tres pilares.
-                  <br />
-                  Un solo equipo.
-                </p>
-              </div>
-            </div>
+          <div id="cotizar-auto" className="hero-visual animate-rise-delay-2">
+            <AutoMultiQuote />
           </div>
         </div>
       </section>
+
+      <CompanyMarquee />
 
       {/* ——— QUÉ HACEMOS ——— */}
       <section className="section-pillars">
@@ -135,7 +119,7 @@ export default function HomePage() {
                   href: "/seguro-de-auto",
                   icon: "shield",
                   title: "MARXEN Seguros",
-                  text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. Cotizá online con San Cristóbal.",
+                  text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. El cotizador online es para autos.",
                   cta: "Cotizar auto",
                   tone: "navy",
                   delay: 0,
@@ -312,7 +296,15 @@ export default function HomePage() {
           </Reveal>
 
           <Reveal delay={100}>
-            <QuoteForm />
+            <div className="surface p-6 sm:p-8">
+              <p className="font-display text-2xl font-semibold text-navy">Hablá directo con Marcos</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                El cotizador de esta página es solo para autos. Para el resto, llamalo o escribile.
+              </p>
+              <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="btn btn-primary mt-6">
+                {site.phone}
+              </a>
+            </div>
           </Reveal>
         </div>
       </section>

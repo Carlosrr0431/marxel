@@ -75,6 +75,12 @@ export function Footer() {
                 </a>
               </p>
               <p className="mt-2 text-sm text-muted">
+                Marcos:{" "}
+                <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="footer-link">
+                  {site.phone}
+                </a>
+              </p>
+              <p className="mt-2 text-sm text-muted">
                 WhatsApp:{" "}
                 <a href={wa} className="footer-link" target="_blank" rel="noopener noreferrer">
                   {site.phoneLocal}

@@ -36,7 +36,7 @@ export default function PrivacidadPage() {
             <h2 className="font-display text-xl font-semibold">Qué datos pedimos</h2>
             <p className="mt-2 text-muted">
               Nombre, celular, email, localidad, datos del vehículo o del viaje, y el contenido que
-              nos escribas por el formulario, el chatbot o WhatsApp. Si un asesor conecta su Gmail,
+              nos escribas por el formulario o WhatsApp. Si un asesor conecta su Gmail,
               también accedemos al calendario de esa cuenta de Google.
             </p>
           </div>

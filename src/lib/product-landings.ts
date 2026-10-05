@@ -60,7 +60,7 @@ export const productLandings: Record<QuoteProduct, ProductLanding> = {
     faqs: [
       {
         q: "¿Dónde cotizo un seguro de auto en Salta?",
-        a: "En marxen.com.ar/seguro-de-auto. MARXEN es productor asesor en Salta Capital: cotizás con San Cristóbal online y confirmás por WhatsApp +54 9 387 634-8199.",
+        a: "En marxen.com.ar/seguro-de-auto. MARXEN es productor asesor en Salta Capital: comparás el auto y confirmás por WhatsApp +54 9 387 572-4473.",
       },
       {
         q: "¿Qué cubre el seguro de auto?",

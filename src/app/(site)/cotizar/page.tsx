@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
+import { AutoMultiQuote } from "@/components/AutoMultiQuote";
 import { QuoteForm } from "@/components/QuoteForm";
 import { PageHero } from "@/components/SectionHeading";
-import { SanCristobalEmbed } from "@/components/SanCristobalEmbed";
 import { GoAssistanceQuote } from "@/components/GoAssistanceQuote";
 import { JsonLd } from "@/components/JsonLd";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
 const TITLE = "Cotizar seguro de auto, prepaga y viajero en Salta";
 const DESCRIPTION =
-  "Cotizá online tu seguro San Cristóbal o pedí una propuesta de prepaga y seguro de viaje. MARXEN te responde por WhatsApp desde Salta.";
+  "Cotizá el seguro de tu auto con las compañías de MARXEN, o pedí prepaga y seguro de viaje. Marcos te responde desde Salta.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,
@@ -17,10 +17,6 @@ export const metadata: Metadata = pageMetadata({
 });
 
 type SearchParams = Promise<{ interes?: string }>;
-
-function isSegurosInterest(interes: string) {
-  return /seguro|auto|moto|hogar|comercio|art|praxis|accidente/i.test(interes);
-}
 
 function isViajeroInterest(interes: string) {
   return /viajero|viaje/i.test(interes);
@@ -34,7 +30,7 @@ export default async function CotizarPage({
   const params = await searchParams;
   const interes = params.interes || "";
   const showViajero = isViajeroInterest(interes);
-  const showSanCristobal = !interes || isSegurosInterest(interes);
+  const showAutoQuote = !interes || /auto/i.test(interes);
 
   return (
     <>
@@ -55,15 +51,11 @@ export default async function CotizarPage({
         <>
           <PageHero
             eyebrow="Cotización"
-            title={
-              showSanCristobal && (!interes || isSegurosInterest(interes))
-                ? "Cotizá tu seguro de auto en Salta"
-                : "Contanos qué necesitás"
-            }
+            title={showAutoQuote ? "Cotizá tu seguro de auto en Salta" : "Contanos qué necesitás"}
             description={
-              showSanCristobal && isSegurosInterest(interes)
-                ? "Usá el cotizador de San Cristóbal abajo. Si preferís, también podés dejarnos tus datos y te contactamos."
-                : "Nombre, provincia, edad y celular. Si es asistencia al viajero, también destino, motivo y fechas."
+              showAutoQuote
+                ? "Dejá la patente o los datos del auto. Marcos lo compara con las compañías y te escribe."
+                : "Nombre, provincia, edad y celular. Para autos usá el cotizador del inicio."
             }
             crumbs={[
               { href: "/", label: "Inicio" },
@@ -71,17 +63,9 @@ export default async function CotizarPage({
             ]}
           />
 
-          {showSanCristobal ? (
-            <section className="bg-cloud">
-              <div className="container-mx py-10 sm:py-14">
-                <SanCristobalEmbed />
-              </div>
-            </section>
-          ) : null}
-
           <section className="bg-atmosphere">
             <div className="container-mx max-w-xl py-14 sm:py-16">
-              <QuoteForm defaultInterest={interes} />
+              {showAutoQuote ? <AutoMultiQuote /> : <QuoteForm defaultInterest={interes} />}
             </div>
           </section>
         </>

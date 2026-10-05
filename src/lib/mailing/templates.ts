@@ -18,7 +18,7 @@ export const MAIL_PRESETS: MailPreset[] = [
     title: "Respaldo y tranquilidad, en cada etapa",
     body: "Somos productores asesores en Salta. Te acompañamos a cotizar y contratar seguros, prepagas y asistencia al viajero, con asesoramiento claro y seguimiento personal.\n\nSi querés una cotización o tenés una consulta, escribinos y te respondemos a la brevedad.",
     ctaLabel: "Hablar por WhatsApp",
-    ctaUrl: "https://wa.me/5493876348199",
+    ctaUrl: "https://wa.me/5493875724473",
   },
   {
     id: "salud",
@@ -156,7 +156,7 @@ export function buildMailHtml(input: {
   const title = escapeHtml(input.title);
   const bodyHtml = textToHtml(input.body);
   const ctaLabel = escapeHtml(input.ctaLabel || "Escribinos");
-  const ctaUrl = escapeHtml(input.ctaUrl || "https://wa.me/5493876348199");
+  const ctaUrl = escapeHtml(input.ctaUrl || "https://wa.me/5493875724473");
   const theme = HERO[input.theme || ""] ? input.theme! : "institucional";
   const hero = HERO[theme];
   const isWhatsapp = /wa\.me|whatsapp/i.test(ctaUrl);
@@ -241,7 +241,7 @@ export function buildMailHtml(input: {
               <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:${C.white};">MARXEN · Productores asesores</p>
               <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:${C.sky};">Asesoramiento claro, humano y a tu medida en Salta.</p>
               <p style="margin:0;font-size:13px;line-height:1.7;color:rgba(255,255,255,.78);">
-                WhatsApp <a href="https://wa.me/5493876348199" style="color:${C.sky};text-decoration:none;">387 634-8199</a><br/>
+                WhatsApp <a href="https://wa.me/5493875724473" style="color:${C.sky};text-decoration:none;">387 572-4473</a><br/>
                 <a href="mailto:comercial@marxen.com.ar" style="color:${C.sky};text-decoration:none;">comercial@marxen.com.ar</a><br/>
                 Salta, Argentina
               </p>
