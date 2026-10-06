@@ -14,11 +14,12 @@ import type {
   SeguimientoTipo,
 } from "@/lib/crm/types";
 import { scoreLead } from "@/lib/crm/utils";
+import { SITE_URL } from "@/lib/seo";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
-import { deleteGoogleEvent, findGoogleEventIdByMarker, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { deleteGoogleEvent, findGoogleEventIdByMarker, listGoogleEvents, upsertGoogleEvent } from "@/lib/crm/google-calendar";
 import { eventColor, packEventColor, readEventSeries, repeatDates, stripEventMeta, withEventSeries } from "@/lib/crm/event-meta";
-import { cancelCalendarReminderPrefix, cancelCalendarReminders } from "@/lib/crm/calendar-reminders";
+import { cancelCalendarReminderPrefix, cancelCalendarReminders, syncCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
   CALENDAR_NOTIFY_COOKIE,
   NOTIFY_MINUTES,
@@ -239,10 +240,12 @@ export async function createSeguimiento(formData: FormData) {
       everyDays,
     });
     if (!googleId) throw new Error("Conectá Gmail para agendar sin contacto");
+    await syncGoogleEventReminders(googleId, payload.titulo, payload.programado_para, descripcion);
     revalidateCrm();
     return;
   }
   let firstId = "";
+  const queued: { key: string; title: string; start: string }[] = [];
   for (const start of dates) {
     const { data, error } = await supabase
       .from("seguimientos")
@@ -251,8 +254,19 @@ export async function createSeguimiento(formData: FormData) {
       .single();
     if (error) throw new Error(error.message);
     if (!firstId && data?.id) firstId = String(data.id);
+    if (data?.id) {
+      queued.push({
+        key: `crm:${data.id}`,
+        title: payload.titulo,
+        start,
+      });
+    }
   }
   if (firstId) await mirrorSeguimientoToGoogle(firstId);
+  const link = leadId ? `${SITE_URL}/crm/leads/${leadId}` : `${SITE_URL}/crm/calendario`;
+  await syncCalendarReminders(
+    queued.map((item) => ({ ...item, note: stripEventMeta(payload.descripcion), link })),
+  ).catch(() => null);
   await notifySeguimientoWhatsapp({
     titulo: payload.titulo,
     fecha: payload.programado_para,
@@ -293,7 +307,27 @@ export async function updateSeguimiento(formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
   await mirrorSeguimientoToGoogle(id);
+  await remindCrmById(id);
   revalidateCrm();
+}
+
+async function remindCrmById(id: string) {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("seguimientos")
+    .select("id,titulo,descripcion,programado_para,lead_id,estado")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data || data.estado === "hecho" || data.estado === "cancelado") return;
+  await syncCalendarReminders([
+    {
+      key: `crm:${data.id}`,
+      title: String(data.titulo),
+      start: String(data.programado_para),
+      note: stripEventMeta(data.descripcion) || null,
+      link: data.lead_id ? `${SITE_URL}/crm/leads/${data.lead_id}` : `${SITE_URL}/crm/calendario`,
+    },
+  ]).catch(() => null);
 }
 
 export async function updateGoogleCalendarEvent(formData: FormData) {
@@ -313,7 +347,24 @@ export async function updateGoogleCalendarEvent(formData: FormData) {
     colorId: eventColor(color)?.googleId,
   });
   if (!googleId) throw new Error("No se pudo guardar en Google Calendar");
+  await syncGoogleEventReminders(googleId, titulo, programado, String(formData.get("descripcion") || ""));
   revalidateCrm();
+}
+
+async function syncGoogleEventReminders(googleId: string, title: string, start: string, note: string | null) {
+  const from = new Date();
+  const until = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const items = await listGoogleEvents(from, until).catch(() => []);
+  const related = items.filter((item) => item.id === googleId || item.recurringEventId === googleId);
+  const events = related.length
+    ? related.map((item) => ({
+        key: `google:${item.id}`,
+        title: item.title || title,
+        start: item.start,
+        note: stripEventMeta(item.description) || null,
+      }))
+    : [{ key: `google:${googleId}`, title, start, note: stripEventMeta(note) || null }];
+  await syncCalendarReminders(events).catch(() => null);
 }
 
 export async function deleteGoogleCalendarEvent(id: string, series = false) {
@@ -453,6 +504,7 @@ export async function rescheduleSeguimiento(id: string, programadoPara: string) 
     .eq("id", id);
   if (error) throw new Error(error.message);
   await mirrorSeguimientoToGoogle(id);
+  await remindCrmById(id);
   revalidateCrm();
 }
 
@@ -465,6 +517,7 @@ export async function snoozeSeguimiento(id: string, hours = 24) {
     .update({ programado_para: when, estado: "pendiente" })
     .eq("id", id);
   await mirrorSeguimientoToGoogle(id);
+  await remindCrmById(id);
   revalidateCrm();
 }
 

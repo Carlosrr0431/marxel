@@ -115,7 +115,7 @@ export default async function CalendarioPage({
   after(() =>
     syncCalendarReminders(
       events
-        .filter((event) => event.estado === "pendiente")
+        .filter((event) => event.estado !== "hecho" && event.estado !== "cancelado")
         .map((event) => ({
           key: event.source === "google" ? event.id : `crm:${event.id}`,
           title: event.title,

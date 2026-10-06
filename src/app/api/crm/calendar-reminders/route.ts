@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const rows = (data || []) as unknown as Row[];
   const events: ReminderEvent[] = rows
-    .filter((row) => row.estado === "pendiente")
+    .filter((row) => row.estado !== "hecho" && row.estado !== "cancelado")
     .map((row) => ({
       key: `crm:${row.id}`,
       title: row.titulo,

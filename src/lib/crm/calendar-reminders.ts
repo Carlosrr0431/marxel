@@ -32,9 +32,15 @@ function reminderPhone() {
   return normalizeArPhone(process.env.CALENDAR_REMINDER_WHATSAPP || DEFAULT_PHONE);
 }
 
-function buildText(event: ReminderEvent) {
+function buildText(event: ReminderEvent, minutesLeft: number) {
+  const headline =
+    minutesLeft >= 25
+      ? "⏰ *Evento en 30 minutos*"
+      : minutesLeft > 1
+        ? `⏰ *Evento en ${minutesLeft} minutos*`
+        : "⏰ *El evento es ahora*";
   return [
-    "⏰ *Evento en 30 minutos*",
+    headline,
     event.title,
     `🕒 ${dateTimeLabel.format(new Date(event.start))}`,
     event.person ? `👤 ${event.person}` : null,
@@ -59,17 +65,23 @@ export async function syncCalendarReminders(events: ReminderEvent[]) {
 
   for (const event of events) {
     const startMs = new Date(event.start).getTime();
-    if (!Number.isFinite(startMs) || startMs <= now || startMs - now > HORIZON_MS) continue;
+    if (!Number.isFinite(startMs) || startMs - now > HORIZON_MS) continue;
+
+    const minutesLeft = Math.round((startMs - now) / 60000);
+    if (minutesLeft < -30) continue;
 
     const dedupKey = `cal:${createHash("sha1").update(`${event.key}|${startMs}`).digest("hex").slice(0, 40)}`;
     const { data: existing } = await supabase
       .from("whatsapp_outbound_queue")
-      .select("id")
+      .select("id,status")
       .eq("agent_code", agentCode)
       .eq("dedup_key", dedupKey)
       .limit(1)
       .maybeSingle();
-    if (existing?.id) continue;
+    if (existing?.id && existing.status !== "failed") continue;
+    if (existing?.id) {
+      await supabase.from("whatsapp_outbound_queue").delete().eq("id", existing.id);
+    }
 
     await cancelCalendarReminders(event.key);
 
@@ -78,7 +90,7 @@ export async function syncCalendarReminders(events: ReminderEvent[]) {
       agentCode,
       to,
       kind: "text",
-      payload: { text: buildText(event) },
+      payload: { text: buildText(event, minutesLeft) },
       unique: true,
       dedupKey,
       delayMs,
