@@ -14,6 +14,7 @@ import {
   updateSeguimiento,
 } from "@/lib/crm/actions";
 import type { CalendarNotify } from "@/lib/crm/calendar-notify";
+import { EVENT_COLORS, eventColor, type EventColorId } from "@/lib/crm/event-meta";
 import {
   PRIORIDADES,
   SEGUIMIENTO_TIPOS,
@@ -41,6 +42,7 @@ export type CalendarEvent = {
   person: string;
   phone: string | null;
   descripcion: string | null;
+  color?: EventColorId | null;
   prioridad: Prioridad;
   href: string;
   leadId: string | null;
@@ -294,11 +296,12 @@ export function CrmCalendar({
                       const style = event.source === "google"
                         ? { label: "Google", chip: "bg-blue-100 text-blue-700", bar: "#2563eb" }
                         : TIPO_STYLE[event.tipo];
+                      const bar = eventColor(event.color)?.hex || style.bar;
                       return (
                         <article
                           key={event.id}
                           className={`overflow-hidden rounded-xl border border-line/70 shadow-[0_6px_16px_rgba(26,16,56,0.05)] ${done ? "bg-cloud/80 opacity-70" : "bg-white"}`}
-                          style={{ borderLeftWidth: 3, borderLeftColor: done ? "#dddce6" : overdue ? "#e11d48" : style.bar }}
+                          style={{ borderLeftWidth: 3, borderLeftColor: done ? "#dddce6" : overdue ? "#e11d48" : bar }}
                         >
                           <button type="button" className="w-full px-3 py-2.5 text-left" onClick={() => { setError(""); setSheet({ mode: "edit", id: event.id }); }}>
                             <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -531,6 +534,8 @@ function EventModal({
   const [prioridad, setPrioridad] = useState<Prioridad>(event?.prioridad || "media");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [when, setWhen] = useState(at);
+  const [color, setColor] = useState<EventColorId>(event?.color || "azul");
+  const [everyDays, setEveryDays] = useState("");
   const [date, time] = when.split("T");
   const text = query.trim().toLowerCase();
   const matches = text.length < 2
@@ -559,6 +564,8 @@ function EventModal({
           <input type="hidden" name="tipo" value={tipo} />
           <input type="hidden" name="prioridad" value={prioridad} />
           <input type="hidden" name="programado_para" value={when} />
+          <input type="hidden" name="color" value={color} />
+          <input type="hidden" name="cada_dias" value={everyDays} />
           <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
           <input type="hidden" name="afiliado_id" value={personId.startsWith("afiliado:") ? personId.slice(9) : ""} />
           <label className="block">
@@ -575,6 +582,39 @@ function EventModal({
               <input type="time" required value={(time || "09:00").slice(0, 5)} onChange={(input) => setWhen(`${date}T${input.target.value}`)} className="crm-input" />
             </label>
           </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {EVENT_COLORS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={color === item.id}
+                  onClick={() => setColor(item.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${color === item.id ? "bg-navy text-white shadow-sm" : "bg-mist text-navy"}`}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.hex }} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {mode === "create" ? (
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Repetir cada cuántos días</span>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                inputMode="numeric"
+                value={everyDays}
+                onChange={(input) => setEveryDays(input.target.value.replace(/[^\d]/g, ""))}
+                className="crm-input"
+                placeholder="Vacío = una sola vez"
+              />
+              <span className="mt-1 block text-xs text-muted">Si ponés un número, se agenda esa repetición durante un año (hasta 36 veces). Cada uno avisa por WhatsApp.</span>
+            </label>
+          ) : null}
           {googleOnly ? null : (
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Tipo</p>

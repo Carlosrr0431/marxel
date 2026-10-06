@@ -9,6 +9,7 @@ import {
 } from "@/lib/crm/calendar-reminders";
 import { listGoogleEvents, readServerConnection } from "@/lib/crm/google-calendar";
 import { SITE_URL } from "@/lib/seo";
+import { stripEventMeta } from "@/lib/crm/event-meta";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
       title: row.titulo,
       start: row.programado_para,
       person: row.leads?.nombre || row.afiliados?.nombre || null,
-      note: row.descripcion,
+      note: stripEventMeta(row.descripcion) || null,
       link: row.lead_id ? `${SITE_URL}/crm/leads/${row.lead_id}` : `${SITE_URL}/crm/calendario`,
     }));
   const crmCount = events.length;
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
           key: `google:${item.id}`,
           title: item.title,
           start: item.start,
-          note: item.description.trim() || null,
+          note: stripEventMeta(item.description) || null,
         });
       }
       google = "ok";

@@ -17,6 +17,7 @@ import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
 import { deleteGoogleEvent, findGoogleEventIdByMarker, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { eventColor, packEventColor, repeatDates, stripEventMeta } from "@/lib/crm/event-meta";
 import { cancelCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
   CALENDAR_NOTIFY_COOKIE,
@@ -93,6 +94,7 @@ async function mirrorSeguimientoToGoogle(id: string) {
       description: [note, `[MARXEN:${id}]`].filter(Boolean).join("\n"),
       start: String(data.programado_para),
       reminderMinutes: notify.googleMinutes,
+      colorId: eventColor(note.match(/\[MARXEN-COLOR:(naranja|amarillo|verde|azul|violeta)\]/)?.[1])?.googleId,
     });
     if (googleId && googleId !== currentId && !linked.error) {
       await supabase.from("seguimientos").update({ google_event_id: googleId }).eq("id", id);
@@ -207,11 +209,14 @@ export async function createSeguimiento(formData: FormData) {
   if (programado && !programado.includes("Z") && programado.length === 16) {
     programado = new Date(programado).toISOString();
   }
+  const color = String(formData.get("color") || "");
+  const everyDays = Math.min(365, Math.max(0, Math.floor(Number(formData.get("cada_dias") || 0) || 0)));
+  const descripcion = packEventColor(String(formData.get("descripcion") || ""), color);
   const payload = {
     lead_id: leadId,
     afiliado_id: afiliadoId,
     titulo: String(formData.get("titulo") || "").trim(),
-    descripcion: String(formData.get("descripcion") || "") || null,
+    descripcion,
     tipo: String(formData.get("tipo") || "whatsapp") as SeguimientoTipo,
     prioridad: String(formData.get("prioridad") || "media") as Prioridad,
     programado_para: programado || new Date().toISOString(),
@@ -221,27 +226,38 @@ export async function createSeguimiento(formData: FormData) {
   if (!payload.titulo) {
     throw new Error("El título es obligatorio");
   }
+  const dates = repeatDates(payload.programado_para, everyDays);
   if (!leadId && !afiliadoId) {
     const notify = await readCalendarNotify();
     const googleId = await upsertGoogleEvent({
       title: payload.titulo,
-      description: payload.descripcion,
+      description: descripcion,
       start: payload.programado_para,
       reminderMinutes: notify.googleMinutes,
+      colorId: eventColor(color)?.googleId,
+      everyDays,
     });
     if (!googleId) throw new Error("Conectá Gmail para agendar sin contacto");
     revalidateCrm();
     return;
   }
-  const { data, error } = await supabase.from("seguimientos").insert(payload).select("id").single();
-  if (error) throw new Error(error.message);
-  if (data?.id) await mirrorSeguimientoToGoogle(String(data.id));
+  let firstId = "";
+  for (const start of dates) {
+    const { data, error } = await supabase
+      .from("seguimientos")
+      .insert({ ...payload, programado_para: start })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    if (!firstId && data?.id) firstId = String(data.id);
+  }
+  if (firstId) await mirrorSeguimientoToGoogle(firstId);
   await notifySeguimientoWhatsapp({
     titulo: payload.titulo,
     fecha: payload.programado_para,
     leadId,
     afiliadoId,
-    notas: payload.descripcion,
+    notas: stripEventMeta(descripcion),
   });
   revalidateCrm();
 }
@@ -268,7 +284,7 @@ export async function updateSeguimiento(formData: FormData) {
       lead_id: leadId,
       afiliado_id: afiliadoId,
       titulo,
-      descripcion: String(formData.get("descripcion") || "") || null,
+      descripcion: packEventColor(String(formData.get("descripcion") || ""), String(formData.get("color") || "")),
       tipo: String(formData.get("tipo") || "whatsapp") as SeguimientoTipo,
       prioridad: String(formData.get("prioridad") || "media") as Prioridad,
       programado_para: programado,
@@ -286,12 +302,14 @@ export async function updateGoogleCalendarEvent(formData: FormData) {
   const programado = localDateTime(String(formData.get("programado_para") || ""));
   if (!id || !titulo || !programado) throw new Error("Datos incompletos");
   const notify = await readCalendarNotify();
+  const color = String(formData.get("color") || "");
   const googleId = await upsertGoogleEvent({
     eventId: id,
     title: titulo,
-    description: String(formData.get("descripcion") || "") || null,
+    description: packEventColor(String(formData.get("descripcion") || ""), color),
     start: programado,
     reminderMinutes: notify.googleMinutes,
+    colorId: eventColor(color)?.googleId,
   });
   if (!googleId) throw new Error("No se pudo guardar en Google Calendar");
   revalidateCrm();

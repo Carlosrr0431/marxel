@@ -194,6 +194,7 @@ export type GoogleCalendarEvent = {
   start: string;
   htmlLink: string;
   description: string;
+  colorId: string;
 };
 
 export async function listGoogleEvents(
@@ -225,6 +226,7 @@ export async function listGoogleEvents(
       summary?: string;
       description?: string;
       htmlLink?: string;
+      colorId?: string;
       start?: { dateTime?: string; date?: string };
     }[];
   };
@@ -238,6 +240,7 @@ export async function listGoogleEvents(
         start,
         htmlLink: item.htmlLink || "https://calendar.google.com",
         description: item.description || "",
+        colorId: item.colorId || "",
       };
     })
     .filter((item): item is GoogleCalendarEvent => Boolean(item));
@@ -269,6 +272,8 @@ export async function upsertGoogleEvent(input: {
   description?: string | null;
   start: string;
   reminderMinutes?: number;
+  colorId?: string | null;
+  everyDays?: number;
 }) {
   const connection = await readGoogleConnection();
   if (!connection || !googleConfigured()) return null;
@@ -276,11 +281,14 @@ export async function upsertGoogleEvent(input: {
   const start = new Date(input.start);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const minutes = input.reminderMinutes ?? 0;
+  const everyDays = Math.min(365, Math.floor(input.everyDays || 0));
   const payload = {
     summary: input.title,
     description: input.description || "Seguimiento MARXEN CRM",
     start: { dateTime: start.toISOString(), timeZone: TZ },
     end: { dateTime: end.toISOString(), timeZone: TZ },
+    ...(input.colorId ? { colorId: input.colorId } : {}),
+    ...(everyDays >= 1 ? { recurrence: [`RRULE:FREQ=DAILY;INTERVAL=${everyDays}`] } : {}),
     reminders: minutes
       ? {
           useDefault: false,
