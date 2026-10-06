@@ -9,6 +9,7 @@ export const EVENT_COLORS = [
 export type EventColorId = (typeof EVENT_COLORS)[number]["id"];
 
 const COLOR_RE = /\[MARXEN-COLOR:(naranja|amarillo|verde|azul|violeta)\]/g;
+const SERIE_RE = /\[MARXEN-SERIE:([0-9a-f-]{36})\]/i;
 
 export function eventColor(id: string | null | undefined) {
   return EVENT_COLORS.find((item) => item.id === id) || null;
@@ -18,8 +19,12 @@ export function eventColorFromGoogle(googleId: string | null | undefined) {
   return EVENT_COLORS.find((item) => item.googleId === googleId) || null;
 }
 
+export function readEventSeries(text: string | null | undefined) {
+  return (text || "").match(SERIE_RE)?.[1] || null;
+}
+
 export function stripEventMeta(text: string | null | undefined) {
-  return (text || "").replace(COLOR_RE, "").replace(/\n{2,}/g, "\n").trim();
+  return (text || "").replace(COLOR_RE, "").replace(SERIE_RE, "").replace(/\n{2,}/g, "\n").trim();
 }
 
 export function readEventColor(text: string | null | undefined): EventColorId | null {
@@ -28,10 +33,19 @@ export function readEventColor(text: string | null | undefined): EventColorId | 
 }
 
 export function packEventColor(text: string | null | undefined, color: string | null | undefined) {
+  const serie = readEventSeries(text);
   const clean = stripEventMeta(text);
   const chosen = eventColor(color);
-  if (!chosen) return clean || null;
-  return [clean, `[MARXEN-COLOR:${chosen.id}]`].filter(Boolean).join("\n");
+  return [clean, chosen ? `[MARXEN-COLOR:${chosen.id}]` : "", serie ? `[MARXEN-SERIE:${serie}]` : ""]
+    .filter(Boolean)
+    .join("\n") || null;
+}
+
+export function withEventSeries(text: string | null | undefined, serieId: string) {
+  const base = stripEventMeta(text);
+  const color = readEventColor(text);
+  const packed = packEventColor(base, color);
+  return [packed, `[MARXEN-SERIE:${serieId}]`].filter(Boolean).join("\n");
 }
 
 /** Fechas de una serie: la primera y, si hay intervalo, hasta 36 veces o un año. */

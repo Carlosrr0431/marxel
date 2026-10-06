@@ -133,6 +133,33 @@ export async function reconcileCalendarReminders(
   return stale.length;
 }
 
+/** Cancela avisos de una serie: la clave exacta y las de cada fecha (`google:<serie>_...`). */
+export async function cancelCalendarReminderPrefix(prefix: string) {
+  try {
+    const supabase = createServiceClient();
+    const { data } = await supabase
+      .from("whatsapp_outbound_queue")
+      .select("id,meta")
+      .eq("status", "pending")
+      .contains("meta", { source: "calendar_reminder" })
+      .limit(500);
+    const stale = (data || [])
+      .filter((row) => {
+        const key = String((row.meta as { calendarEventKey?: string } | null)?.calendarEventKey || "");
+        return key === prefix || key.startsWith(`${prefix}_`);
+      })
+      .map((row) => row.id as string);
+    if (!stale.length) return;
+    await supabase
+      .from("whatsapp_outbound_queue")
+      .update({ status: "failed", last_error: "calendar_reminder_cancelled", claimed_at: null, claimed_by: null })
+      .in("id", stale)
+      .eq("status", "pending");
+  } catch {
+    // Sin la cola migrada no hay nada que cancelar.
+  }
+}
+
 /** Cancela el aviso pendiente de un evento (al borrarlo, completarlo o moverlo). */
 export async function cancelCalendarReminders(eventKey: string) {
   try {

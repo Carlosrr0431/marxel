@@ -195,6 +195,7 @@ export type GoogleCalendarEvent = {
   htmlLink: string;
   description: string;
   colorId: string;
+  recurringEventId: string;
 };
 
 export async function listGoogleEvents(
@@ -227,6 +228,7 @@ export async function listGoogleEvents(
       description?: string;
       htmlLink?: string;
       colorId?: string;
+      recurringEventId?: string;
       start?: { dateTime?: string; date?: string };
     }[];
   };
@@ -241,6 +243,7 @@ export async function listGoogleEvents(
         htmlLink: item.htmlLink || "https://calendar.google.com",
         description: item.description || "",
         colorId: item.colorId || "",
+        recurringEventId: item.recurringEventId || "",
       };
     })
     .filter((item): item is GoogleCalendarEvent => Boolean(item));

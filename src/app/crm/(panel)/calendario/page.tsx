@@ -6,7 +6,7 @@ import { listGoogleEvents, persistGoogleConnection, readGoogleConnection } from 
 import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/components/crm/CrmCalendar";
 import type { Seguimiento } from "@/lib/crm/types";
 import { readCalendarNotify } from "@/lib/crm/calendar-notify";
-import { eventColorFromGoogle, readEventColor, stripEventMeta } from "@/lib/crm/event-meta";
+import { eventColorFromGoogle, readEventColor, readEventSeries, stripEventMeta } from "@/lib/crm/event-meta";
 
 export default async function CalendarioPage({
   searchParams,
@@ -53,6 +53,7 @@ export default async function CalendarioPage({
       phone: persona?.celular || null,
       descripcion: stripEventMeta(row.descripcion) || null,
       color: readEventColor(row.descripcion),
+      seriesId: readEventSeries(row.descripcion),
       prioridad: row.prioridad,
       href: row.lead_id ? `/crm/leads/${row.lead_id}` : "/crm/calendario",
       leadId: row.lead_id,
@@ -84,6 +85,7 @@ export default async function CalendarioPage({
       phone: null,
       descripcion: stripEventMeta(item.description.replace(/\n?\[MARXEN:[^\]]+\]/g, "")) || null,
       color: eventColorFromGoogle(item.colorId)?.id || readEventColor(item.description),
+      seriesId: item.recurringEventId || null,
       prioridad: "media",
       href: item.htmlLink,
       leadId: null,

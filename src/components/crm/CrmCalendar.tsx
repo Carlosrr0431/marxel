@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { useRouter } from "next/navigation";
 import {
   cancelSeguimiento,
+  cancelSeguimientoSerie,
   completeSeguimiento,
   createSeguimiento,
   deleteGoogleCalendarEvent,
@@ -48,6 +49,7 @@ export type CalendarEvent = {
   leadId: string | null;
   afiliadoId: string | null;
   source?: "crm" | "google";
+  seriesId?: string | null;
 };
 
 export type CalendarPerson = {
@@ -394,7 +396,8 @@ export function CrmCalendar({
           onDone={(id) => run(() => completeSeguimiento(id))}
           onSnooze={(id) => run(() => snoozeSeguimiento(id, 24))}
           onDelete={(id) => run(() => cancelSeguimiento(id))}
-          onDeleteGoogle={(id) => run(() => deleteGoogleCalendarEvent(id))}
+          onDeleteSeries={(id) => run(() => cancelSeguimientoSerie(id))}
+          onDeleteGoogle={(id, series) => run(() => deleteGoogleCalendarEvent(id, series))}
         />
       ) : null}
     </div>
@@ -509,6 +512,7 @@ function EventModal({
   onDone,
   onSnooze,
   onDelete,
+  onDeleteSeries,
   onDeleteGoogle,
 }: {
   mode: "create" | "edit";
@@ -524,7 +528,8 @@ function EventModal({
   onDone: (id: string) => void;
   onSnooze: (id: string) => void;
   onDelete: (id: string) => void;
-  onDeleteGoogle: (id: string) => void;
+  onDeleteSeries: (id: string) => void;
+  onDeleteGoogle: (id: string, series?: boolean) => void;
 }) {
   const initialPerson = event?.leadId ? `lead:${event.leadId}` : event?.afiliadoId ? `afiliado:${event.afiliadoId}` : "";
   const [personId, setPersonId] = useState(initialPerson);
@@ -719,21 +724,45 @@ function EventModal({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#1a1038]/40 p-5 backdrop-blur-[2px]">
           <div className="w-full max-w-sm rounded-[1.4rem] bg-white p-5 shadow-[0_24px_60px_rgba(26,16,56,0.28)]">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-500">Confirmar</p>
-            <h3 className="mt-1 font-display text-lg font-semibold text-navy">Eliminar este evento</h3>
+            <h3 className="mt-1 font-display text-lg font-semibold text-navy">
+              {event.seriesId ? "Eliminar la serie" : "Eliminar este evento"}
+            </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              {googleOnly ? "Se borra de Google Calendar." : "Se cancela el seguimiento y también el evento de Google, si existe."}
+              {event.seriesId
+                ? "Podés borrar solo esta fecha o todas las repeticiones."
+                : googleOnly
+                  ? "Se borra de Google Calendar."
+                  : "Se cancela el seguimiento y también el evento de Google, si existe."}
             </p>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button type="button" className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-navy" onClick={() => setConfirmDelete(false)}>
                 Cancelar
               </button>
+              {event.seriesId ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-navy disabled:opacity-60"
+                  onClick={() => (googleOnly ? onDeleteGoogle(event.id.replace(/^google:/, "")) : onDelete(event.id))}
+                >
+                  Solo esta fecha
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={pending}
                 className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                onClick={() => (googleOnly ? onDeleteGoogle(event.id.replace(/^google:/, "")) : onDelete(event.id))}
+                onClick={() =>
+                  event.seriesId
+                    ? googleOnly
+                      ? onDeleteGoogle(event.seriesId, true)
+                      : onDeleteSeries(event.id)
+                    : googleOnly
+                      ? onDeleteGoogle(event.id.replace(/^google:/, ""))
+                      : onDelete(event.id)
+                }
               >
-                Eliminar
+                {event.seriesId ? "Toda la serie" : "Eliminar"}
               </button>
             </div>
           </div>

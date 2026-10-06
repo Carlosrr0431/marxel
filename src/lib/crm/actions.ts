@@ -17,8 +17,8 @@ import { scoreLead } from "@/lib/crm/utils";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
 import { deleteGoogleEvent, findGoogleEventIdByMarker, upsertGoogleEvent } from "@/lib/crm/google-calendar";
-import { eventColor, packEventColor, repeatDates, stripEventMeta } from "@/lib/crm/event-meta";
-import { cancelCalendarReminders } from "@/lib/crm/calendar-reminders";
+import { eventColor, packEventColor, readEventSeries, repeatDates, stripEventMeta, withEventSeries } from "@/lib/crm/event-meta";
+import { cancelCalendarReminderPrefix, cancelCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
   CALENDAR_NOTIFY_COOKIE,
   NOTIFY_MINUTES,
@@ -227,6 +227,7 @@ export async function createSeguimiento(formData: FormData) {
     throw new Error("El título es obligatorio");
   }
   const dates = repeatDates(payload.programado_para, everyDays);
+  if (dates.length > 1) payload.descripcion = withEventSeries(descripcion, crypto.randomUUID());
   if (!leadId && !afiliadoId) {
     const notify = await readCalendarNotify();
     const googleId = await upsertGoogleEvent({
@@ -315,11 +316,12 @@ export async function updateGoogleCalendarEvent(formData: FormData) {
   revalidateCrm();
 }
 
-export async function deleteGoogleCalendarEvent(id: string) {
+export async function deleteGoogleCalendarEvent(id: string, series = false) {
   await requireCrm();
   if (!id) throw new Error("Evento inválido");
   await deleteGoogleEvent(id);
-  await cancelCalendarReminders(`google:${id}`);
+  if (series) await cancelCalendarReminderPrefix(`google:${id}`);
+  else await cancelCalendarReminders(`google:${id}`);
   revalidateCrm();
 }
 
@@ -399,6 +401,30 @@ export async function completeSeguimiento(id: string, resultado?: string) {
         .update({ ultimo_contacto_at: new Date().toISOString() })
         .eq("id", seg.lead_id);
     }
+  }
+  revalidateCrm();
+}
+
+export async function cancelSeguimientoSerie(id: string) {
+  await requireCrm();
+  const supabase = createServiceClient();
+  const current = await supabase.from("seguimientos").select("id,descripcion").eq("id", id).maybeSingle();
+  const serie = readEventSeries(current.data?.descripcion);
+  if (!serie) {
+    await cancelSeguimiento(id);
+    return;
+  }
+  const { data } = await supabase
+    .from("seguimientos")
+    .select("id,google_event_id")
+    .ilike("descripcion", `%[MARXEN-SERIE:${serie}]%`)
+    .neq("estado", "cancelado")
+    .limit(80);
+  for (const row of data || []) {
+    await supabase.from("seguimientos").update({ estado: "cancelado" }).eq("id", row.id);
+    await cancelCalendarReminders(`crm:${row.id}`);
+    const googleId = (row.google_event_id as string | null) || (await findGoogleEventIdByMarker(row.id));
+    if (googleId) await deleteGoogleEvent(googleId).catch(() => null);
   }
   revalidateCrm();
 }
