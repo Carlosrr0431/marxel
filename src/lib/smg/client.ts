@@ -286,13 +286,19 @@ export function withEmission(quote: unknown, extras: Record<string, unknown>) {
   next.tomador = {
     nombre: String(extras.nombre || ""),
     apellido1: String(extras.apellido || ""),
+    apellido2: String(extras.apellido2 || ""),
     cuitcuil: String(extras.cuit || ""),
-    fecnac: String(extras.fecnac || ""),
+    fecnac: /^\d{4}-\d{2}-\d{2}$/.test(String(extras.fecnac || ""))
+      ? `${extras.fecnac}T12:00:00-03:00`
+      : String(extras.fecnac || ""),
     codsexo: String(extras.sexo || ""),
+    nacionalidad: 1,
+    codtipopersona: "F",
     codtipodocumento: numberOf(extras.tipoDoc, 96),
     nrodoc: String(extras.nroDoc || ""),
     nrodocbusqueda: String(extras.nroDoc || ""),
-    codcondicionfiscal: numberOf(extras.codCondicionFiscal, 1),
+    codestadocivil: numberOf(extras.estadoCivil),
+    codcondicionfiscal: numberOf(extras.condicionFiscal, 1),
     personaexpuestapoliticamente: false,
     sujetoobligado: false,
     leyfatca: false,
