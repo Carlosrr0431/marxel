@@ -14,6 +14,7 @@ const links = [
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const, group: "Ventas" },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
+  { href: "/crm/smg", label: "Swiss Medical", icon: "shield" as const },
   { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
   { href: "/crm/mailing", label: "Mailing", icon: "mail" as const, group: "Herramientas" },
 ];
