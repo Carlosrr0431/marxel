@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/seo";
 import { slotKey, syncCalendarReminders } from "@/lib/crm/calendar-reminders";
@@ -7,7 +8,7 @@ import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/componen
 import type { Seguimiento } from "@/lib/crm/types";
 import { readCalendarNotify } from "@/lib/crm/calendar-notify";
 import { eventColorFromGoogle, readEventColor, readEventSeries, stripEventMeta } from "@/lib/crm/event-meta";
-import { isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
+import { isProducerCalendarAccount, isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
 
 export default async function CalendarioPage({
   searchParams,
@@ -63,6 +64,9 @@ export default async function CalendarioPage({
   });
 
   const googleAccount = await readGoogleConnection().catch(() => null);
+  if (googleAccount && !isProducerCalendarAccount(googleAccount.email)) {
+    redirect("/api/crm/google/disconnect");
+  }
   const googleItems = googleAccount ? await listGoogleEvents(from, to).catch(() => []) : [];
   const linkedIds = new Set(
     ((rows || []) as Array<Seguimiento & { google_event_id?: string | null }>)

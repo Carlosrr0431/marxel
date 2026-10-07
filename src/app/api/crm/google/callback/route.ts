@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { connectionCookie, exchangeGoogleCode, saveServerConnection, signOAuthState } from "@/lib/crm/google-calendar";
+import { isProducerCalendarAccount } from "@/lib/crm/producer-calendar";
 import { SITE_URL } from "@/lib/seo";
 
 function same(a: string, b: string) {
@@ -24,6 +25,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const account = await exchangeGoogleCode(code);
+    if (!isProducerCalendarAccount(account.email)) {
+      const rejected = NextResponse.redirect(`${back}?google=cuenta`);
+      rejected.cookies.delete("marxel_google_oauth");
+      rejected.cookies.delete("marxel_google_cal");
+      return rejected;
+    }
     const stored = connectionCookie(account.email, account.refreshToken);
     await saveServerConnection({ email: account.email, refreshToken: account.refreshToken }).catch(() => null);
     const response = NextResponse.redirect(`${back}?google=ok`);

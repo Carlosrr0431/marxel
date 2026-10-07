@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, scryptSync } from "crypto";
 import { cookies } from "next/headers";
 import { SITE_URL } from "@/lib/seo";
-import { isProducerCalendarAccount } from "@/lib/crm/producer-calendar";
+import { isProducerCalendarAccount, PRODUCER_CALENDAR_EMAIL } from "@/lib/crm/producer-calendar";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const CONNECTION_COOKIE = "marxel_google_cal";
@@ -47,7 +47,8 @@ export function googleAuthUrl(state: string) {
     response_type: "code",
     scope: `openid email ${CALENDAR_SCOPE}`,
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",
+    login_hint: PRODUCER_CALENDAR_EMAIL,
     include_granted_scopes: "true",
     state,
   });

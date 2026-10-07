@@ -357,7 +357,15 @@ export function CrmCalendar({
                 <h2 className="mt-1 font-display text-2xl font-semibold">Google Calendar</h2>
               </div>
               <div className="space-y-4 px-6 py-5">
-                <p className="text-sm leading-relaxed text-muted">Entrá con Gmail para ver y editar los seguimientos desde acá.</p>
+                <p className="text-sm leading-relaxed text-muted">
+                  Entrá con {PRODUCER_CALENDAR_EMAIL} para ver la agenda y recibir los avisos por WhatsApp.
+                </p>
+                {googleStatus === "off" ? (
+                  <p className="rounded-2xl bg-mist px-3 py-2 text-sm text-navy">Se desconectó Gmail. Volvé a entrar con esa cuenta.</p>
+                ) : null}
+                {googleStatus === "cuenta" ? (
+                  <p className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-950">Otra cuenta de Gmail no se guarda. Tiene que ser {PRODUCER_CALENDAR_EMAIL}.</p>
+                ) : null}
                 {googleStatus === "denegado" ? <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">No se aceptó el permiso de Google Calendar.</p> : null}
                 {googleStatus === "config" || googleStatus === "error" || googleStatus === "estado" ? (
                   <p className="rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">No se pudo conectar con Google. Intentá de nuevo.</p>
