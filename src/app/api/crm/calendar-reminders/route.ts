@@ -8,6 +8,7 @@ import {
   type ReminderEvent,
 } from "@/lib/crm/calendar-reminders";
 import { listGoogleEvents, readServerConnection } from "@/lib/crm/google-calendar";
+import { isProducerCalendarAccount, isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
 import { SITE_URL } from "@/lib/seo";
 import { stripEventMeta } from "@/lib/crm/event-meta";
 
@@ -64,16 +65,19 @@ export async function GET(request: Request) {
   const crmCount = events.length;
 
   // Eventos de Google: se leen con la conexión guardada en el servidor.
-  let google: "sin_conexion" | "ok" | "error" = "sin_conexion";
+  let google: "sin_conexion" | "otra_cuenta" | "ok" | "error" = "sin_conexion";
   let googleError = "";
   try {
     const connection = await readServerConnection();
-    if (connection) {
+    if (connection && !isProducerCalendarAccount(connection.email)) {
+      google = "otra_cuenta";
+    } else if (connection) {
       const items = await listGoogleEvents(now, until, { connection, strict: true });
       const crmSlots = new Set(rows.map((row) => slotKey(row.titulo, row.programado_para)));
       for (const item of items) {
         if (item.description.includes("[MARXEN:")) continue;
         if (crmSlots.has(slotKey(item.title, item.start))) continue;
+        if (!isProducerCalendarEvent(item, connection.email)) continue;
         events.push({
           key: `google:${item.id}`,
           title: item.title,

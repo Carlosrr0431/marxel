@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, scryptSync } from "crypto";
 import { cookies } from "next/headers";
 import { SITE_URL } from "@/lib/seo";
+import { isProducerCalendarAccount } from "@/lib/crm/producer-calendar";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const CONNECTION_COOKIE = "marxel_google_cal";
@@ -123,6 +124,7 @@ export async function clearServerConnection() {
 
 /** Guarda la conexión del navegador en la base si todavía no está o cambió. */
 export async function persistGoogleConnection(connection: Connection) {
+  if (!isProducerCalendarAccount(connection.email)) return;
   const saved = await readServerConnection();
   if (saved?.email === connection.email && saved.refreshToken === connection.refreshToken) return;
   await saveServerConnection(connection);
@@ -196,6 +198,8 @@ export type GoogleCalendarEvent = {
   description: string;
   colorId: string;
   recurringEventId: string;
+  organizerEmail: string;
+  creatorEmail: string;
 };
 
 export async function listGoogleEvents(
@@ -229,6 +233,8 @@ export async function listGoogleEvents(
       htmlLink?: string;
       colorId?: string;
       recurringEventId?: string;
+      organizer?: { email?: string };
+      creator?: { email?: string };
       start?: { dateTime?: string; date?: string };
     }[];
   };
@@ -244,6 +250,8 @@ export async function listGoogleEvents(
         description: item.description || "",
         colorId: item.colorId || "",
         recurringEventId: item.recurringEventId || "",
+        organizerEmail: item.organizer?.email || "",
+        creatorEmail: item.creator?.email || "",
       };
     })
     .filter((item): item is GoogleCalendarEvent => Boolean(item));

@@ -7,6 +7,7 @@ import { CrmCalendar, type CalendarEvent, type CalendarPerson } from "@/componen
 import type { Seguimiento } from "@/lib/crm/types";
 import { readCalendarNotify } from "@/lib/crm/calendar-notify";
 import { eventColorFromGoogle, readEventColor, readEventSeries, stripEventMeta } from "@/lib/crm/event-meta";
+import { isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
 
 export default async function CalendarioPage({
   searchParams,
@@ -71,6 +72,11 @@ export default async function CalendarioPage({
   const crmSlots = new Set(
     events.map((event) => slotKey(event.title, event.start)),
   );
+  const producerGoogleIds = new Set(
+    googleItems
+      .filter((item) => isProducerCalendarEvent(item, googleAccount?.email))
+      .map((item) => `google:${item.id}`),
+  );
   for (const item of googleItems) {
     if (linkedIds.has(item.id)) continue;
     if (item.description.includes("[MARXEN:")) continue;
@@ -116,6 +122,7 @@ export default async function CalendarioPage({
     syncCalendarReminders(
       events
         .filter((event) => event.estado !== "hecho" && event.estado !== "cancelado")
+        .filter((event) => event.source !== "google" || producerGoogleIds.has(event.id))
         .map((event) => ({
           key: event.source === "google" ? event.id : `crm:${event.id}`,
           title: event.title,

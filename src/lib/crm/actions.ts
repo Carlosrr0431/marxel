@@ -17,7 +17,8 @@ import { scoreLead } from "@/lib/crm/utils";
 import { SITE_URL } from "@/lib/seo";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
-import { deleteGoogleEvent, findGoogleEventIdByMarker, listGoogleEvents, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { deleteGoogleEvent, findGoogleEventIdByMarker, listGoogleEvents, readGoogleConnection, upsertGoogleEvent } from "@/lib/crm/google-calendar";
+import { isProducerCalendarAccount, isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
 import { eventColor, packEventColor, readEventSeries, repeatDates, stripEventMeta, withEventSeries } from "@/lib/crm/event-meta";
 import { cancelCalendarReminderPrefix, cancelCalendarReminders, syncCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
@@ -352,10 +353,15 @@ export async function updateGoogleCalendarEvent(formData: FormData) {
 }
 
 async function syncGoogleEventReminders(googleId: string, title: string, start: string, note: string | null) {
+  const account = await readGoogleConnection().catch(() => null);
   const from = new Date();
   const until = new Date(Date.now() + 48 * 60 * 60 * 1000);
   const items = await listGoogleEvents(from, until).catch(() => []);
-  const related = items.filter((item) => item.id === googleId || item.recurringEventId === googleId);
+  const related = items.filter(
+    (item) =>
+      (item.id === googleId || item.recurringEventId === googleId) &&
+      isProducerCalendarEvent(item, account?.email),
+  );
   const events = related.length
     ? related.map((item) => ({
         key: `google:${item.id}`,
@@ -363,7 +369,10 @@ async function syncGoogleEventReminders(googleId: string, title: string, start: 
         start: item.start,
         note: stripEventMeta(item.description) || null,
       }))
-    : [{ key: `google:${googleId}`, title, start, note: stripEventMeta(note) || null }];
+    : isProducerCalendarAccount(account?.email)
+      ? [{ key: `google:${googleId}`, title, start, note: stripEventMeta(note) || null }]
+      : [];
+  if (!events.length) return;
   await syncCalendarReminders(events).catch(() => null);
 }
 

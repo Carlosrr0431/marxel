@@ -15,6 +15,7 @@ import {
   updateSeguimiento,
 } from "@/lib/crm/actions";
 import type { CalendarNotify } from "@/lib/crm/calendar-notify";
+import { isProducerCalendarAccount, PRODUCER_CALENDAR_EMAIL } from "@/lib/crm/producer-calendar";
 import { EVENT_COLORS, eventColor, type EventColorId } from "@/lib/crm/event-meta";
 import {
   PRIORIDADES,
@@ -241,6 +242,12 @@ export function CrmCalendar({
           </button>
         </div>
       </div>
+
+      {googleEmail && !isProducerCalendarAccount(googleEmail) ? (
+        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">
+          Los avisos de WhatsApp salen de los eventos creados por {PRODUCER_CALENDAR_EMAIL}. Esta sesión está en otra cuenta de Gmail: desconectá y entrá con esa cuenta.
+        </p>
+      ) : null}
 
       <div className="relative min-h-0 flex-1">
         <div className={`flex h-full overflow-x-auto ${locked ? "pointer-events-none select-none blur-[1.5px]" : ""}`}>
