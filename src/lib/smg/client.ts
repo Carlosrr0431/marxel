@@ -17,7 +17,7 @@ export function smgAgentCode() {
 }
 
 function baseUrl() {
-  return (process.env.SMG_API_BASE || "https://mobileqa.swissmedical.com.ar/cl/api-smg").replace(/\/$/, "");
+  return (process.env.SMG_API_BASE || "https://mobile.swissmedical.com.ar/cl/api-smg").replace(/\/$/, "");
 }
 
 function asRecord(value: unknown) {
@@ -89,7 +89,7 @@ async function login() {
 export async function smgLoginInfo() {
   await login();
   return {
-    ambiente: "QA",
+    ambiente: /mobileqa/i.test(baseUrl()) ? "QA" : "produccion",
     base: baseUrl(),
     usuario: process.env.SMG_API_USERNAME,
     codAgente: smgAgentCode(),
