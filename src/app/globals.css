@@ -1049,12 +1049,17 @@ a {
 }
 .quote-compare__table thead th:first-child,
 .quote-compare__table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: white;
   text-align: left;
   font-size: 0.82rem;
   font-weight: 650;
   color: var(--navy);
   min-width: 9.5rem;
 }
+.quote-compare__table thead th:first-child { z-index: 3; }
 .quote-compare__table thead th img {
   display: block;
   height: 1.35rem;
@@ -1099,18 +1104,112 @@ a {
 @media (max-width: 520px) {
   .home-quote__price { font-size: 1.08rem; }
 }
-.home-quote--crm { max-width: 46rem; }
+.home-quote--crm {
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+}
 .home-quote--crm .quote-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   max-height: none;
-  overflow: visible;
-  padding: 1.25rem 1.3rem 1.35rem;
+  overflow: auto;
+  padding: 0.85rem 1rem 0.95rem;
   box-shadow: 0 12px 40px rgba(26, 16, 56, 0.06);
 }
-.home-quote--crm h2 { font-size: 1.65rem; }
-.home-quote--crm .home-quote__lede { font-size: 0.92rem; }
-.home-quote--crm .field { padding: 0.62rem 0.8rem; font-size: 0.95rem; }
-.home-quote--crm .home-quote__price { font-size: 1.4rem; }
-.home-quote--crm .home-quote__submit { min-height: 2.7rem; font-size: 0.95rem; }
+.home-quote--crm .quote-card:has(.crm-quote-result) { overflow: hidden; }
+.home-quote--crm h2 { font-size: 1.2rem; }
+.home-quote--crm .home-quote__lede { font-size: 0.82rem; }
+.home-quote--crm .field { padding: 0.46rem 0.7rem; font-size: 0.9rem; }
+.home-quote--crm .home-quote__submit { min-height: 2.4rem; font-size: 0.92rem; }
+.home-quote--crm .home-quote__grid,
+.home-quote--crm .home-quote__row { margin-top: 0.4rem; }
+.crm-quote-result {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.crm-quote-result__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.8rem;
+}
+.crm-quote-result__bar h2 { margin: 0; }
+.crm-quote-result__bar p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.crm-quote-result .quote-alert { margin-top: 0; }
+.quote-compare.quote-compare--inline {
+  position: static;
+  z-index: auto;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  place-items: stretch;
+  padding: 0;
+  background: transparent;
+}
+.quote-compare--inline .quote-compare__scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid #eceef5;
+  border-radius: 1rem;
+}
+.quote-compare__pick {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.1rem 0.2rem;
+  color: inherit;
+  cursor: pointer;
+}
+.quote-compare__pick em {
+  margin-top: 0.28rem;
+  border-radius: 999px;
+  background: var(--navy);
+  padding: 0.22rem 0.7rem;
+  color: white;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.quote-compare__pick:hover em { background: #2a2158; }
+.quote-compare__pick:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: 0.7rem;
+}
+.crm-content .quote-compare__table thead th {
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--navy);
+}
+.crm-content .quote-compare__table thead { background: white; }
+.crm-content .quote-compare__table tbody tr:hover { background: transparent; }
+@media (min-width: 1100px) {
+  .home-quote--crm .home-quote__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .home-quote--crm,
+  .home-quote--crm .quote-card { height: auto; }
+  .quote-compare--inline .quote-compare__scroll { max-height: 70vh; }
+}
 .home-quote__emit h3 { font-size: 1.15rem; }
 .home-quote__emit p { margin: 0.25rem 0 0.2rem; color: var(--muted); font-size: 0.9rem; }
 
@@ -5067,6 +5166,17 @@ body:has(.crm-shell) {
   margin: 0;
 }
 
+.crm-shell.is-quote .crm-content {
+  padding: 0.7rem 0.85rem;
+  overflow: hidden;
+}
+
+.crm-shell.is-quote .crm-content > * {
+  max-width: none;
+  height: 100%;
+  margin: 0;
+}
+
 .crm-cal-mobiletoggle {
   display: none;
   position: absolute;
@@ -5082,8 +5192,14 @@ body:has(.crm-shell) {
 }
 
 @media (max-width: 1023px) {
-  .crm-shell.is-calendar.is-sidebar-collapsed .crm-cal-mobiletoggle {
+  .crm-shell.is-calendar.is-sidebar-collapsed .crm-cal-mobiletoggle,
+  .crm-shell.is-quote.is-sidebar-collapsed .crm-cal-mobiletoggle {
     display: block;
+  }
+
+  .crm-shell.is-quote .crm-content {
+    overflow: auto;
+    padding-top: 3.4rem;
   }
 }
 

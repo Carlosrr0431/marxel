@@ -310,6 +310,7 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
   }
 
   const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
+  const crmPlans = variant === "crm" && quote ? comparePlans(quote) : [];
 
   return (
     <div className={variant === "crm" ? "home-quote home-quote--crm" : "home-quote"}>
@@ -425,7 +426,40 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
           </>
         ) : null}
 
-        {view === "plans" && quote ? (
+        {view === "plans" && quote && variant === "crm" ? (
+          <div className="crm-quote-result">
+            <div className="crm-quote-result__bar">
+              <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
+                Editar datos
+              </button>
+              <h2>{quote.carDescription || hint || plate}</h2>
+              <p>Elegí un plan para emitir.</p>
+            </div>
+            {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
+            {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
+            {crmPlans.length > 0 ? (
+              <QuoteCompare
+                embedded
+                focusKey=""
+                plans={crmPlans}
+                onClose={() => setQuote(null)}
+                onPick={(plan) => {
+                  const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
+                  setChoice({
+                    company,
+                    id: plan.key.slice(company.length + 1),
+                    title: plan.title,
+                    monthly: plan.monthly,
+                  });
+                }}
+              />
+            ) : (
+              <p className="quote-alert">No hubo planes para comparar.</p>
+            )}
+          </div>
+        ) : null}
+
+        {view === "plans" && quote && variant !== "crm" ? (
           <>
             <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
               Editar datos
