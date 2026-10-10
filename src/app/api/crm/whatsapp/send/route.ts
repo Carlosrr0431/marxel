@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
 
   if (!queued.success) {
     const sqlHint = queued.rlsBlocked
-      ? " Falta aplicar supabase/whatsapp_outbound_queue_v5_rls.sql en Supabase."
+      ? " En Supabase, SQL Editor, ejecutá supabase/whatsapp_outbound_queue_v5_rls.sql."
       : queued.missingTable || /kind_check|kind in \(/i.test(queued.error || "")
         ? " Falta aplicar supabase/whatsapp_outbound_queue_v4_crm_15s.sql en Supabase."
         : "";

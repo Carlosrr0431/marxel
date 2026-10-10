@@ -59,7 +59,9 @@ export type EnqueueResult =
   | { success: false; error: string; missingTable?: boolean; rlsBlocked?: boolean };
 
 function isRlsDenied(error: { code?: string; message?: string } | null) {
-  return /row-level security policy/i.test(String(error?.message || ""));
+  const code = String(error?.code || "");
+  const message = String(error?.message || "");
+  return code === "42501" || /permission denied|row-level security policy/i.test(message);
 }
 
 function isMissingQueueRelationError(error: { code?: string; message?: string } | null) {
