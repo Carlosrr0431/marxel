@@ -43,6 +43,16 @@ function tokenExpiry(value: unknown) {
   return Date.now() + 10 * 60 * 1000;
 }
 
+function loginError(detail: string) {
+  if (/id_canal/i.test(detail)) {
+    return "Swiss Medical no tiene habilitado el canal de esta API. Hay que pedirles que activen el acceso de MARXEN para cotizar.";
+  }
+  if (/error inesperado/i.test(detail)) {
+    return "Swiss Medical rechazó el login en el ambiente de pruebas. El usuario es el de Oficina Virtual, pero el servicio de pruebas responde con un error interno.";
+  }
+  return detail || "Swiss Medical rechazó el login";
+}
+
 async function login() {
   if (!smgConfigured()) {
     throw new Error("Faltan SMG_API_KEY, SMG_API_USERNAME y SMG_API_PASSWORD");
@@ -66,9 +76,11 @@ async function login() {
     }),
   });
   const data = asRecord(parseJson(await response.text()));
+  const nested = asRecord(data.data);
   const token = typeof data.token === "string" ? data.token : "";
   if (!response.ok || !token) {
-    throw new Error(typeof data.message === "string" ? data.message : "Swiss Medical rechazó el login de QA");
+    const detail = String(nested.errMessage || data.message || "").trim();
+    throw new Error(loginError(detail));
   }
   cached = { value: token, exp: tokenExpiry(data.exp) };
   return token;
