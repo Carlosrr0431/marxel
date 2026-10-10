@@ -355,15 +355,20 @@ export function HomeAutoQuote() {
     }
   }
 
+  const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
+
   return (
     <div className="home-quote">
       <form
         className="quote-card"
         onSubmit={(event) => {
           event.preventDefault();
-          void quoteNow();
+          if (view === "emit") void emitPolicy();
+          else void quoteNow();
         }}
       >
+        {view === "form" ? (
+          <>
         <p className="home-quote__kicker">San Cristóbal y SMG</p>
         <h2>Cotizá tu auto en un minuto</h2>
         <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
@@ -463,26 +468,44 @@ export function HomeAutoQuote() {
           {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
         </button>
         {quoting ? <p className="quote-info">Cotizando en San Cristóbal y SMG…</p> : null}
-        {error ? <p className="quote-alert">{error}</p> : null}
-      </form>
+          </>
+        ) : null}
 
-      {quote ? (
-        <div className="home-quote__results">
-          <CompanyPlans
-            name="San Cristóbal"
-            quote={quote.sancristobal}
-            selected={choice}
-            company="sancristobal"
-            onSelect={setChoice}
-          />
-          <CompanyPlans name="SMG" quote={quote.smg} selected={choice} company="smg" onSelect={setChoice} />
-        </div>
-      ) : null}
+        {view === "plans" && quote ? (
+          <>
+            <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
+              Editar datos
+            </button>
+            <h2>{quote.carDescription || hint || plate}</h2>
+            <p className="home-quote__lede">Elegí un plan para seguir con la emisión.</p>
+            <div className="home-quote__results">
+              <CompanyPlans
+                name="San Cristóbal"
+                quote={quote.sancristobal}
+                selected={choice}
+                company="sancristobal"
+                onSelect={setChoice}
+              />
+              <CompanyPlans
+                name="SMG"
+                quote={quote.smg}
+                selected={choice}
+                company="smg"
+                onSelect={setChoice}
+              />
+            </div>
+          </>
+        ) : null}
 
-      {choice && !issued ? (
-        <form className="quote-card home-quote__emit" onSubmit={(event) => { event.preventDefault(); void emitPolicy(); }}>
-          <h3>Emitir {choice.title}</h3>
-          <p>{choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes</p>
+        {view === "emit" && choice ? (
+          <>
+            <button type="button" className="home-quote__back" onClick={() => setChoice(null)}>
+              Volver a los planes
+            </button>
+            <h2>Emitir {choice.title}</h2>
+            <p className="home-quote__lede">
+              {choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes
+            </p>
           <div className="home-quote__grid">
             <label>
               <span>DNI</span>
@@ -524,10 +547,29 @@ export function HomeAutoQuote() {
           <button type="submit" className="btn btn-primary home-quote__submit" disabled={emitting}>
             {emitting ? "Emitiendo…" : "Emitir póliza"}
           </button>
-        </form>
-      ) : null}
+          </>
+        ) : null}
 
-      {issued ? <p className="quote-found">{issued}</p> : null}
+        {view === "done" ? (
+          <>
+            <button
+              type="button"
+              className="home-quote__back"
+              onClick={() => {
+                setIssued("");
+                setChoice(null);
+                setQuote(null);
+              }}
+            >
+              Nueva cotización
+            </button>
+            <h2>Listo</h2>
+            <p className="quote-found">{issued}</p>
+          </>
+        ) : null}
+
+        {error && view !== "plans" ? <p className="quote-alert">{error}</p> : null}
+      </form>
     </div>
   );
 }
@@ -596,7 +638,7 @@ function CompanyPlans({
       <h3>{name}</h3>
       {quote.error ? <p>{quote.error}</p> : null}
       <ul>
-        {quote.plans.map((plan) => {
+        {quote.plans.slice(0, 3).map((plan) => {
           const on = selected?.company === company && selected.id === plan.id;
           return (
             <li key={plan.id}>
