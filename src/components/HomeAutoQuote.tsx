@@ -253,6 +253,57 @@ export function HomeAutoQuote() {
     };
   }, [ready, normalized, versionId, postal, age, hasGnc, nombre, celular, year, is0km, brandId, modelId, location]);
 
+  async function quoteNow() {
+    setError("");
+    if (!is0km && plateKind === "moto") {
+      setError("Esta patente es de moto.");
+      return;
+    }
+    if (!is0km && plateKind !== "auto") {
+      setError("Ingresá una patente de auto válida.");
+      return;
+    }
+    if (!yearId || !brand || !model || !version || !location) {
+      setError("Elegí año, marca, modelo y versión.");
+      return;
+    }
+    if (!nombre.trim() || celular.replace(/\D/g, "").length < 8 || Number(age) < 18) {
+      setError("Completá nombre, WhatsApp y una edad mayor de 18.");
+      return;
+    }
+    const ticket = `${normalized}|${version.id}|${postal}|${age}|${hasGnc}|${nombre.trim()}|${celular.trim()}`;
+    quotedTicket.current = ticket;
+    setQuoting(true);
+    setIssued("");
+    try {
+      const data = await fetchJson("/api/auto-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          year: Number(year),
+          is0km,
+          brand: { id: Number(brand.id), description: brand.label },
+          model: { id: Number(model.id), description: model.label },
+          version,
+          location,
+          nombre: nombre.trim(),
+          celular: celular.trim(),
+          age: Number(age),
+          hasGnc: hasGnc === "si",
+          licensePlate: normalized,
+          page_path: window.location.pathname,
+          ticket,
+        }),
+      });
+      setQuote(data as QuotePayload);
+    } catch (err) {
+      quotedTicket.current = "";
+      setError(err instanceof Error ? err.message : "No pudimos cotizar.");
+    } finally {
+      setQuoting(false);
+    }
+  }
+
   async function emitPolicy() {
     if (!choice || !brand || !model || !version || !location) return;
     if (dni.length < 7 || !email.includes("@") || !gender || !street || !streetNumber || vin.length < 10 || engine.length < 6) {
@@ -306,7 +357,13 @@ export function HomeAutoQuote() {
 
   return (
     <div className="home-quote">
-      <form className="quote-card" onSubmit={(event) => event.preventDefault()}>
+      <form
+        className="quote-card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void quoteNow();
+        }}
+      >
         <p className="home-quote__kicker">San Cristóbal y SMG</p>
         <h2>Cotizá tu auto en un minuto</h2>
         <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
@@ -402,6 +459,9 @@ export function HomeAutoQuote() {
             <input className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
           </label>
         </div>
+        <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
+          {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
+        </button>
         {quoting ? <p className="quote-info">Cotizando en San Cristóbal y SMG…</p> : null}
         {error ? <p className="quote-alert">{error}</p> : null}
       </form>
