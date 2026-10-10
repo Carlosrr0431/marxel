@@ -21,6 +21,10 @@ function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
+function fromCrm(body: Record<string, unknown>) {
+  return String(body.page_path || "").startsWith("/crm");
+}
+
 export async function POST(req: Request) {
   try {
     const body = asRecord(await req.json());
@@ -85,16 +89,18 @@ async function quote(body: Record<string, unknown>) {
       : `SMG: ${reasonOf(smg)}`,
   ].filter(Boolean);
 
-  await saveQuoteLeadSafe({
-    nombre,
-    celular,
-    email: String(body.email || ""),
-    edad: Number(body.age) || null,
-    localidad: location.description || null,
-    interes: "Seguro de auto",
-    pagePath: String(body.page_path || "/"),
-    notas: lines.join("\n"),
-  });
+  if (!fromCrm(body)) {
+    await saveQuoteLeadSafe({
+      nombre,
+      celular,
+      email: String(body.email || ""),
+      edad: Number(body.age) || null,
+      localidad: location.description || null,
+      interes: "Seguro de auto",
+      pagePath: String(body.page_path || "/"),
+      notas: lines.join("\n"),
+    });
+  }
 
   return NextResponse.json({
     carDescription: scResult?.carDescription || lines[1],
@@ -212,26 +218,28 @@ async function emit(body: Record<string, unknown>) {
     );
   }
 
-  await saveQuoteLeadSafe({
-    nombre,
-    celular: phone,
-    email,
-    dni,
-    edad: Number(body.age) || null,
-    localidad: city,
-    interes: "Seguro de auto",
-    pagePath: String(body.page_path || "/"),
-    notas: [
-      note,
-      `Plan: ${String(body.planTitle || "")}`,
-      plate ? `Patente: ${plate}` : "",
-      `Domicilio: ${street} ${streetNumber}`,
-      vin ? `Chasis: ${vin}` : "",
-      engine ? `Motor: ${engine}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-  });
+  if (!fromCrm(body)) {
+    await saveQuoteLeadSafe({
+      nombre,
+      celular: phone,
+      email,
+      dni,
+      edad: Number(body.age) || null,
+      localidad: city,
+      interes: "Seguro de auto",
+      pagePath: String(body.page_path || "/"),
+      notas: [
+        note,
+        `Plan: ${String(body.planTitle || "")}`,
+        plate ? `Patente: ${plate}` : "",
+        `Domicilio: ${street} ${streetNumber}`,
+        vin ? `Chasis: ${vin}` : "",
+        engine ? `Motor: ${engine}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+  }
 
   return NextResponse.json({ policyNumber, note });
 }
