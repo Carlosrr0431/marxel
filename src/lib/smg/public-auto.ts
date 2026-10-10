@@ -31,7 +31,15 @@ function fold(value: string) {
 
 function messageOf(data: unknown) {
   const row = asRecord(data);
-  return String(row.message || row.Message || "").trim();
+  const nested = asRecord(row.data);
+  return String(nested.errMessage || row.message || row.Message || "").trim();
+}
+
+function placesOf(data: unknown) {
+  const row = asRecord(data);
+  return asList(row.ubicaciones).length
+    ? asList(row.ubicaciones)
+    : asList(asRecord(row.data).ubicaciones);
 }
 
 function plansOf(data: unknown): PublicSmgPlan[] {
@@ -48,12 +56,26 @@ function plansOf(data: unknown): PublicSmgPlan[] {
 }
 
 async function placeForPostal(postalCode: number) {
-  const result = await smgUbicaciones({ codPostal: postalCode });
-  if (result.status >= 400) throw new Error(messageOf(result.data) || "SMG no encontró la localidad");
-  const places = asList(asRecord(result.data).ubicaciones);
-  const place = places.find((item) => fold(text(item, ["txtLocalidad"])) === "salta") || places[0];
-  if (!place) throw new Error("SMG no encontró la localidad de ese código postal");
-  return place;
+  const queries = [
+    { txtLocalidad: "", codPostal: postalCode },
+    { txtLocalidad: "SALTA", codPostal: postalCode },
+    { txtLocalidad: "SALTA", codPostal: 0 },
+  ];
+  for (const query of queries) {
+    const result = await smgUbicaciones(query);
+    if (result.status >= 400) continue;
+    const places = placesOf(result.data);
+    const place =
+      places.find((item) => fold(text(item, ["txtLocalidad"])) === "salta" && Number(text(item, ["codPostal"]) || postalCode) === postalCode) ||
+      places.find((item) => fold(text(item, ["txtLocalidad"])) === "salta") ||
+      places.find((item) => Number(text(item, ["codPostal"])) === postalCode) ||
+      places[0];
+    if (place && text(place, ["codProvincia"]) && text(place, ["codLocalidad"])) return place;
+  }
+  if (postalCode === 4400) {
+    return { txtLocalidad: "SALTA", codProvincia: 17, codLocalidad: 1, codPostal: 4400 };
+  }
+  throw new Error("SMG no encontró la localidad de ese código postal");
 }
 
 async function matchVehicle(input: { brand: string; model: string; year: number; place: Record<string, unknown> }) {

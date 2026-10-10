@@ -88,11 +88,6 @@ export function HomeAutoQuote() {
   const brand = brands.find((item) => item.id === brandId) || null;
   const model = models.find((item) => item.id === modelId) || null;
   const version = versions.find((item) => String(item.id) === versionId) || null;
-  const ready =
-    plateKind === "auto" &&
-    Boolean(year && brand && model && version && location && nombre.trim()) &&
-    celular.replace(/\D/g, "").length >= 8 &&
-    Number(age) >= 18;
 
   useEffect(() => {
     if (postal.length !== 4) {
@@ -205,54 +200,6 @@ export function HomeAutoQuote() {
     };
   }, [year, yearId, brandId, modelId]);
 
-  useEffect(() => {
-    if (!ready || !brand || !model || !version || !location) return;
-    const ticket = `${normalized}|${version.id}|${postal}|${age}|${hasGnc}|${nombre.trim()}|${celular.trim()}`;
-    if (quotedTicket.current === ticket) return;
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      quotedTicket.current = ticket;
-      setQuoting(true);
-      setError("");
-      setIssued("");
-      fetchJson("/api/auto-quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          year: Number(year),
-          is0km,
-          brand: { id: Number(brand.id), description: brand.label },
-          model: { id: Number(model.id), description: model.label },
-          version,
-          location,
-          nombre: nombre.trim(),
-          celular: celular.trim(),
-          age: Number(age),
-          hasGnc: hasGnc === "si",
-          licensePlate: normalized,
-          page_path: window.location.pathname,
-          ticket,
-        }),
-      })
-        .then((data) => {
-          if (!cancelled) setQuote(data as QuotePayload);
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            quotedTicket.current = "";
-            setError(err instanceof Error ? err.message : "No pudimos cotizar.");
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setQuoting(false);
-        });
-    }, 700);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [ready, normalized, versionId, postal, age, hasGnc, nombre, celular, year, is0km, brandId, modelId, location]);
-
   async function quoteNow() {
     setError("");
     if (!is0km && plateKind === "moto") {
@@ -286,6 +233,7 @@ export function HomeAutoQuote() {
           model: { id: Number(model.id), description: model.label },
           version,
           location,
+          postalCode: Number(postal),
           nombre: nombre.trim(),
           celular: celular.trim(),
           age: Number(age),

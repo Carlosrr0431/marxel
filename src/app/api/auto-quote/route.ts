@@ -62,7 +62,7 @@ async function quote(body: Record<string, unknown>) {
       year,
       brand: String(brand.description || ""),
       model: String(model.description || ""),
-      postalCode: Number(location.zipCode),
+      postalCode: Number(body.postalCode) || Number(location.zipCode),
       plate,
     }),
   ]);
