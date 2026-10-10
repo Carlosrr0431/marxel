@@ -50,7 +50,6 @@ export function Header() {
                     key={company.slug}
                     href="/#companias"
                     aria-label={company.name}
-                    className={company.slug === "go" ? "is-logo-tall" : undefined}
                   >
                     <CompanyMark company={company} />
                   </Link>

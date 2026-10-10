@@ -6886,26 +6886,23 @@ button.crm-wa-file {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 3.15rem;
+  height: 4.1rem;
   border-radius: 0.7rem;
-  padding: 0.4rem 0.85rem;
+  padding: 0.55rem 0.75rem;
 }
 
 .nav-menu__companies a:hover { background: var(--mist); }
 
 .nav-menu__companies .company-mark {
-  width: 100%;
+  width: 8.75rem;
+  height: 2.45rem;
 }
 
 .nav-menu__companies .company-mark img {
-  width: auto;
-  max-width: 100%;
-  height: 2.15rem;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-}
-
-.nav-menu__companies a.is-logo-tall .company-mark img {
-  height: 2.65rem;
+  object-position: center;
 }
 
 .mobile-acc {
@@ -6968,7 +6965,8 @@ button.crm-wa-file {
 
 .company-mark {
   display: flex;
-  width: 100%;
+  width: 8.75rem;
+  height: 2.45rem;
   align-items: center;
   justify-content: center;
 }
@@ -6976,8 +6974,9 @@ button.crm-wa-file {
 .company-mark img {
   display: block;
   width: 100%;
-  height: 2.7rem;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
 }
 
 @keyframes company-marquee {
@@ -7153,7 +7152,7 @@ button.crm-wa-file {
 
 @media (prefers-reduced-motion: reduce) {
   .company-track { animation: none; flex-wrap: wrap; width: 100%; justify-content: center; }
-  .company-card:nth-child(n + 11) { display: none; }
+  .company-card:nth-child(n + 12) { display: none; }
 }
 
 .auto-quote {

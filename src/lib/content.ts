@@ -21,6 +21,7 @@ export const companias = [
   { slug: "smg", name: "SMG Vida", logo: "/companias/smg.svg" },
   { slug: "caruso", name: "Caruso", logo: "/companias/caruso.svg" },
   { slug: "prevencion", name: "Prevención Retiro", logo: "/companias/prevencion.svg" },
+  { slug: "prevencion-salud", name: "Prevención Salud", logo: "/companias/prevencion-salud.svg" },
   { slug: "mista", name: "Mista Seguros", logo: "/companias/mista.png" },
   { slug: "sancor", name: "Sancor Seguros", logo: "/companias/sancor.svg" },
   { slug: "sancristobal", name: "San Cristóbal", logo: "/companias/sancristobal.svg" },
