@@ -7,6 +7,11 @@ import { CompanyMark } from "./CompanyMark";
 
 const YEARS = Array.from({ length: 32 }, (_, i) => String(2026 - i));
 
+const AUTO_QUOTE_SLUGS = ["sancristobal", "smg"] as const;
+const autoQuoteCompanies = AUTO_QUOTE_SLUGS.map((slug) => companias.find((company) => company.slug === slug)).filter(
+  (company): company is (typeof companias)[number] => Boolean(company),
+);
+
 export function AutoMultiQuote() {
   const [mode, setMode] = useState<"patente" | "datos">("patente");
   const [sent, setSent] = useState(false);
@@ -30,7 +35,7 @@ export function AutoMultiQuote() {
       mode === "patente"
         ? `Patente ${patente} · CP ${cp}`
         : `${anio} ${marca} ${modelo} · CP ${cp}`;
-    const notas = `Multi cotizador de autos\n${vehiculo}\nCompañías: ${companias.map((c) => c.name).join(", ")}`;
+    const notas = `Multi cotizador de autos\n${vehiculo}\nCompañías: San Cristóbal, SMG`;
 
     try {
       const res = await fetch("/api/leads", {
@@ -71,10 +76,10 @@ export function AutoMultiQuote() {
       <div className="auto-quote">
         <p className="font-display text-xl font-semibold text-navy">Pedido recibido</p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Marcos compara tu auto con estas compañías y te escribe al WhatsApp.
+          Marcos compara tu auto con San Cristóbal y SMG, y te escribe al WhatsApp.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {companias.map((company) => (
+          {autoQuoteCompanies.map((company) => (
             <CompanyMark key={company.slug} company={company} />
           ))}
         </div>

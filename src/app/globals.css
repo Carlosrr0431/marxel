@@ -6751,19 +6751,27 @@ button.crm-wa-file {
 .nav-menu__companies a {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-content: center;
+  min-height: 3.15rem;
   border-radius: 0.7rem;
-  padding: 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--navy);
+  padding: 0.4rem 0.85rem;
 }
 
 .nav-menu__companies a:hover { background: var(--mist); }
 
+.nav-menu__companies .company-mark {
+  width: 100%;
+}
+
 .nav-menu__companies .company-mark img {
-  width: 4.6rem;
-  height: 1.7rem;
+  width: auto;
+  max-width: 100%;
+  height: 2.15rem;
+  object-fit: contain;
+}
+
+.nav-menu__companies a.is-logo-tall .company-mark img {
+  height: 2.65rem;
 }
 
 .mobile-acc {
