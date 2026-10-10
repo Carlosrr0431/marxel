@@ -138,6 +138,14 @@ async function emit(body: Record<string, unknown>) {
 
   let policyNumber = "";
   let note = "";
+  const calm = (message: string, fallback: string) => {
+    const text = message.replace(/\s+/g, " ").trim();
+    if (/catálogo de autos|Object reference not set|soporteb2b/i.test(text)) {
+      return "San Cristóbal cotizó el plan, pero el ambiente de pruebas no puede emitir la póliza. El pedido quedó para Marcos.";
+    }
+    if (!text || text.startsWith("{") || text.startsWith("[") || text.length > 220) return fallback;
+    return text;
+  };
   try {
   if (company === "smg") {
     const issued = await emitSmgPublic({
@@ -195,7 +203,12 @@ async function emit(body: Record<string, unknown>) {
   } catch (err) {
     const status = err instanceof AutoQuoteError || err instanceof ScB2bError ? err.status : 502;
     if (status === 400) throw err;
-    note = err instanceof Error ? err.message : "No se pudo emitir. El pedido quedó para el productor.";
+    note = calm(
+      err instanceof Error ? err.message : "",
+      company === "smg"
+        ? "SMG no pudo emitir la póliza. El pedido quedó para Marcos."
+        : "San Cristóbal no pudo emitir la póliza. El pedido quedó para Marcos."
+    );
   }
 
   await saveQuoteLeadSafe({

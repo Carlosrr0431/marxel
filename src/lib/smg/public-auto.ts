@@ -29,10 +29,32 @@ function fold(value: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function shortText(value: unknown) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!text || text.startsWith("{") || text.startsWith("[") || text.length > 180) return "";
+  return text;
+}
+
 function messageOf(data: unknown) {
   const row = asRecord(data);
   const nested = asRecord(row.data);
-  return String(nested.errMessage || row.message || row.Message || "").trim();
+  return shortText(nested.errMessage || row.message || row.Message || row.errMessage);
+}
+
+function problemOf(data: unknown) {
+  const row = asRecord(data);
+  const lists = [row.Errores, row.errores, row.Validaciones, row.validaciones];
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const message =
+        typeof item === "string"
+          ? shortText(item)
+          : shortText(text(asRecord(item), ["mensaje", "Mensaje", "descripcion", "errMessage"]));
+      if (message) return message;
+    }
+  }
+  return "";
 }
 
 function placesOf(data: unknown) {
@@ -155,10 +177,8 @@ function firstConduct(catalog: unknown) {
 function policyNumberOf(data: unknown) {
   const root = asRecord(data);
   const header = asRecord(root.encabezado);
-  return (
-    text(root, ["nroPoliza", "numeroPoliza", "nroSolicitud"]) ||
-    text(header, ["nroPoliza", "numeroPoliza", "nroSolicitud", "idCotizacion"])
-  );
+  const number = text(root, ["nroPoliza", "numeroPoliza", "nroSolicitud"]) || text(header, ["nroPoliza", "numeroPoliza", "nroSolicitud"]);
+  return number && number !== "0" ? number : "";
 }
 
 export async function emitSmgPublic(input: {
@@ -204,6 +224,8 @@ export async function emitSmgPublic(input: {
     codConducto: conduct,
   });
   const result = await smgCotizar(issued);
-  if (result.status >= 400) throw new Error(messageOf(result.data) || "SMG no aceptó la emisión");
-  return { policyNumber: policyNumberOf(result.data), data: result.data };
+  const policyNumber = policyNumberOf(result.data);
+  if (policyNumber) return { policyNumber, data: result.data };
+  const problem = problemOf(result.data) || messageOf(result.data);
+  throw new Error(problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor.");
 }
