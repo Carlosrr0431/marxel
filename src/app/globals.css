@@ -925,28 +925,37 @@ a {
   color: var(--muted);
 }
 .home-quote__results ul { display: flex; flex-direction: column; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
-.home-quote__results button {
+.home-quote__plan {
+  border: 1px solid transparent;
+  border-radius: 0.85rem;
+  background: #f4f7fb;
+}
+.home-quote__plan.is-on {
+  border-color: var(--teal);
+  background: white;
+  box-shadow: 0 0 0 2px rgba(58, 180, 217, 0.22);
+}
+.home-quote__plan-pick {
   display: flex;
   width: 100%;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.05rem;
-  border: 1px solid transparent;
-  border-radius: 0.85rem;
-  background: #f4f7fb;
-  padding: 0.55rem 0.6rem 0.5rem;
+  border: 0;
+  background: transparent;
+  padding: 0.55rem 0.6rem 0.15rem;
   text-align: left;
   color: var(--navy);
   cursor: pointer;
 }
-.home-quote__results button:hover {
-  background: white;
-  border-color: rgba(58, 180, 217, 0.45);
-}
-.home-quote__results button.is-on {
-  border-color: var(--teal);
-  background: white;
-  box-shadow: 0 0 0 2px rgba(58, 180, 217, 0.22);
+.home-quote__detail {
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.6rem 0.45rem;
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 .home-quote__results strong {
   font-size: 0.78rem;
@@ -963,12 +972,130 @@ a {
   line-height: 1.05;
   color: var(--navy);
 }
-.home-quote__results button span {
+.home-quote__plan-pick span {
   color: var(--teal);
   font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
 }
+.quote-compare {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(26, 16, 56, 0.46);
+}
+.quote-compare__panel {
+  width: min(58rem, 100%);
+  max-height: min(86vh, 44rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 1.4rem;
+  background: white;
+  box-shadow: 0 24px 70px rgba(26, 16, 56, 0.28);
+}
+.quote-compare__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.15rem 0.7rem;
+}
+.quote-compare__kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.quote-compare__head h2 {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+}
+.quote-compare__close {
+  border: 0;
+  border-radius: 999px;
+  background: #f4f7fb;
+  padding: 0.45rem 0.8rem;
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+.quote-compare__scroll { overflow: auto; padding: 0 0.6rem 1rem; }
+.quote-compare__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 36rem;
+}
+.quote-compare__table th,
+.quote-compare__table td {
+  padding: 0.7rem 0.55rem;
+  border-bottom: 1px solid #eceef5;
+  text-align: center;
+  vertical-align: middle;
+}
+.quote-compare__table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  color: var(--navy);
+}
+.quote-compare__table thead th:first-child,
+.quote-compare__table tbody th {
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--navy);
+  min-width: 9.5rem;
+}
+.quote-compare__table thead th img {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+  max-width: 6.5rem;
+  margin: 0 auto 0.35rem;
+  object-fit: contain;
+}
+.quote-compare__table thead th span,
+.quote-compare__table thead th small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+.quote-compare__table thead th strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.84rem;
+}
+.quote-compare__table thead th b {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+}
+.quote-compare__table .is-focus { background: #f3fbfe; }
+.quote-compare__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.4rem;
+  border-radius: 999px;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.quote-compare__mark.is-si { background: #e7f8ef; color: #0f7a45; }
+.quote-compare__mark.is-no { background: #f4f5f8; color: #8b8a96; }
+.quote-compare__mark.is-note { background: #e7f6fb; color: #1d6f8a; }
 @media (max-width: 520px) {
   .home-quote__price { font-size: 1.08rem; }
 }

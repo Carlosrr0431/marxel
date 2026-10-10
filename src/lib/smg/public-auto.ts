@@ -1,9 +1,11 @@
+import { parseSmgCovers, type CoverMap } from "@/lib/plan-covers";
 import { buildQuoteBody, smgCotizar, smgProductos, smgUbicaciones, smgVehiculos, withEmission } from "./client";
 
 export type PublicSmgPlan = {
   id: string;
   title: string;
   monthly: number;
+  covers: CoverMap | null;
 };
 
 function asRecord(value: unknown) {
@@ -72,6 +74,7 @@ function plansOf(data: unknown): PublicSmgPlan[] {
       id: text(plan, ["codPlanCobertura"]),
       title: text(plan, ["planCobertura", "descripcion"]) || "Cobertura",
       monthly: Math.round(Number(plan.importeCuota) || Number(plan.importePremio) || 0),
+      covers: parseSmgCovers(text(plan, ["descripcionAmparos"])),
     }))
     .filter((plan) => plan.id)
     .sort((a, b) => a.monthly - b.monthly);

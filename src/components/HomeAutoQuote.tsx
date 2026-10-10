@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
 
 type Option = { id: string; label: string };
 type Version = {
@@ -22,7 +23,7 @@ type Location = {
   zipCode: number;
   synonymous: string;
 };
-type Offer = { id: string; title: string; monthly: number; description?: string };
+type Offer = { id: string; title: string; monthly: number; description?: string; covers?: Record<string, string> | null };
 type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number };
 type QuotePayload = { carDescription: string; statedAmount: number; sancristobal: CompanyQuote; smg: CompanyQuote };
 type Choice = { company: "sancristobal" | "smg"; id: string; title: string; monthly: number };
@@ -78,6 +79,7 @@ export function HomeAutoQuote() {
   const [vin, setVin] = useState("");
   const [engine, setEngine] = useState("");
   const [emitting, setEmitting] = useState(false);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
   const [issued, setIssued] = useState("");
   const quotedTicket = useRef("");
 
@@ -436,6 +438,7 @@ export function HomeAutoQuote() {
                 selected={choice}
                 company="sancristobal"
                 onSelect={setChoice}
+                onDetail={setDetailKey}
               />
               <CompanyPlans
                 name="SMG"
@@ -443,6 +446,7 @@ export function HomeAutoQuote() {
                 selected={choice}
                 company="smg"
                 onSelect={setChoice}
+                onDetail={setDetailKey}
               />
             </div>
           </>
@@ -521,7 +525,31 @@ export function HomeAutoQuote() {
 
         {error && view !== "plans" ? <p className="quote-alert">{error}</p> : null}
       </form>
+      {detailKey && quote ? (
+        <QuoteCompare
+          focusKey={detailKey}
+          plans={comparePlans(quote)}
+          onClose={() => setDetailKey(null)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function comparePlans(quote: QuotePayload): ComparePlan[] {
+  const columns = [
+    { company: "sancristobal" as const, name: "San Cristóbal", logo: "/companias/sancristobal.svg", data: quote.sancristobal },
+    { company: "smg" as const, name: "Swiss Medical", logo: "/companias/smg.svg", data: quote.smg },
+  ];
+  return columns.flatMap((column) =>
+    column.data.plans.slice(0, 3).map((plan) => ({
+      key: `${column.company}:${plan.id}`,
+      company: column.name,
+      logo: column.logo,
+      title: plan.title,
+      monthly: plan.monthly,
+      covers: plan.covers,
+    }))
   );
 }
 
@@ -577,12 +605,14 @@ function CompanyPlans({
   selected,
   company,
   onSelect,
+  onDetail,
 }: {
   name: string;
   quote: CompanyQuote;
   selected: Choice | null;
   company: Choice["company"];
   onSelect: (choice: Choice) => void;
+  onDetail: (key: string) => void;
 }) {
   const logo = company === "smg" ? "/companias/smg.svg" : "/companias/sancristobal.svg";
   return (
@@ -595,16 +625,20 @@ function CompanyPlans({
       <ul>
         {quote.plans.slice(0, 3).map((plan) => {
           const on = selected?.company === company && selected.id === plan.id;
+          const detailKey = `${company}:${plan.id}`;
           return (
-            <li key={plan.id}>
+            <li key={plan.id} className={on ? "home-quote__plan is-on" : "home-quote__plan"}>
               <button
                 type="button"
-                className={on ? "is-on" : undefined}
+                className="home-quote__plan-pick"
                 onClick={() => onSelect({ company, id: plan.id, title: plan.title, monthly: plan.monthly })}
               >
                 <strong>{plan.title}</strong>
                 <b className="home-quote__price">{plan.monthly > 0 ? money(plan.monthly) : "Consultar"}</b>
                 {plan.monthly > 0 ? <span>por mes</span> : null}
+              </button>
+              <button type="button" className="home-quote__detail" onClick={() => onDetail(detailKey)}>
+                Ver detalle
               </button>
             </li>
           );

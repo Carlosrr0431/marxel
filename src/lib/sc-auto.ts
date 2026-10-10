@@ -1,4 +1,5 @@
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+import { scCovers, type CoverMap } from "@/lib/plan-covers";
 import { fetchClasificVehicle, type ClasificVehicle } from "@/lib/clasific";
 
 const SC_API = "https://api.sancristobal.com.ar/marketing-marketing/api";
@@ -80,6 +81,7 @@ export type AutoPlan = {
   technicalName?: string;
   franchiseType?: string | null;
   franchiseValue?: number | null;
+  covers?: CoverMap;
 };
 
 export function formatScPlanDetail(plan: {
@@ -961,6 +963,7 @@ export async function quoteAutoVehicle(input: QuoteAutoInput): Promise<AutoQuote
       productCode,
       franchiseType,
       franchiseValue,
+      covers: scCovers(plan.key),
     };
     planObj.technicalName = formatScPlanDetail(planObj);
     return planObj;

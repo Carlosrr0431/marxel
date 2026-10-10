@@ -107,6 +107,7 @@ async function quote(body: Record<string, unknown>) {
             title: plan.title,
             monthly: plan.monthly,
             description: plan.description,
+            covers: plan.covers,
           })),
         }
       : { opportunityId: 0, plans: [], error: reasonOf(sc) },

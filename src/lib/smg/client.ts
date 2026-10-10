@@ -284,6 +284,7 @@ export function buildQuoteBody(input: Record<string, unknown>, emitir = false) {
         },
       },
     ],
+    mostrarDescAmparos: true,
   };
 }
 
