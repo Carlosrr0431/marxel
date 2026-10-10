@@ -34,22 +34,10 @@ function utmFrom(request: Request) {
 
 async function notifyProducer(input: { celular: string; notas: string; leadId: string }) {
   try {
-    const { getProducerWhatsapp } = await import("@/lib/whatsmeow/producer-notify");
-    const { sendWhatsmeowText } = await import("@/lib/whatsmeow/client");
-    const { getWhatsmeowAgentCode } = await import("@/lib/whatsmeow/config");
-    const producer = getProducerWhatsapp();
-    if (!producer) return;
-    const text = [
-      "📞 *Nuevo contacto web*",
-      `Tel: ${input.celular}`,
-      input.notas ? `Mensaje: ${input.notas}` : null,
-      `CRM: https://www.marxen.com.ar/crm/leads/${input.leadId}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-    await sendWhatsmeowText(getWhatsmeowAgentCode(), producer, text, { wake: true });
-  } catch {
-    // El aviso al asesor no bloquea el alta del lead.
+    const { notifyProducerContactForm } = await import("@/lib/whatsmeow/producer-notify");
+    await notifyProducerContactForm(input);
+  } catch (err) {
+    console.error("[contacto][whatsapp]", err instanceof Error ? err.message : err);
   }
 }
 
@@ -92,12 +80,21 @@ export async function POST(request: Request) {
   let leadId = existingId;
 
   if (existingId) {
+    const { data: current } = await supabase
+      .from("leads")
+      .select("notas_iniciales, estado")
+      .eq("id", existingId)
+      .maybeSingle();
+    const previous = String(current?.notas_iniciales || "").trim();
+    const estado = String(current?.estado || "");
     const { error } = await supabase
       .from("leads")
       .update({
-        notas_iniciales: payload.notas_iniciales,
+        notas_iniciales: previous ? `${payload.notas_iniciales}\n\n${previous}` : payload.notas_iniciales,
         prioridad: "alta",
         origen_detalle: "formulario",
+        page_path: pagePath,
+        estado: estado === "perdido" || estado === "ganado" ? "nuevo" : estado || "nuevo",
         updated_at: new Date().toISOString(),
       })
       .eq("id", existingId);
@@ -116,6 +113,15 @@ export async function POST(request: Request) {
     leadId = String(data.id);
   }
 
-  if (leadId) await notifyProducer({ celular, notas, leadId });
+  if (leadId) {
+    await supabase.from("actividades").insert({
+      lead_id: leadId,
+      tipo: "nota",
+      titulo: "Consulta del formulario",
+      detalle: payload.notas_iniciales,
+      autor: "web",
+    });
+    await notifyProducer({ celular, notas: payload.notas_iniciales, leadId });
+  }
   return NextResponse.redirect(destination(request, "enviado=1"), 303);
 }

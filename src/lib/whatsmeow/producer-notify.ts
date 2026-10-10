@@ -274,7 +274,11 @@ async function addLeadTag(leadId: string, tag: string) {
   await supabase.from("leads").update({ tags: [...tags, tag] }).eq("id", leadId);
 }
 
-async function sendToProducer(text: string, meta: Record<string, unknown> = {}) {
+async function sendToProducer(
+  text: string,
+  meta: Record<string, unknown> = {},
+  options?: { unique?: boolean }
+) {
   const producer = getProducerWhatsapp();
   if (!producer) return { ok: false as const, queued: false as const, error: "sin productor" };
   const agent = getWhatsmeowAgentCode();
@@ -289,6 +293,8 @@ async function sendToProducer(text: string, meta: Record<string, unknown> = {}) 
         kind: "text",
         payload: { text },
         wake: true,
+        unique: Boolean(options?.unique),
+        dedupKey: options?.unique ? `contact:${String(meta.leadId || "lead")}:${Date.now()}` : undefined,
         meta: { ...meta, producer },
       });
       if (queued.success) {
@@ -339,6 +345,19 @@ export async function confirmProducerQueueDelivery(meta: Record<string, unknown>
     return;
   }
 
+  if (source === "contact_form") {
+    const supabase = createServiceClient();
+    await supabase.from("actividades").insert({
+      lead_id: leadId,
+      tipo: "whatsapp",
+      titulo: "Consulta del formulario avisada al productor",
+      detalle: `Aviso a ${displayPhone(producer)}`,
+      autor: "sistema",
+      meta: { source: "contact_form", producer, phone: meta.phone || null },
+    });
+    return;
+  }
+
   if (source === "producer_interest") {
     const supabase = createServiceClient();
     const { data } = await supabase
@@ -362,6 +381,26 @@ export async function confirmProducerQueueDelivery(meta: Record<string, unknown>
       },
     });
   }
+}
+
+export async function notifyProducerContactForm(input: {
+  leadId: string;
+  celular: string;
+  notas?: string | null;
+}) {
+  const producer = getProducerWhatsapp();
+  if (!producer) return;
+  const text = [
+    "📞 *Nueva consulta web*",
+    `Tel: ${displayPhone(input.celular)}`,
+    input.notas?.trim() ? `Mensaje: ${input.notas.trim()}` : "Pidió que lo contacten.",
+    `CRM: https://www.marxen.com.ar/crm/leads/${input.leadId}`,
+  ].join("\n");
+  await sendToProducer(
+    text,
+    { source: "contact_form", leadId: input.leadId, phone: input.celular },
+    { unique: true }
+  );
 }
 
 export async function notifyProducerQuoteReady(input: {

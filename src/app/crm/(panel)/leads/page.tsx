@@ -13,6 +13,7 @@ import { normalizeArPhone } from "@/lib/whatsmeow/config";
 const QUICK = [
   { href: "/crm/leads?origen=chatbot", label: "Chatbot" },
   { href: "/crm/leads?origen=whatsapp_directo", label: "WhatsApp Directo" },
+  { href: "/crm/leads?origen=formulario", label: "Formulario" },
   { href: "/crm/leads?tag=caliente", label: "Calientes" },
   { href: "/crm/leads?producto=salud", label: "Salud" },
   { href: "/crm/leads?producto=seguros", label: "Seguros" },
@@ -40,6 +41,7 @@ export default async function LeadsPage({
   if (params.modalidad) query = query.eq("modalidad", params.modalidad);
   if (params.origen === "chatbot") query = query.eq("origen_detalle", "chatbot");
   if (params.origen === "whatsapp_directo") query = query.eq("origen_detalle", "whatsapp_directo");
+  if (params.origen === "formulario") query = query.eq("origen_detalle", "formulario");
   if (params.origen === "web") query = query.eq("origen", "web");
   if (params.q) {
     query = query.or(
