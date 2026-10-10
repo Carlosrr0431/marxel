@@ -249,9 +249,11 @@ export async function handleWhatsappInbound(body: unknown) {
   const root = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const event = String(root.event || "").trim();
 
-  if (event === "messages.status") {
+  if (event === "messages.update" || event === "messages.status") {
     const data = root.data && typeof root.data === "object" ? (root.data as Record<string, unknown>) : {};
-    const rawIds = Array.isArray(data.ids) ? data.ids : data.id ? [data.id] : [];
+    const key = data.key && typeof data.key === "object" ? (data.key as Record<string, unknown>) : {};
+    const messageId = String(key.id || data.id || data.message_id || "");
+    const rawIds = Array.isArray(data.ids) ? data.ids : messageId ? [messageId] : [];
     const applied = await applyCrmDeliveryReceipt({
       ids: rawIds.map((id) => String(id || "")),
       status: Number(data.status),
