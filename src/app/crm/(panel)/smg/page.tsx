@@ -660,9 +660,11 @@ export default function SmgPage() {
                   >
                     <span className="block text-sm font-semibold text-navy">{text(plan, ["planCobertura", "descripcion"]) || "Cobertura"}</span>
                     <span className="text-sm text-muted">
-                      {[moneyOf(plan.importePremio) && `${moneyOf(plan.importePremio)} premio`, moneyOf(plan.importeCuota) && `${moneyOf(plan.importeCuota)} por cuota`]
-                        .filter(Boolean)
-                        .join(" · ") || "Sin precio informado"}
+                      {moneyOf(plan.importeCuota)
+                        ? `${moneyOf(plan.importeCuota)} por mes`
+                        : moneyOf(plan.importePremio)
+                          ? `${moneyOf(plan.importePremio)} premio`
+                          : "Sin precio informado"}
                     </span>
                   </button>
                 );
@@ -781,7 +783,7 @@ export default function SmgPage() {
                 <dt className="text-muted">Cobertura</dt>
                 <dd className="text-navy">
                   {chosenPlan
-                    ? `${text(chosenPlan, ["planCobertura", "descripcion"])} · ${moneyOf(chosenPlan.importeCuota) || moneyOf(chosenPlan.importePremio) || "sin precio"}`
+                    ? `${text(chosenPlan, ["planCobertura", "descripcion"])} · ${moneyOf(chosenPlan.importeCuota) ? `${moneyOf(chosenPlan.importeCuota)} por mes` : moneyOf(chosenPlan.importePremio) || "sin precio"}`
                     : "Sin elegir"}
                 </dd>
               </div>

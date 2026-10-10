@@ -231,7 +231,8 @@ export function buildQuoteBody(input: Record<string, unknown>, emitir = false) {
       fechavighasta: hasta,
       codproducto: numberOf(input.codProducto),
       codvigencia: 1,
-      codperiodo: numberOf(input.codPeriodo, 3),
+      // 6 = refacturación mensual. El 3 de la guía es cuatrimestral y pone en importeCuota el premio de 4 meses.
+      codperiodo: numberOf(input.codPeriodo, 6),
       codmoneda: 0,
       txtReferencia: String(input.referencia || ""),
       txtObservaciones: String(input.observaciones || ""),
@@ -240,10 +241,11 @@ export function buildQuoteBody(input: Record<string, unknown>, emitir = false) {
       codAjustePrima: numberOf(input.codAjustePrima, 16),
     },
     planDePago: {
-      codplandepago: numberOf(input.codPlanPago, 8),
+      // 30 + cuota 129 = cobranza en convenio, un pago del mes, sin interés.
+      codplandepago: numberOf(input.codPlanPago, 30),
       codconducto: numberOf(input.codConducto),
       nroctatarj: String(input.nroTarjeta || ""),
-      codcuota: numberOf(input.codCuota, 78),
+      codcuota: numberOf(input.codCuota, 129),
       codmoneda: 0,
     },
     riesgo: [
@@ -266,7 +268,7 @@ export function buildQuoteBody(input: Record<string, unknown>, emitir = false) {
             anio: numberOf(input.anio),
             codUso: numberOf(input.codUso, 1),
             txtUso: String(input.txtUso || "PARTICULAR"),
-            codClausulaAjuste: numberOf(input.codClausulaAjuste, 5),
+            codClausulaAjuste: numberOf(input.codClausulaAjuste, 1),
             codTipoRecuperador: 0,
             codRecuperador: 0,
             sn0Km: Boolean(input.ceroKm),
