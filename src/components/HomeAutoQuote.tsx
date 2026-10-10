@@ -429,7 +429,6 @@ export function HomeAutoQuote() {
               Editar datos
             </button>
             <h2>{quote.carDescription || hint || plate}</h2>
-            <p className="home-quote__lede">Elegí un plan para seguir con la emisión.</p>
             <div className="home-quote__results">
               <CompanyPlans
                 name="San Cristóbal"
@@ -585,9 +584,13 @@ function CompanyPlans({
   company: Choice["company"];
   onSelect: (choice: Choice) => void;
 }) {
+  const logo = company === "smg" ? "/companias/smg.svg" : "/companias/sancristobal.svg";
   return (
-    <section>
-      <h3>{name}</h3>
+    <section className="home-quote__company">
+      <header>
+        <img src={logo} alt={name} />
+        <span>Hacé clic para emitir</span>
+      </header>
       {quote.error ? <p>{quote.error}</p> : null}
       <ul>
         {quote.plans.slice(0, 3).map((plan) => {
