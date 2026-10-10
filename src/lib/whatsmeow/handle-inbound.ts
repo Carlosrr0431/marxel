@@ -12,7 +12,7 @@ import {
   saveConversation,
   type ConversationRow,
 } from "@/lib/whatsmeow/conversations";
-import { persistCrmInbound, updateCrmChatNameIfMissing, isRecentBotOutbound } from "@/lib/whatsmeow/crm-chat";
+import { applyCrmDeliveryReceipt, persistCrmInbound, updateCrmChatNameIfMissing, isRecentBotOutbound } from "@/lib/whatsmeow/crm-chat";
 import { mapPollToValue, parseInbound, pollOptionsFromReplies } from "@/lib/whatsmeow/inbound";
 import {
   detectsQuoteIntent,
@@ -27,7 +27,6 @@ import {
 } from "@/lib/whatsmeow/producer-notify";
 
 const IGNORE_EVENTS = new Set([
-  "messages.status",
   "messages.ack",
   "messages.reaction",
   "messages.revoke",
@@ -250,6 +249,15 @@ export async function handleWhatsappInbound(body: unknown) {
   const root = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const event = String(root.event || "").trim();
 
+  if (event === "messages.status") {
+    const data = root.data && typeof root.data === "object" ? (root.data as Record<string, unknown>) : {};
+    const rawIds = Array.isArray(data.ids) ? data.ids : data.id ? [data.id] : [];
+    const applied = await applyCrmDeliveryReceipt({
+      ids: rawIds.map((id) => String(id || "")),
+      status: Number(data.status),
+    });
+    return { status: 200, body: { success: true, receipt: true, updated: applied.updated } };
+  }
   if (LIFECYCLE_EVENTS.has(event)) {
     return { status: 200, body: { success: true, ignored: true, reason: event || "lifecycle" } };
   }

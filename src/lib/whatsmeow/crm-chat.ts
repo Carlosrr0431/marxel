@@ -22,7 +22,7 @@ export type CrmChat = {
   updated_at: string;
 };
 
-export type CrmDeliveryStatus = "pending" | "sending" | "sent" | "failed";
+export type CrmDeliveryStatus = "pending" | "sending" | "sent" | "delivered" | "read" | "failed";
 
 export type CrmChatMessage = {
   id: string;
@@ -203,6 +203,45 @@ export async function markCrmMessageFromQueue({
     return { ok: false as const, updated: false };
   }
   return { ok: true as const, updated: Boolean(data?.length), id: data?.[0]?.id ? String(data[0].id) : null };
+}
+
+const DELIVERY_RANK: Record<CrmDeliveryStatus, number> = {
+  failed: -1,
+  pending: 0,
+  sending: 1,
+  sent: 2,
+  delivered: 3,
+  read: 4,
+};
+
+function deliveryFromReceipt(status: number): CrmDeliveryStatus | null {
+  if (status >= 4) return "read";
+  if (status === 3) return "delivered";
+  if (status === 2) return "sent";
+  return null;
+}
+
+/** Sube el tilde solo hacia adelante: enviado gris, leído azul. */
+export async function applyCrmDeliveryReceipt(input: { ids: string[]; status: number }) {
+  const next = deliveryFromReceipt(input.status);
+  const ids = [...new Set(input.ids.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 40);
+  if (!next || ids.length === 0) return { ok: true as const, updated: 0 };
+  const allowed = (Object.keys(DELIVERY_RANK) as CrmDeliveryStatus[]).filter(
+    (status) => DELIVERY_RANK[status] >= 0 && DELIVERY_RANK[status] < DELIVERY_RANK[next]
+  );
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("whatsapp_chat_messages")
+    .update({ delivery_status: next })
+    .in("wa_message_id", ids)
+    .eq("from_me", true)
+    .in("delivery_status", allowed)
+    .select("id");
+  if (error) {
+    console.warn("[whatsapp-crm] receipt", error.message);
+    return { ok: false as const, updated: 0 };
+  }
+  return { ok: true as const, updated: data?.length || 0 };
 }
 
 export async function ensureCrmChatContact(phone: string, name?: string | null) {

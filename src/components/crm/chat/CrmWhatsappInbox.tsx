@@ -187,8 +187,9 @@ function Ticks({ status }: { status: CrmDeliveryStatus }) {
       </span>
     );
   }
+  const read = status === "read";
   return (
-    <svg viewBox="0 0 16 15" className="crm-wa-ticks" aria-hidden="true">
+    <svg viewBox="0 0 16 15" className={`crm-wa-ticks${read ? " is-read" : ""}`} aria-hidden="true">
       <path d="M15.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L8.14 9.97 6.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L15.08 3.92a.45.45 0 0 0-.07-.604z" />
       <path d="M11.01 3.316l-.478-.372a.45.45 0 0 0-.612.06L4.14 9.97 2.035 8.007a.45.45 0 0 0-.613.007l-.378.378a.45.45 0 0 0 .007.613l2.654 2.53a.64.64 0 0 0 .918-.062L11.08 3.92a.45.45 0 0 0-.07-.604z" />
     </svg>

@@ -5668,6 +5668,10 @@ body:has(.crm-shell) {
 .crm-wa-ticks {
   width: 0.95rem;
   height: 0.9rem;
+  fill: #8696a0;
+}
+
+.crm-wa-ticks.is-read {
   fill: #53bdeb;
 }
 
