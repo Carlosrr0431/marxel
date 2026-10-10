@@ -7,9 +7,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { faqContacto, site } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const TITLE = "Contacto MARXEN Salta";
+const TITLE = "Contacto y Google Maps | MARXEN Salta";
 const DESCRIPTION =
-  "Escribí a MARXEN por WhatsApp, teléfono o email. Productores de seguros, prepagas y viajero en Salta.";
+  "MARXEN, agente de seguros en Salta Capital. WhatsApp 0387 572-4473, email y ficha de Google Maps. Autos, motos, prepaga y viajero.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,

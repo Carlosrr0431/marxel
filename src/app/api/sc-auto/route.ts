@@ -59,6 +59,8 @@ export async function POST(req: Request) {
         vin: String(body.vin || ""),
         engineNumber: String(body.engineNumber || ""),
       });
+      const monthly = Number(body.monthly);
+      const planTitle = String(body.planTitle || "").trim();
       await saveQuoteLeadSafe({
         nombre: String(result.nombre || body.nombre || ""),
         celular: String(body.celular || ""),
@@ -69,10 +71,19 @@ export async function POST(req: Request) {
         interes: "Seguro de auto",
         pagePath: String(body.page_path || "/seguros"),
         notas: [
-          `Cotización auto San Cristóbal #${body.opportunityId}`,
-          `Registrado con el productor`,
+          result.registeredWithSc
+            ? `Cotización auto San Cristóbal #${result.opportunityId}`
+            : "Cotización auto San Cristóbal elegida por el cliente",
+          planTitle
+            ? `Plan: ${planTitle}${monthly > 0 ? ` · $${monthly.toLocaleString("es-AR")} / mes` : ""}`
+            : "",
+          result.registeredWithSc
+            ? "Registrada en el panel de San Cristóbal"
+            : "San Cristóbal cotizó el precio y no devolvió número de oportunidad. El pedido quedó para el productor.",
           body.location?.description ? `Localidad: ${body.location.description}` : "",
           String(body.licensePlate || "") ? `Patente: ${body.licensePlate}` : "0km sin patente",
+          String(body.vin || "") ? `Chasis: ${body.vin}` : "",
+          String(body.engineNumber || "") ? `Motor: ${body.engineNumber}` : "",
         ]
           .filter(Boolean)
           .join("\n"),

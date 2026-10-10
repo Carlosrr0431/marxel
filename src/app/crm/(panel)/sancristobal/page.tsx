@@ -320,6 +320,13 @@ export default function SanCristobalPage() {
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupHint, setLookupHint] = useState("");
   const [autoEngine, setAutoEngine] = useState<"sitio_seguro" | "b2b">("sitio_seguro");
+  const [insuredEmail, setInsuredEmail] = useState("");
+  const [insuredPhone, setInsuredPhone] = useState("");
+  const [vin, setVin] = useState("");
+  const [engineNumber, setEngineNumber] = useState("");
+  const [street, setStreet] = useState("");
+  const [streetNumber, setStreetNumber] = useState("");
+  const [issuedPolicy, setIssuedPolicy] = useState("");
 
   const producer = useMemo(() => pickProducer(boot), [boot]);
   const warnings = useMemo(
@@ -1025,6 +1032,24 @@ export default function SanCristobalPage() {
             ) : selectedVersion?.statedAmount ? (
               <p className="self-end text-sm text-muted">Suma {moneyOf(selectedVersion.statedAmount)}</p>
             ) : null}
+            <Field label="Email">
+              <input className="crm-input" value={insuredEmail} onChange={(e) => setInsuredEmail(e.target.value)} />
+            </Field>
+            <Field label="Celular">
+              <input className="crm-input" value={insuredPhone} onChange={(e) => setInsuredPhone(e.target.value)} />
+            </Field>
+            <Field label="Calle">
+              <input className="crm-input" value={street} onChange={(e) => setStreet(e.target.value)} />
+            </Field>
+            <Field label="Altura">
+              <input className="crm-input" value={streetNumber} onChange={(e) => setStreetNumber(e.target.value)} />
+            </Field>
+            <Field label="Chasis">
+              <input className="crm-input" value={vin} onChange={(e) => setVin(e.target.value)} />
+            </Field>
+            <Field label="Motor">
+              <input className="crm-input" value={engineNumber} onChange={(e) => setEngineNumber(e.target.value)} />
+            </Field>
             <div className="flex flex-col gap-2 self-end sm:col-span-2 lg:col-span-3">
               <span className="text-xs font-semibold text-ink">Canal de cotización:</span>
               <div className="flex flex-wrap gap-4 text-sm">
@@ -1090,6 +1115,11 @@ export default function SanCristobalPage() {
               {autoEngine === "sitio_seguro" ? "Cotizar por Sitio Seguro" : "Cotizar auto (B2B)"}
             </button>
           </section>
+          {issuedPolicy ? (
+            <p className="rounded-xl bg-teal/10 px-4 py-3 text-sm font-semibold text-navy">
+              Póliza {issuedPolicy}
+            </p>
+          ) : null}
           {quotePlans.length ? (
             <div className="grid gap-3 md:grid-cols-3">
               {quotePlans.map((plan) => (
@@ -1109,6 +1139,44 @@ export default function SanCristobalPage() {
                   {textOf(plan.DeductibleTypeFullDescription) ? (
                     <p className="mt-3 text-xs text-muted">{textOf(plan.DeductibleTypeFullDescription)}</p>
                   ) : null}
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn-primary mt-4 w-full"
+                    disabled={busy || !taxId || !selectedVersion?.infoAutoCode}
+                    onClick={() =>
+                      void run(
+                        () =>
+                          b2bPost({
+                            action: "emit-ca7",
+                            taxId,
+                            age: Number(age),
+                            postalCode: Number(postal),
+                            locationState: textOf(city.Estado) || "AR_01",
+                            city: textOf(city.Nombre) || "SALTA",
+                            infoautoCode: selectedVersion?.infoAutoCode,
+                            year: Number(year),
+                            statedAmount: selectedVersion?.statedAmount,
+                            is0Km,
+                            hasGnc,
+                            productCode: textOf(plan.ProductCode) || "CA7_CM",
+                            email: insuredEmail,
+                            phone: insuredPhone,
+                            licensePlate: plate,
+                            vin,
+                            engineNumber,
+                            street,
+                            streetNumber,
+                          }),
+                        (data) => {
+                          const policy = textOf(asDict(data.data).PolicyNumber);
+                          setIssuedPolicy(policy);
+                          setNotice(policy ? `Póliza emitida ${policy}` : "San Cristóbal respondió la emisión.");
+                        }
+                      )
+                    }
+                  >
+                    Emitir póliza
+                  </button>
                 </article>
               ))}
             </div>

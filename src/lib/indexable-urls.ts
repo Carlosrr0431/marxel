@@ -8,7 +8,7 @@ export type IndexablePage = {
 };
 
 /** Fecha de última actualización de contenido (zona Argentina, YYYY-MM-DD). */
-export const SITEMAP_LASTMOD = "2026-09-10";
+export const SITEMAP_LASTMOD = "2026-10-10";
 
 /**
  * URLs públicas a indexar (Search Console + sitemap). No incluir /crm ni /api.
@@ -27,6 +27,8 @@ export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/guias/seguro-de-auto-en-salta", changeFrequency: "monthly", priority: 0.8 },
   { path: "/guias/prepaga-en-salta", changeFrequency: "monthly", priority: 0.8 },
   { path: "/guias/seguro-de-viaje-schengen", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/guias/seguro-de-moto-en-salta", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/guias/obra-social-y-prepaga-en-salta", changeFrequency: "monthly", priority: 0.8 },
   { path: "/seguro-de-moto", changeFrequency: "monthly", priority: 0.8 },
   { path: "/seguro-de-hogar", changeFrequency: "monthly", priority: 0.8 },
   { path: "/salud/cartilla-medica", changeFrequency: "monthly", priority: 0.75 },

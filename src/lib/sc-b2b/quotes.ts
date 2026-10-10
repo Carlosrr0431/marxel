@@ -178,11 +178,7 @@ export async function quoteCa7(input: Ca7QuoteInput) {
     return await scB2bPost("/api/Quoted/QuoteCA7", buildCa7Quote({ ...input, fuelType, statedAmount, category, isNational }));
   } catch (err) {
     if (err instanceof ScB2bError && /Object reference not set/i.test(err.message)) {
-      throw new ScB2bError(
-        "San Cristóbal UAT no pudo cotizar este auto: QuoteCA7 falló porque el catálogo Infoauto no devolvió el vehículo.",
-        err.status,
-        err.body
-      );
+      throw new ScB2bError(UAT_CATALOG_ERROR, 422, err.body);
     }
     throw err;
   }
@@ -200,8 +196,103 @@ export async function quoteLife(body: unknown) {
   return scB2bPost("/api/Quoted/QuoteLifeIndividual", body);
 }
 
+const UAT_CATALOG_ERROR =
+  "San Cristóbal UAT devolvió el precio, pero el catálogo de autos vino sin marca ni modelo. Sin eso no hay número de cotización y no se puede emitir la póliza. Hay que pedirle a soporteb2b@sancristobal.com.ar que cargue el catálogo de vehículos en el ambiente de pruebas.";
+
+function asRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function quoteIdFrom(data: unknown, productCode: string) {
+  const summaries = asRecord(data).Summaries;
+  const rows = Array.isArray(summaries) ? summaries : [];
+  const match =
+    rows.find((row) => String(asRecord(row).ProductCode || "") === productCode) || rows[0];
+  return String(asRecord(match).QuoteId || "");
+}
+
+export type Ca7IssueInput = Ca7QuoteInput & {
+  productCode: string;
+  email: string;
+  phone: string;
+  licensePlate?: string;
+  vin?: string;
+  engineNumber?: string;
+  street?: string;
+  streetNumber?: string;
+  city?: string;
+};
+
 export async function issueCa7(body: unknown) {
   return scB2bPost("/api/IssueSubmission/IssueCA7", body);
+}
+
+export async function quoteAndIssueCa7(input: Ca7IssueInput) {
+  const productCode = input.productCode || "CA7_CM";
+  const email = String(input.email || "").trim();
+  const phone = String(input.phone || "").replace(/\D/g, "");
+  const street = String(input.street || "").trim();
+  const streetNumber = String(input.streetNumber || "").trim();
+  const city = String(input.city || "SALTA").trim();
+  if (!email.includes("@")) throw new ScB2bError("Falta el email del asegurado", 400);
+  if (phone.length < 8) throw new ScB2bError("Falta el celular del asegurado", 400);
+  if (!street || !streetNumber) throw new ScB2bError("Falta la calle y la altura", 400);
+  if (!input.is0Km && !String(input.licensePlate || "").trim()) {
+    throw new ScB2bError("Falta la patente", 400);
+  }
+  if (String(input.vin || "").trim().length < 6 || String(input.engineNumber || "").trim().length < 4) {
+    throw new ScB2bError("Faltan el chasis y el motor", 400);
+  }
+
+  let quoted: unknown;
+  try {
+    quoted = await quoteCa7({ ...input, productCodes: [productCode] });
+  } catch (err) {
+    if (err instanceof ScB2bError && /Object reference not set/i.test(err.message)) {
+      throw new ScB2bError(UAT_CATALOG_ERROR, 422, err.body);
+    }
+    throw err;
+  }
+
+  const quoteId = quoteIdFrom(quoted, productCode);
+  if (!quoteId) throw new ScB2bError("La cotización no trajo un número para emitir", 422, quoted);
+
+  const state = input.locationState || "AR_01";
+  const postal = String(input.postalCode);
+  const address = {
+    PostalCode: postal,
+    Street: street,
+    StreetNumber: streetNumber,
+    City: city,
+    StateCode: state,
+    Phone: phone,
+  };
+
+  return issueCa7({
+    QuoteId: quoteId,
+    PaymentInfo: {
+      PaymentMethodCode: "responsive",
+      SendCouponsByCode: "email",
+    },
+    VehicleInfo: {
+      EngineNumber: String(input.engineNumber || "").trim(),
+      LicensePlate: String(input.licensePlate || "").trim(),
+      VIN: String(input.vin || "").trim(),
+      Address: address,
+    },
+    InsuredData: {
+      CellPhone: phone,
+      Email: email,
+      Address: address,
+      ElectronicDocuments: true,
+      UIfObligated: false,
+    },
+    IssueData: {
+      WarningsThrowException: false,
+      StartDate: new Date().toISOString(),
+      DetailResponse: true,
+    },
+  });
 }
 
 export async function issueCp7(body: unknown) {

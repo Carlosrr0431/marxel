@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AutoMultiQuote } from "@/components/AutoMultiQuote";
+import { HomeAutoQuote } from "@/components/HomeAutoQuote";
 import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -11,9 +11,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { faqHome, productor, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const HOME_TITLE = "Seguro de auto, prepaga y viajero en Salta | MARXEN";
+const HOME_TITLE = "Seguros de auto, moto, prepaga y viajero en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "MARXEN, productor asesor en Salta. Cotizá tu auto con varias compañías y contactanos para más información.";
+  "MARXEN, productor asesor en Salta Capital. Cotizá seguro de auto y moto, prepaga y obra social, y asistencia al viajero.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
@@ -22,10 +22,13 @@ export const metadata: Metadata = pageMetadata({
   absoluteTitle: true,
   keywords: [
     "seguro de auto Salta",
-    "seguros de auto",
+    "seguro de moto Salta",
     "prepaga Salta",
-    "seguro de viaje Salta",
+    "obra social Salta",
+    "seguro de salud Salta",
+    "asistencia al viajero Salta",
     "MARXEN Salta",
+    "agente de seguros Salta",
     "San Cristóbal Seguros",
     "Prevención Salud",
   ],
@@ -60,7 +63,10 @@ export default function HomePage() {
       <section className="hero-section hero-section--cover">
         <img className="hero-cover" src="/brand/marxen-portada.jpg" alt="" />
         <div className="hero-cover-scrim" aria-hidden />
-        <div className="container-mx hero-section__inner">
+        <div className="container-mx hero-section__inner hero-section__inner--quote">
+          <div id="cotizar-auto" className="hero-visual hero-visual--quote animate-rise-delay-2">
+            <HomeAutoQuote />
+          </div>
           <div className="hero-copy">
             <p className="animate-rise eyebrow">Seguros de auto, prepaga y viajero en Salta</p>
             <h1 className="animate-rise-delay-1">
@@ -69,9 +75,8 @@ export default function HomePage() {
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
             <p className="hero-lede animate-rise-delay-2" data-seo-lede>
-              Compará el seguro de tu auto con las compañías y hablá directo
-              con Marcos. También asesoramos prepagas y asistencia al viajero
-              en Salta.
+              Ingresá la patente y cotizamos tu auto en San Cristóbal y SMG.
+              También asesoramos motos, prepaga, obra social y asistencia al viajero en Salta.
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
@@ -93,9 +98,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div id="cotizar-auto" className="hero-visual animate-rise-delay-2">
-            <AutoMultiQuote />
-          </div>
         </div>
       </section>
 
@@ -138,7 +140,7 @@ export default function HomePage() {
                   href: "/seguro-de-auto",
                   icon: "shield",
                   title: "MARXEN Seguros",
-                  text: "Autos, motos, hogar, comercios, ART, AP y mala praxis. El cotizador online es para autos.",
+                  text: "Seguro de auto y de moto en Salta, más hogar, comercios, ART y accidentes personales. El cotizador del inicio compara San Cristóbal y SMG.",
                   cta: "Cotizar auto",
                   tone: "navy",
                   delay: 0,
@@ -147,7 +149,7 @@ export default function HomePage() {
                   href: "/salud",
                   icon: "heart",
                   title: "MARXEN Salud",
-                  text: "Tu salud no puede esperar. Accedé a los mejores planes de Prevención Salud con el respaldo que necesitás. Te ayudamos a elegir según tus aportes.",
+                  text: "Prepaga y seguro de salud en Salta. Planes de Prevención Salud y derivación de aportes de obra social si sos monotributista o estás en relación de dependencia.",
                   cta: "Explorar",
                   tone: "teal",
                   delay: 80,
@@ -156,7 +158,7 @@ export default function HomePage() {
                   href: "/viajero",
                   icon: "plane",
                   title: "Seguro de viaje",
-                  text: "Asistencia médica global, pérdida de equipaje y más. Elegí tu plan y disfrutá de tu viaje sin preocupaciones.",
+                  text: "Asistencia al viajero desde Salta: cobertura médica internacional, Schengen y equipaje. Se contrata antes de salir.",
                   cta: "Ver coberturas",
                   tone: "sky",
                   delay: 160,

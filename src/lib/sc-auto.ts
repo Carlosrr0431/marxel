@@ -1036,9 +1036,6 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
   const age = Number(input.age);
   const location = input.location;
 
-  if (!opportunityId || !quoteId) {
-    throw new AutoQuoteError("Falta la cotización seleccionada", 400);
-  }
   if (dni.length < 7 || dni.length > 8) throw new AutoQuoteError("DNI inválido", 400);
   if (!email.includes("@")) throw new AutoQuoteError("Email inválido", 400);
   if (!nombre || !location?.locationId || age < 18) {
@@ -1053,7 +1050,6 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
     ? { firstName: person.firstName, lastName: person.lastName || person.firstName }
     : splitName(nombre);
   const gender = normalizeGender(person?.gender || input.gender || "Male");
-  const producer = await getProducer();
   const licensePlate = normalizeArPlate(input.licensePlate || "");
   const plateKind = classifyArPlate(licensePlate);
 
@@ -1070,6 +1066,22 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
     throw new AutoQuoteError("El número de motor tiene que tener al menos 6 dígitos", 400);
   }
 
+  const nombreCompleto = `${names.firstName} ${names.lastName}`.trim();
+
+  // vehicle-quote a veces devuelve precios con opportunityId y quote id en 0.
+  // Sin esos ids el panel de San Cristóbal no acepta el alta; el productor igual recibe el pedido.
+  if (!opportunityId || !quoteId) {
+    return {
+      ok: true,
+      opportunityId,
+      quoteId,
+      dni,
+      nombre: nombreCompleto,
+      registeredWithSc: false,
+    };
+  }
+
+  const producer = await getProducer();
   const headers = { "x-id": dni };
 
   try {
@@ -1145,6 +1157,7 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
     opportunityId,
     quoteId,
     dni,
-    nombre: `${names.firstName} ${names.lastName}`.trim(),
+    nombre: nombreCompleto,
+    registeredWithSc: true,
   };
 }

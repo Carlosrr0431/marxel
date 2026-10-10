@@ -33,6 +33,7 @@ import {
   producerMovements,
   producerPortfolio,
   quoteAtm,
+  quoteAndIssueCa7,
   quoteCa7,
   quoteCp7,
   quoteLife,
@@ -415,8 +416,7 @@ async function handlePost(request: NextRequest) {
       return NextResponse.json(await runSitioSeguro());
     }
 
-    try {
-      const data = await quoteCa7({
+    const data = await quoteCa7({
         taxId: String(payload.taxId || ""),
         officialIdType: payload.officialIdType ? String(payload.officialIdType) : undefined,
         gender: payload.gender ? String(payload.gender) : undefined,
@@ -436,26 +436,34 @@ async function handlePost(request: NextRequest) {
           : undefined,
         policyType: payload.policyType ? String(payload.policyType) : undefined,
       });
-      return NextResponse.json({ ok: true, data, engine: "b2b" });
-    } catch (err) {
-      const isCatalogErr =
-        err instanceof Error &&
-        /catálogo Infoauto|Object reference not set/i.test(err.message);
-      if (isCatalogErr) {
-        try {
-          const fallbackRes = await runSitioSeguro();
-          return NextResponse.json({
-            ...fallbackRes,
-            fallback: true,
-            notice:
-              "Guidewire B2B UAT no tiene este vehículo cargado en su base interna. Se cotizó con éxito mediante Sitio Seguro aplicando el descuento comercial de la compañía.",
-          });
-        } catch {
-          // Si falla también el fallback, lanzar el error
-        }
-      }
-      throw err;
-    }
+    return NextResponse.json({ ok: true, data, engine: "b2b" });
+  }
+
+  if (action === "emit-ca7") {
+    const gender = String(payload.gender || "M");
+    const data = await quoteAndIssueCa7({
+      taxId: String(payload.taxId || ""),
+      officialIdType: payload.officialIdType ? String(payload.officialIdType) : undefined,
+      gender: gender.toLowerCase().startsWith("f") ? "F" : "M",
+      age: payload.age ? Number(payload.age) : undefined,
+      postalCode: Number(payload.postalCode),
+      locationState: String(payload.locationState || "AR_01"),
+      infoautoCode: String(payload.infoautoCode || ""),
+      year: Number(payload.year),
+      is0Km: Boolean(payload.is0Km),
+      hasGnc: Boolean(payload.hasGnc),
+      statedAmount: payload.statedAmount ? Number(payload.statedAmount) : undefined,
+      productCode: String(payload.productCode || "CA7_CM"),
+      email: String(payload.email || ""),
+      phone: String(payload.phone || ""),
+      licensePlate: payload.licensePlate ? String(payload.licensePlate) : undefined,
+      vin: payload.vin ? String(payload.vin) : undefined,
+      engineNumber: payload.engineNumber ? String(payload.engineNumber) : undefined,
+      street: payload.street ? String(payload.street) : undefined,
+      streetNumber: payload.streetNumber ? String(payload.streetNumber) : undefined,
+      city: payload.city ? String(payload.city) : "SALTA",
+    });
+    return NextResponse.json({ ok: true, data });
   }
 
   if (action === "quote-cp7") {

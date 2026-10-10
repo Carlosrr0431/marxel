@@ -464,6 +464,8 @@ export function AutoQuoteNative({
           licensePlate: plate,
           vin: digitsOnly(vin),
           engineNumber: digitsOnly(engineNumber),
+          planTitle: plan.title,
+          monthly: plan.monthly,
           page_path: window.location.pathname,
         }),
       });
@@ -481,7 +483,7 @@ export function AutoQuoteNative({
       `Hola MARXEN, soy ${nombre.trim()}.`,
       `Quiero el plan ${plan.title} para ${quote.carDescription}.`,
       `Monto asegurado: ${money(quote.statedAmount)}`,
-      `Código: ${quote.opportunityId}`,
+      quote.opportunityId ? `Código: ${quote.opportunityId}` : null,
       `DNI: ${dni.replace(/\D/g, "")}`,
       `Email: ${email.trim()}`,
       plate ? `Patente: ${plate}` : null,
@@ -940,10 +942,12 @@ function PlansView({
             <dt className="inline font-semibold">Monto Asegurado: </dt>
             <dd className="inline">{money(quote.statedAmount)}</dd>
           </div>
-          <div>
-            <dt className="inline font-semibold">Código de cotización: </dt>
-            <dd className="inline">{quote.opportunityId}</dd>
-          </div>
+          {quote.opportunityId ? (
+            <div>
+              <dt className="inline font-semibold">Código de cotización: </dt>
+              <dd className="inline">{quote.opportunityId}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
 
@@ -996,12 +1000,18 @@ function SuccessView({
         Cotización enviada al productor
       </h2>
       <p className="mt-3 text-base text-muted">
-        Ya quedó registrada en San Cristóbal con tu DNI. Un asesor de MARXEN te contacta para emitir.
+        {quote.opportunityId
+          ? "Ya quedó registrada en San Cristóbal con tu DNI. Un asesor de MARXEN te contacta para emitir."
+          : "Marcos ya recibió el plan, el auto y tus datos. Te escribe para seguir con la emisión."}
       </p>
       <p className="mt-4 text-sm text-navy/80">
         {plan.title} · {quote.carDescription}
-        <br />
-        Código {quote.opportunityId}
+        {quote.opportunityId ? (
+          <>
+            <br />
+            Código {quote.opportunityId}
+          </>
+        ) : null}
       </p>
       <button type="button" onClick={onWhatsApp} className="btn btn-primary mt-6 w-full">
         Seguir por WhatsApp

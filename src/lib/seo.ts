@@ -16,6 +16,8 @@ export const SITE_GEO = {
 
 export const ORG_ID = `${SITE_URL}/#organizacion`;
 export const WEBSITE_ID = `${SITE_URL}/#sitio`;
+export const PERSON_ID = `${SITE_URL}/#marcos-gonzalez`;
+const PHONE_E164 = "+54-9-387-572-4473";
 
 export const DEFAULT_KEYWORDS = [
   "MARXEN",
@@ -34,6 +36,10 @@ export const DEFAULT_KEYWORDS = [
   "asistencia al viajero Salta",
   "seguro de hogar Salta",
   "seguro de moto Salta",
+  "seguro de motos Salta",
+  "obra social Salta",
+  "derivar aportes obra social",
+  "asistencia al viajero",
 ];
 
 export function absoluteUrl(path = "/") {
@@ -89,7 +95,7 @@ export function organizationNode(): JsonLd {
       url: absoluteUrl("/brand/marxel-lockup.svg"),
     },
     image: absoluteUrl("/opengraph-image"),
-    telephone: site.phoneLocal,
+    telephone: PHONE_E164,
     email: site.email,
     description:
       "Productores asesores de seguros, prepagas y asistencia al viajero en Salta, Argentina. Cotización de auto, moto y hogar con San Cristóbal, planes de Prevención Salud y asistencia al viajero.",
@@ -127,14 +133,15 @@ export function organizationNode(): JsonLd {
     knowsAbout: [
       "Seguro de automóviles",
       "Seguros de auto en Salta",
-      "Seguro de motos",
+      "Seguro de motos en Salta",
       "Seguro de hogar",
+      "Obra social y derivación de aportes",
+      "Seguro de salud",
       "Seguro de comercio",
       "ART",
       "Accidentes personales",
       "Mala praxis",
       "Medicina prepaga",
-      "Seguro de salud",
       "Prevención Salud",
       "Asistencia al viajero",
       "Seguro de viaje",
@@ -143,13 +150,14 @@ export function organizationNode(): JsonLd {
       {
         "@type": "ContactPoint",
         contactType: "customer service",
-        telephone: "+5493875724473",
+        telephone: PHONE_E164,
         email: site.email,
         areaServed: "AR",
         availableLanguage: ["Spanish"],
         url: `https://wa.me/${site.whatsapp}`,
       },
     ],
+    employee: { "@id": PERSON_ID },
     sameAs: [site.instagram, site.facebook, site.mapsUrl],
     hasOfferCatalog: {
       "@type": "OfferCatalog",
@@ -173,7 +181,11 @@ export function organizationNode(): JsonLd {
         {
           "@type": "Offer",
           url: absoluteUrl("/salud"),
-          itemOffered: { "@type": "Service", name: "Medicina prepaga", url: absoluteUrl("/salud") },
+          itemOffered: {
+            "@type": "Service",
+            name: "Prepaga, obra social y seguro de salud",
+            url: absoluteUrl("/salud"),
+          },
         },
         {
           "@type": "Offer",
@@ -185,6 +197,32 @@ export function organizationNode(): JsonLd {
           },
         },
       ],
+    },
+  };
+}
+
+export function personNode(): JsonLd {
+  return {
+    "@type": "Person",
+    "@id": PERSON_ID,
+    name: "Marcos González",
+    jobTitle: "Productor asesor de seguros",
+    url: absoluteUrl("/quienes-somos"),
+    image: absoluteUrl("/equipo/marcos-gonzalez.jpg"),
+    telephone: PHONE_E164,
+    email: site.email,
+    worksFor: { "@id": ORG_ID },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: SITE_GEO.locality,
+      addressRegion: SITE_GEO.region,
+      postalCode: "4400",
+      addressCountry: SITE_GEO.country,
+    },
+    identifier: {
+      "@type": "PropertyValue",
+      name: "Matrícula de productor asesor",
+      value: "100282",
     },
   };
 }

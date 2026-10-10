@@ -137,4 +137,84 @@ export const GUIDES: Guide[] = [
       { href: "/salud", label: "Prepaga en Salta" },
     ],
   },
+  {
+    path: "/guias/seguro-de-moto-en-salta",
+    title: "Seguro de moto en Salta | Guía MARXEN",
+    description:
+      "Qué cubre un seguro de moto en Salta, la diferencia entre uso particular y reparto, y cómo cotizarlo con MARXEN.",
+    h1: "Cómo elegir un seguro de moto en Salta",
+    lede: "La responsabilidad civil es el piso para circular. El resto depende de la cilindrada, el valor de la moto y si el uso es particular. MARXEN cotiza motos en Salta; no es la compañía que emite la póliza.",
+    keywords: [
+      "seguro de moto en Salta",
+      "seguro de motos Salta",
+      "cotizar seguro de moto",
+    ],
+    paragraphs: [
+      {
+        title: "Lo obligatorio y lo opcional",
+        text: "Para circular hace falta responsabilidad civil. Los planes que cotizamos suman, según el nivel, robo, incendio y asistencia. El detalle se ve en la cotización, no en un precio publicado.",
+      },
+      {
+        title: "Uso particular",
+        text: "El cotizador online es para uso particular. Delivery, reparto y flotas se cotizan aparte: el ramo y el precio cambian.",
+      },
+      {
+        title: "Cómo cotizar",
+        text: "En marxen.com.ar/seguro-de-moto podés partir de la patente o cargar año, marca y modelo. Un asesor de Salta confirma el alta por WhatsApp 0387 572-4473. El asesoramiento no tiene costo.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿MARXEN asegura motos en Salta?",
+        a: "Sí, como productor asesor. La póliza la emite la compañía. Cotizá en /seguro-de-moto o escribinos por WhatsApp.",
+      },
+    ],
+    related: [
+      { href: "/seguro-de-moto", label: "Cotizar seguro de moto" },
+      { href: "/seguro-de-auto", label: "Seguro de auto" },
+    ],
+  },
+  {
+    path: "/guias/obra-social-y-prepaga-en-salta",
+    title: "Obra social y prepaga en Salta | Guía MARXEN",
+    description:
+      "Diferencia entre obra social, prepaga y seguro de salud en Salta, y cómo derivar aportes de monotributo o relación de dependencia con MARXEN.",
+    h1: "Obra social, prepaga y seguro de salud en Salta",
+    lede: "Obra social, prepaga y seguro de salud no son lo mismo. MARXEN no es una obra social: asesora planes de Prevención Salud y la derivación de aportes cuando tu situación laboral lo permite.",
+    keywords: [
+      "obra social Salta",
+      "derivar obra social",
+      "seguro de salud Salta",
+      "prepaga o obra social",
+    ],
+    paragraphs: [
+      {
+        title: "Tres nombres, tres cosas",
+        text: "La obra social es la cobertura de ley ligada al trabajo o al monotributo. La prepaga es un plan de medicina privada, como Prevención Salud. “Seguro de salud” es la forma en que mucha gente busca esa prepaga. MARXEN asesora la prepaga; no reemplaza a la Superintendencia ni a tu empleador.",
+      },
+      {
+        title: "Cuándo se pueden derivar aportes",
+        text: "Si estás en relación de dependencia, la opción de cambio se gestiona en Mi SSSalud. Si sos monotributista, el componente de obra social puede usarse como pago a cuenta del plan. Si el aporte no cubre la cuota, abonás la diferencia. El ingreso particular paga la cuota completa.",
+      },
+      {
+        title: "Qué mirar antes de cambiar",
+        text: "Cartilla en Salta, copagos, grupo familiar y preexistencias declaradas. Las prestaciones del PMO tienen cobertura desde el día 1; las carencias aplican a extras. Una prepaga no puede rechazar el ingreso por una preexistencia declarada. La cuota no se publica: depende de edad, grupo y aportes.",
+      },
+    ],
+    faqs: [
+      {
+        q: "¿MARXEN es una obra social?",
+        a: "No. Es un productor asesor en Salta Capital. Te ayuda a elegir un plan de Prevención Salud y a orientar los aportes cuando corresponde.",
+      },
+      {
+        q: "¿Dónde pido la derivación?",
+        a: "En marxen.com.ar/salud o por WhatsApp 0387 572-4473. El asesor confirma si tu caso es monotributo, relación de dependencia o particular.",
+      },
+    ],
+    related: [
+      { href: "/salud", label: "Planes de salud" },
+      { href: "/guias/prepaga-en-salta", label: "Guía de prepaga" },
+      { href: "/salud/cartilla-medica", label: "Cartilla médica" },
+    ],
+  },
 ];

@@ -12,9 +12,9 @@ import {
 } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const TITLE = "Prepaga y seguro de salud en Salta | Planes A2 y A4";
+const TITLE = "Prepaga, obra social y seguro de salud en Salta";
 const DESCRIPTION =
-  "Prepaga en Salta con MARXEN: planes A2 y A4 de Prevención Salud, cartilla médica y derivación de aportes de monotributo o relación de dependencia.";
+  "Prepaga y seguro de salud en Salta con MARXEN: planes de Prevención Salud, cartilla médica y derivación de aportes de obra social.";
 const FAQ_ITEMS = faqSalud.flatMap((bloque) => bloque.items);
 
 export const metadata: Metadata = pageMetadata({
@@ -29,6 +29,8 @@ export const metadata: Metadata = pageMetadata({
     "plan A2",
     "plan A4",
     "derivar aportes monotributo",
+    "obra social Salta",
+    "derivar obra social",
     "MARXEN Salud",
   ],
 });
@@ -51,8 +53,8 @@ export default function SaludPage() {
       />
       <PageHero
         eyebrow="MARXEN Salud"
-        title="Prepaga en Salta: planes de salud A2 y A4"
-        description="Te ayudamos a elegir el plan de Prevención Salud que mejor se adapta a vos: monotributo, relación de dependencia o particular. Cartilla local y derivación de aportes."
+        title="Prepaga y obra social en Salta"
+        description="Te ayudamos a elegir el plan de Prevención Salud y, si corresponde, a derivar los aportes de tu obra social: monotributo, relación de dependencia o particular."
         cta={{ href: "#planes-a2-a4", label: "Comparar A2 y A4" }}
         crumbs={[
           { href: "/", label: "Inicio" },
@@ -139,12 +141,12 @@ export default function SaludPage() {
         </div>
       </section>
 
-      <section className="bg-mist/40">
+      <section id="obra-social" className="scroll-mt-24 bg-mist/40">
         <div className="container-mx py-14 sm:py-16 lg:py-20">
           <SectionHeading
-            eyebrow="Modalidades de ingreso"
-            title="¿Cómo te sumás?"
-            description="El camino cambia según tu situación laboral. Te guiamos en cada caso."
+            eyebrow="Obra social y prepaga"
+            title="Cómo derivar aportes en Salta"
+            description="Monotributo, relación de dependencia o ingreso particular. MARXEN no es una obra social: te asesora para pasar los aportes a Prevención Salud cuando corresponde."
           />
           <div className="mt-10 grid gap-4 md:grid-cols-3 md:gap-5">
             {modalidadesIngreso.map((m) => (

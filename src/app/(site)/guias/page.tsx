@@ -7,7 +7,7 @@ import { itemListNode, pageJsonLd, pageMetadata } from "@/lib/seo";
 
 const TITLE = "Guías de seguros, prepaga y viajero en Salta";
 const DESCRIPTION =
-  "Cómo elegir seguro de auto, prepaga A2/A4 y asistencia al viajero Schengen desde Salta. Guías de MARXEN, productor asesor local.";
+  "Guías de MARXEN en Salta: seguro de auto y moto, prepaga, obra social y asistencia al viajero.";
 
 export const metadata: Metadata = pageMetadata({
   title: TITLE,

@@ -4,7 +4,7 @@ export const site = {
   tagline:
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
-    "Productores asesores de seguros en Salta: cotizá auto, moto y hogar, compará prepagas Prevención Salud y contratá seguro de viaje / asistencia al viajero.",
+    "Productor asesor en Salta Capital: seguro de auto y moto, prepaga y obra social Prevención Salud, y asistencia al viajero.",
   phone: "+54 9 387 572-4473",
   phoneLocal: "0387 572-4473",
   email: "comercial@marxen.com.ar",
@@ -48,7 +48,9 @@ export const seoLinks = [
   { href: "/seguro-de-auto", label: "Seguro de auto" },
   { href: "/seguro-de-moto", label: "Seguro de moto" },
   { href: "/seguro-de-hogar", label: "Seguro de hogar" },
-  { href: "/salud", label: "Prepaga / salud" },
+  { href: "/salud", label: "Prepaga y obra social" },
+  { href: "/guias/obra-social-y-prepaga-en-salta", label: "Derivar aportes" },
+  { href: "/guias/seguro-de-moto-en-salta", label: "Guía de moto" },
   { href: "/salud/cartilla-medica", label: "Cartilla médica" },
   { href: "/viajero", label: "Seguro de viaje" },
   { href: "/guias", label: "Guías" },
@@ -176,8 +178,16 @@ export const faqHome: FaqItem[] = [
     a: "Trabajamos con Alba Caución, CNP, SMG Vida, Caruso, Prevención Retiro, Mista Seguros, Sancor Seguros, San Cristóbal, Nivel Seguros y Go Assistance. En salud asesoramos planes de Prevención Salud.",
   },
   {
-    q: "¿También ayudan con prepaga y aportes?",
-    a: "Sí. Armamos la comparativa de cartilla y te guiamos si sos monotributista, estás en relación de dependencia o ingresás de forma particular, para aprovechar aportes cuando corresponde.",
+    q: "¿También ayudan con prepaga, obra social y aportes?",
+    a: "Sí. Asesoramos prepaga y seguro de salud con Prevención Salud en Salta. Si sos monotributista o estás en relación de dependencia, te guiamos para derivar los aportes de la obra social cuando corresponde. El ingreso particular también se puede hacer.",
+  },
+  {
+    q: "¿Hacen seguro de moto en Salta?",
+    a: "Sí. Cotizamos seguro de moto de uso particular en marxen.com.ar/seguro-de-moto. Si la moto es de reparto o flota, lo armamos aparte por WhatsApp.",
+  },
+  {
+    q: "¿Dónde está MARXEN en Google Maps?",
+    a: "El perfil es MARXEN, agente de seguros, con zona de cobertura en Salta Capital (CP 4400). El teléfono público es 0387 572-4473. La ficha está en Google Maps: share.google/lzKEp4xPQDnOpkqcB.",
   },
   {
     q: "¿El asesoramiento tiene costo?",

@@ -18,6 +18,7 @@ export {
   buildCp7Quote,
   issueAtm,
   issueCa7,
+  quoteAndIssueCa7,
   issueCp7,
   quoteAtm,
   quoteCa7,

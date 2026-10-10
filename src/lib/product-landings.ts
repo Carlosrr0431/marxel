@@ -94,6 +94,7 @@ export const productLandings: Record<QuoteProduct, ProductLanding> = {
     crumbLabel: "Seguro de moto",
     keywords: [
       "seguro de moto Salta",
+      "seguro de motos Salta",
       "cotizar seguro de moto",
       "seguro moto San Cristóbal",
       "MARXEN motos",

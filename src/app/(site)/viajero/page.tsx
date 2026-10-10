@@ -18,6 +18,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/viajero",
   keywords: [
     "seguro de viaje Salta",
+    "asistencia al viajero",
     "asistencia al viajero Salta",
     "seguro de viaje Schengen",
     "GoAssistance",
