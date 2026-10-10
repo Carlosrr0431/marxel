@@ -48,7 +48,7 @@ async function fetchJson(url: string, init?: RequestInit) {
   return data;
 }
 
-export function HomeAutoQuote() {
+export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }) {
   const yearList = useMemo(years, []);
   const [plate, setPlate] = useState("");
   const [yearId, setYearId] = useState("");
@@ -312,7 +312,7 @@ export function HomeAutoQuote() {
   const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
 
   return (
-    <div className="home-quote">
+    <div className={variant === "crm" ? "home-quote home-quote--crm" : "home-quote"}>
       <form
         className="quote-card"
         onSubmit={(event) => {

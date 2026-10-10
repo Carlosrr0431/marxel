@@ -14,8 +14,7 @@ const links = [
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const, group: "Ventas" },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
   { href: "/crm/formulario", label: "Formulario", icon: "form" as const },
-  { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
-  { href: "/crm/smg", label: "Swiss Medical", icon: "shield" as const },
+  { href: "/crm/cotizar", label: "Cotizar", icon: "car" as const },
   { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
   { href: "/crm/mailing", label: "Mailing", icon: "mail" as const, group: "Herramientas" },
 ];
@@ -69,13 +68,6 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       </svg>
     );
   }
-  if (name === "shield") {
-    return (
-      <svg {...props}>
-        <path d="M12 3.5l7 3v5.2c0 4.2-2.8 7.8-7 9.3-4.2-1.5-7-5.1-7-9.3V6.5l7-3z" />
-      </svg>
-    );
-  }
   if (name === "calendar") {
     return (
       <svg {...props}>
@@ -96,6 +88,16 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       <svg {...props}>
         <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h7A2.5 2.5 0 0 1 17 6.5v4a2.5 2.5 0 0 1-2.5 2.5H11l-3 2.2V13H7.5A2.5 2.5 0 0 1 5 10.5v-4z" />
         <path d="M8 16.2c.4 1.4 1.8 2.3 3.4 2.3h2.1L16.8 21v-2.2h.7A2.5 2.5 0 0 0 20 16.3v-3.2" />
+      </svg>
+    );
+  }
+  if (name === "car") {
+    return (
+      <svg {...props}>
+        <path d="M4 14.5h16" />
+        <path d="M6.5 14.5l1.2-4.2A2 2 0 0 1 9.6 8.8h4.8a2 2 0 0 1 1.9 1.5l1.2 4.2" />
+        <circle cx="7.5" cy="16.2" r="1.3" />
+        <circle cx="16.5" cy="16.2" r="1.3" />
       </svg>
     );
   }
