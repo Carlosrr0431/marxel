@@ -492,11 +492,11 @@ export function HomeAutoQuote() {
             </label>
             <label>
               <span>Chasis</span>
-              <input className="field" inputMode="numeric" maxLength={10} value={vin} onChange={(event) => setVin(event.target.value.replace(/\D/g, "").slice(0, 10))} />
+              <input className="field" maxLength={20} value={vin} onChange={(event) => setVin(event.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase())} />
             </label>
             <label className="sm:col-span-2">
               <span>Motor</span>
-              <input className="field" inputMode="numeric" value={engine} onChange={(event) => setEngine(event.target.value.replace(/\D/g, ""))} />
+              <input className="field" maxLength={20} value={engine} onChange={(event) => setEngine(event.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase())} />
             </label>
           </div>
           <button type="submit" className="btn btn-primary home-quote__submit" disabled={emitting}>

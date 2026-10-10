@@ -293,31 +293,40 @@ export function withEmission(quote: unknown, extras: Record<string, unknown>) {
   const next = structuredClone(source.encabezado ? source : asRecord(source.data));
   const header = asRecord(next.encabezado);
   header.emitir = true;
+  const context = asRecord(header.contextInformation);
+  context.snTomadorAgregado = false;
+  header.contextInformation = context;
+  const quoteId = numberOf(header.idCotizacion);
+  const solicitud = asRecord(next.respuestaSolicitud);
+  if (quoteId) solicitud.idcotizacion = quoteId;
+  next.respuestaSolicitud = solicitud;
   next.encabezado = header;
   const payment = asRecord(next.planDePago);
-  if (extras.codConducto) payment.codconducto = numberOf(extras.codConducto);
+  if (extras.codConducto !== undefined && String(extras.codConducto) !== "") {
+    payment.codconducto = numberOf(extras.codConducto);
+  }
   if (extras.nroTarjeta) payment.nroctatarj = String(extras.nroTarjeta);
   next.planDePago = payment;
+  const documento = String(extras.nroDoc || "");
+  const cuit = String(extras.cuit || "");
   next.tomador = {
+    nrodocbusqueda: cuit || documento,
     nombre: String(extras.nombre || ""),
     apellido1: String(extras.apellido || ""),
     apellido2: String(extras.apellido2 || ""),
-    cuitcuil: String(extras.cuit || ""),
+    cuitcuil: cuit,
     fecnac: /^\d{4}-\d{2}-\d{2}$/.test(String(extras.fecnac || ""))
       ? `${extras.fecnac}T12:00:00-03:00`
       : String(extras.fecnac || ""),
     codsexo: String(extras.sexo || ""),
     nacionalidad: 1,
+    codAsegurado: numberOf(extras.codAsegurado),
     codtipopersona: "F",
-    codtipodocumento: numberOf(extras.tipoDoc, 96),
-    nrodoc: String(extras.nroDoc || ""),
-    nrodocbusqueda: String(extras.nroDoc || ""),
+    codtipodocumento: numberOf(extras.tipoDoc, 1),
+    nrodoc: documento,
     codestadocivil: numberOf(extras.estadoCivil),
-    codcondicionfiscal: numberOf(extras.condicionFiscal, 1),
-    personaexpuestapoliticamente: false,
-    sujetoobligado: false,
-    leyfatca: false,
-    ningunadelasanteriores: true,
+    codcondicionfiscal: numberOf(extras.condicionFiscal, 5),
+    codtipoiibb: 0,
     direccion: [
       {
         codpais: 1,
@@ -325,6 +334,7 @@ export function withEmission(quote: unknown, extras: Record<string, unknown>) {
         codmunicipio: numberOf(extras.codMunicipio),
         calle: String(extras.calle || ""),
         numero: String(extras.numero || ""),
+        codpiso: null,
         piso: String(extras.piso || ""),
         depto: String(extras.depto || ""),
         codpostal: String(extras.cp || ""),
@@ -332,9 +342,17 @@ export function withEmission(quote: unknown, extras: Record<string, unknown>) {
       },
     ],
     contacto: [
-      { codtipocontacto: 1, valor: String(extras.email || "") },
-      { codtipocontacto: 4, valor: String(extras.telefono || "") },
-    ].filter((item) => item.valor),
+      { codtipocontacto: 1, valor: String(extras.telefono || "") },
+      { codtipocontacto: 4, valor: "" },
+      { codtipocontacto: 12, valor: "" },
+      { codtipocontacto: 95, valor: "" },
+      { codtipocontacto: 99, valor: String(extras.email || "") },
+    ],
+    escliente: Boolean(extras.esCliente),
+    personaexpuestapoliticamente: false,
+    sujetoobligado: false,
+    leyfatca: false,
+    ningunadelasanteriores: false,
   };
   const riesgos = Array.isArray(next.riesgo) ? next.riesgo : [];
   const riesgo = asRecord(riesgos[0]);
@@ -343,7 +361,34 @@ export function withEmission(quote: unknown, extras: Record<string, unknown>) {
   if (extras.patente) vehiculo.txtPatente = String(extras.patente);
   if (extras.chasis) vehiculo.txtChasis = String(extras.chasis);
   if (extras.motor) vehiculo.txtMotor = String(extras.motor);
+  const plans = Array.isArray(vehiculo.planCobertura) ? vehiculo.planCobertura.map(asRecord) : [];
+  const chosen = plans.find((plan) => String(plan.codPlanCobertura) === String(extras.codPlanCobertura || ""));
   if (extras.codPlanCobertura) vehiculo.codPlanCobertura = numberOf(extras.codPlanCobertura);
+  if (chosen) {
+    header.prima = chosen.importePrima;
+    header.premio = chosen.importePremio;
+    if (vehiculo.sumaAsegurada) header.sumaAsegurada = vehiculo.sumaAsegurada;
+    const consolidado = asRecord(next.consolidado);
+    consolidado.importePrima = chosen.importePrima;
+    consolidado.importePremio = chosen.importePremio;
+    consolidado.importeCuota = chosen.importeCuota;
+    consolidado.importePrimaRC = chosen.importePrimaRC;
+    consolidado.importePrimaCasco = chosen.importePrimaCasco;
+    if (Array.isArray(chosen.componentePremio)) {
+      consolidado.componentePremioConsolidado = chosen.componentePremio.map((item) => {
+        const row = asRecord(item);
+        return {
+          nombreConcepto: row.nombreConcepto,
+          codTipoConcepto: row.codTipoConcepto,
+          codConcepto: row.codConcepto,
+          puntajeTasa: row.puntajeTasa,
+          importeCalculado: row.importeCalculado,
+        };
+      });
+    }
+    next.consolidado = consolidado;
+    next.encabezado = header;
+  }
   entidad.vehiculo = vehiculo;
   riesgo.entidad = entidad;
   if (riesgos.length) riesgos[0] = riesgo;

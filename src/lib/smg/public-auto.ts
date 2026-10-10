@@ -1,5 +1,5 @@
 import { parseSmgCovers, type CoverMap } from "@/lib/plan-covers";
-import { buildQuoteBody, smgCotizar, smgProductos, smgUbicaciones, smgVehiculos, withEmission } from "./client";
+import { buildQuoteBody, smgAsegurado, smgCotizar, smgUbicaciones, smgVehiculos, withEmission } from "./client";
 
 export type PublicSmgPlan = {
   id: string;
@@ -167,21 +167,42 @@ export async function quoteSmgPublic(input: {
   return { plans, quote: result.data, vehicle };
 }
 
-function firstConduct(catalog: unknown) {
-  const forms = asList(asRecord(asRecord(catalog).parametro).formadepago);
-  const options = forms.flatMap((form) => {
-    const conducts = asList(form.conducto);
-    if (!conducts.length) return [text(form, ["codconducto", "codformadepago"])];
-    return conducts.map((item) => text(item, ["codconducto"]));
-  });
-  return options.find(Boolean) || "";
-}
-
 function policyNumberOf(data: unknown) {
   const root = asRecord(data);
   const header = asRecord(root.encabezado);
-  const number = text(root, ["nroPoliza", "numeroPoliza", "nroSolicitud"]) || text(header, ["nroPoliza", "numeroPoliza", "nroSolicitud"]);
+  const solicitud = asRecord(root.respuestaSolicitud);
+  const number =
+    text(solicitud, ["numerosolicitud", "nroSolicitud"]) ||
+    text(header, ["nroSolicitud", "nroPoliza", "numeroPoliza"]) ||
+    text(root, ["nroPoliza", "numeroPoliza", "nroSolicitud"]);
   return number && number !== "0" ? number : "";
+}
+
+function emissionProblem(data: unknown) {
+  const row = asRecord(data);
+  const raw = String(row.message || "");
+  if (raw.startsWith("{")) {
+    try {
+      const inner = asRecord(JSON.parse(raw));
+      const node = asRecord(inner.Data || inner.data);
+      const solicitud = asRecord(node.RespuestaSolicitud || node.respuestaSolicitud);
+      return problemOf(solicitud) || problemOf(node) || problemOf(inner);
+    } catch {
+      return "";
+    }
+  }
+  return problemOf(data) || messageOf(data);
+}
+
+function customerCode(data: unknown) {
+  const root = asRecord(data);
+  const lists = [root.asegurado, root.asegurados, asRecord(root.data).asegurado, root];
+  for (const item of lists) {
+    const row = Array.isArray(item) ? asRecord(item[0]) : asRecord(item);
+    const code = text(row, ["codAsegurado", "codaseg"]);
+    if (code && code !== "0") return code;
+  }
+  return "";
 }
 
 export async function emitSmgPublic(input: {
@@ -204,8 +225,8 @@ export async function emitSmgPublic(input: {
   engineNumber: string;
 }) {
   const quoted = await quoteSmgPublic(input);
-  const products = await smgProductos();
-  const conduct = firstConduct(products.data);
+  const existing = await smgAsegurado({ codtipodocumento: "1", nrodoc: input.dni }).catch(() => null);
+  const codAsegurado = existing ? customerCode(existing.data) : "";
   const issued = withEmission(quoted.quote, {
     nombre: input.nombre,
     apellido: input.apellido,
@@ -224,11 +245,13 @@ export async function emitSmgPublic(input: {
     chasis: input.vin,
     motor: input.engineNumber,
     codPlanCobertura: input.planId,
-    codConducto: conduct,
+    codAsegurado,
+    esCliente: Boolean(codAsegurado),
+    condicionFiscal: 5,
   });
   const result = await smgCotizar(issued);
   const policyNumber = policyNumberOf(result.data);
   if (policyNumber) return { policyNumber, data: result.data };
-  const problem = problemOf(result.data) || messageOf(result.data);
+  const problem = emissionProblem(result.data);
   throw new Error(problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor.");
 }

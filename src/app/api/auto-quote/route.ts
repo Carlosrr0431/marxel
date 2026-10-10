@@ -131,8 +131,8 @@ async function emit(body: Record<string, unknown>) {
   const email = String(body.email || "").trim();
   const phone = String(body.celular || "").trim();
   const dni = String(body.dni || "").replace(/\D/g, "");
-  const vin = String(body.vin || "").replace(/\D/g, "");
-  const engine = String(body.engineNumber || "").replace(/\D/g, "");
+  const vin = String(body.vin || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
+  const engine = String(body.engineNumber || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
   const street = String(body.street || "").trim();
   const streetNumber = String(body.streetNumber || "").trim();
   const city = String(location.description || "SALTA");
