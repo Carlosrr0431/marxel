@@ -23,6 +23,7 @@ export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/viajero", changeFrequency: "weekly", priority: 0.9 },
   { path: "/seguro-de-auto/terceros-basico", changeFrequency: "monthly", priority: 0.85 },
   { path: "/seguros", changeFrequency: "weekly", priority: 0.85 },
+  { path: "/companias", changeFrequency: "monthly", priority: 0.88 },
   { path: "/cotizar", changeFrequency: "weekly", priority: 0.85 },
   { path: "/guias/seguro-de-auto-en-salta", changeFrequency: "monthly", priority: 0.8 },
   { path: "/guias/prepaga-en-salta", changeFrequency: "monthly", priority: 0.8 },

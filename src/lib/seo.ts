@@ -145,6 +145,17 @@ export function organizationNode(): JsonLd {
       "Prevención Salud",
       "Asistencia al viajero",
       "Seguro de viaje",
+      "San Cristóbal Seguros",
+      "Sancor Seguros",
+      "CNP Seguros",
+      "SMG Vida",
+      "Nivel Seguros",
+      "Mista Seguros",
+      "Caruso Seguros",
+      "Alba Caución",
+      "Prevención Retiro",
+      "Go Assistance",
+      "New Travel",
     ],
     contactPoint: [
       {

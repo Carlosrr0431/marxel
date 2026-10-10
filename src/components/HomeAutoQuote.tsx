@@ -309,7 +309,7 @@ export function HomeAutoQuote() {
       <form className="quote-card" onSubmit={(event) => event.preventDefault()}>
         <p className="home-quote__kicker">San Cristóbal y SMG</p>
         <h2>Cotizá tu auto en un minuto</h2>
-        <p className="home-quote__lede">Ingresá la patente. Completamos el auto y cotizamos en las dos compañías.</p>
+        <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
 
         <label className="home-quote__plate">
           <span>Patente</span>
@@ -371,7 +371,6 @@ export function HomeAutoQuote() {
             }}
             placeholder="Elegí el modelo"
             options={models}
-            wide
           />
           <Select
             label="Versión"
@@ -379,11 +378,10 @@ export function HomeAutoQuote() {
             onChange={setVersionId}
             placeholder="Elegí la versión"
             options={versions.map((item) => ({ id: String(item.id), label: item.fullCarDescripcion || item.description }))}
-            wide
           />
         </div>
 
-        <div className="home-quote__row">
+        <div className="home-quote__row home-quote__trio">
           <Pill label="GNC" value={hasGnc} onChange={setHasGnc} />
           <label>
             <span>CP</span>

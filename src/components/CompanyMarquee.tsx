@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { companias } from "@/lib/content";
 import { CompanyMark } from "./CompanyMark";
 
@@ -10,10 +11,10 @@ export function CompanyMarquee() {
       <div className="company-marquee__viewport">
         <div className="company-track">
           {loop.map((company, index) => (
-            <div className="company-card" key={`${company.slug}-${index}`}>
+            <Link className="company-card" key={`${company.slug}-${index}`} href={`/companias#${company.slug}`}>
               <CompanyMark company={company} />
               <span>{company.name}</span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

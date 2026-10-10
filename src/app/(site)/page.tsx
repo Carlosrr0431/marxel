@@ -64,9 +64,6 @@ export default function HomePage() {
         <img className="hero-cover" src="/brand/marxen-portada.jpg" alt="" />
         <div className="hero-cover-scrim" aria-hidden />
         <div className="container-mx hero-section__inner hero-section__inner--quote">
-          <div id="cotizar-auto" className="hero-visual hero-visual--quote animate-rise-delay-2">
-            <HomeAutoQuote />
-          </div>
           <div className="hero-copy">
             <p className="animate-rise eyebrow">Seguros de auto, prepaga y viajero en Salta</p>
             <h1 className="animate-rise-delay-1">
@@ -97,7 +94,9 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-
+          <div id="cotizar-auto" className="hero-visual hero-visual--quote animate-rise-delay-2">
+            <HomeAutoQuote />
+          </div>
         </div>
       </section>
 

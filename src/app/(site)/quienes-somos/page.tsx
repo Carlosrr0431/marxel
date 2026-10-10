@@ -110,7 +110,7 @@ export default function QuienesSomosPage() {
             {companias.map((company) => (
               <li key={company.slug}>
                 <CompanyMark company={company} />
-                <span>{company.name}</span>
+                <Link href={`/companias#${company.slug}`}>{company.name} en Salta</Link>
               </li>
             ))}
           </ul>

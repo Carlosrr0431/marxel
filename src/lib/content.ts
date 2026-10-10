@@ -55,6 +55,7 @@ export const seoLinks = [
   { href: "/viajero", label: "Seguro de viaje" },
   { href: "/guias", label: "Guías" },
   { href: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
+  { href: "/companias", label: "Compañías en Salta" },
 ];
 
 export const seguros = [
@@ -175,7 +176,7 @@ export const faqHome: FaqItem[] = [
   },
   {
     q: "¿Con qué compañías trabajan?",
-    a: "Trabajamos con Alba Caución, CNP, SMG Vida, Caruso, Prevención Retiro, Mista Seguros, Sancor Seguros, San Cristóbal, Nivel Seguros y Go Assistance. En salud asesoramos planes de Prevención Salud.",
+    a: "En Salta trabajamos con San Cristóbal, Sancor Seguros, CNP, SMG Vida, Nivel Seguros, Mista Seguros, Caruso, Alba Caución, Prevención Retiro, Prevención Salud, Go Assistance y New Travel. MARXEN es el productor asesor: la póliza o el plan lo emite la compañía. La lista está en marxen.com.ar/companias.",
   },
   {
     q: "¿También ayudan con prepaga, obra social y aportes?",
