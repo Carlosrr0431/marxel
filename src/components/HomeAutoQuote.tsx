@@ -603,7 +603,8 @@ function CompanyPlans({
                 onClick={() => onSelect({ company, id: plan.id, title: plan.title, monthly: plan.monthly })}
               >
                 <strong>{plan.title}</strong>
-                <span>{plan.monthly > 0 ? `${money(plan.monthly)} / mes` : "Consultar"}</span>
+                <b className="home-quote__price">{plan.monthly > 0 ? money(plan.monthly) : "Consultar"}</b>
+                {plan.monthly > 0 ? <span>por mes</span> : null}
               </button>
             </li>
           );
