@@ -32,10 +32,16 @@ export function normalizeArPhone(value: string) {
   if (!clean) return "";
   if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
   if (clean.length > 13 && !clean.startsWith("54")) return "";
-  if (clean.startsWith("549")) return clean;
-  if (clean.startsWith("54") && !clean.startsWith("549")) return `549${clean.slice(2)}`;
-  if (clean.length >= 8 && clean.length <= 11) return `549${clean}`;
+  if (clean.startsWith("549")) return restoreSaltaMobile(clean);
+  if (clean.startsWith("54") && !clean.startsWith("549")) return restoreSaltaMobile(`549${clean.slice(2)}`);
+  if (clean.length >= 8 && clean.length <= 11) return restoreSaltaMobile(`549${clean}`);
   return clean;
+}
+
+// 307 no es código de área. El celular de Salta es 387 y a veces llega como 307.
+function restoreSaltaMobile(phone: string) {
+  if (phone.startsWith("549307") && phone.length === 13) return `549387${phone.slice(6)}`;
+  return phone;
 }
 
 /** Quita `:device` de un JID (549...:12@s.whatsapp.net → 549...@s.whatsapp.net). */
