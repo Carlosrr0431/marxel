@@ -21,7 +21,7 @@ export function CrmShell({
   searchItems,
   children,
 }: {
-  badges: { inbox: number; seguimientos: number; chatbot: number; chats?: number };
+  badges: { inbox: number; seguimientos: number; chatbot: number; chats?: number; formulario?: number };
   searchItems: SearchItem[];
   children: React.ReactNode;
 }) {

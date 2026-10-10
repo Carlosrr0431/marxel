@@ -13,7 +13,7 @@ import { normalizeArPhone } from "@/lib/whatsmeow/config";
 const QUICK = [
   { href: "/crm/leads?origen=chatbot", label: "Chatbot" },
   { href: "/crm/leads?origen=whatsapp_directo", label: "WhatsApp Directo" },
-  { href: "/crm/leads?origen=formulario", label: "Formulario" },
+  { href: "/crm/formulario", label: "Formulario" },
   { href: "/crm/leads?tag=caliente", label: "Calientes" },
   { href: "/crm/leads?producto=salud", label: "Salud" },
   { href: "/crm/leads?producto=seguros", label: "Seguros" },

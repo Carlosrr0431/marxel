@@ -20,6 +20,7 @@ export default async function CrmPanelLayout({
     { data: unreadChats },
     { data: leads },
     { data: afiliados },
+    { count: formulario },
   ] = await Promise.all([
     supabase
       .from("seguimientos")
@@ -48,6 +49,11 @@ export default async function CrmPanelLayout({
       .select("id,nombre,celular")
       .order("created_at", { ascending: false })
       .limit(80),
+    supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .or("origen_detalle.eq.formulario,tags.cs.{formulario}")
+      .eq("estado", "nuevo"),
   ]);
 
   const searchItems = [
@@ -84,6 +90,7 @@ export default async function CrmPanelLayout({
           inbox: overdue || 0,
           seguimientos: pending || 0,
           chatbot: chatbot || 0,
+          formulario: formulario || 0,
           chats: (unreadChats || []).reduce(
             (sum, row) => sum + Number(row.unread_count || 0),
             0

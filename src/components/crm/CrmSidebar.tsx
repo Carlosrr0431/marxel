@@ -13,6 +13,7 @@ const links = [
   { href: "/crm/chats", label: "Chats", icon: "bubbles" as const },
   { href: "/crm/pipeline", label: "Pipeline", icon: "kanban" as const, group: "Ventas" },
   { href: "/crm/leads", label: "Leads", icon: "users" as const },
+  { href: "/crm/formulario", label: "Formulario", icon: "form" as const },
   { href: "/crm/sancristobal", label: "San Cristóbal", icon: "shield" as const },
   { href: "/crm/smg", label: "Swiss Medical", icon: "shield" as const },
   { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
@@ -98,6 +99,14 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       </svg>
     );
   }
+  if (name === "form") {
+    return (
+      <svg {...props}>
+        <path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 20V5A1.5 1.5 0 0 1 7 3.5z" />
+        <path d="M14 3.5V8h4.5M8.5 12h7M8.5 15.5h5" />
+      </svg>
+    );
+  }
   if (name === "mail") {
     return (
       <svg {...props}>
@@ -119,7 +128,7 @@ export function CrmSidebar({
   collapsed,
   onCollapsedChange,
 }: {
-  badges?: { inbox?: number; chats?: number };
+  badges?: { inbox?: number; chats?: number; formulario?: number };
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }) {
@@ -172,9 +181,11 @@ export function CrmSidebar({
             const badge =
               link.href === "/crm/inbox"
                 ? badges?.inbox
-                : link.href === "/crm/chats"
+                :               link.href === "/crm/chats"
                   ? badges?.chats
-                  : undefined;
+                  : link.href === "/crm/formulario"
+                    ? badges?.formulario
+                    : undefined;
 
             return (
               <Fragment key={link.href}>
