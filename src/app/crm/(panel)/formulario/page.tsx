@@ -46,6 +46,19 @@ function estadoOf(value: string) {
   return LEAD_ESTADOS.find((item) => item.value === value);
 }
 
+const issuers = [
+  {
+    href: "/crm/sancristobal",
+    name: "San Cristóbal",
+    logo: "/companias/sancristobal.svg",
+  },
+  {
+    href: "/crm/smg",
+    name: "Swiss Medical",
+    logo: "/companias/smg.svg",
+  },
+];
+
 export default async function FormularioPage() {
   const supabase = createServiceClient();
   const { data } = await supabase
@@ -78,6 +91,25 @@ export default async function FormularioPage() {
         title="Formulario"
         description="Teléfono y mensaje de quienes pidieron que los contacten desde el sitio."
       />
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        {issuers.map((company) => (
+          <Link
+            key={company.href}
+            href={company.href}
+            className="crm-card crm-card-hover flex flex-col gap-4 p-5"
+          >
+            <span className="flex h-20 items-center justify-center rounded-2xl bg-mist px-6">
+              <img src={company.logo} alt="" className="h-9 w-full max-w-[11rem] object-contain" />
+            </span>
+            <span>
+              <span className="block font-display text-lg font-semibold text-navy">{company.name}</span>
+              <span className="mt-1 block text-sm text-muted">Hacé clic para pasar a la emisión de la póliza.</span>
+            </span>
+            <span className="text-sm font-semibold text-teal">Emitir</span>
+          </Link>
+        ))}
+      </section>
 
       {leads.length ? (
         <div className="grid gap-3">
