@@ -79,7 +79,6 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
   const [vin, setVin] = useState("");
   const [engine, setEngine] = useState("");
   const [emitting, setEmitting] = useState(false);
-  const [detailKey, setDetailKey] = useState<string | null>(null);
   const [issued, setIssued] = useState("");
   const quotedTicket = useRef("");
 
@@ -310,10 +309,19 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
   }
 
   const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
-  const crmPlans = variant === "crm" && quote ? comparePlans(quote) : [];
+  const plans = quote ? comparePlans(quote) : [];
+  function pickPlan(plan: ComparePlan) {
+    const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
+    setChoice({
+      company,
+      id: plan.key.slice(company.length + 1),
+      title: plan.title,
+      monthly: plan.monthly,
+    });
+  }
 
   return (
-    <div className={variant === "crm" ? "home-quote home-quote--crm" : "home-quote"}>
+    <div className={variant === "crm" ? "home-quote home-quote--crm" : `home-quote${view === "plans" && plans.length > 0 ? " is-comparing" : ""}`}>
       <form
         className="quote-card"
         onSubmit={(event) => {
@@ -437,53 +445,12 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
             </div>
             {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
             {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
-            {crmPlans.length > 0 ? (
-              <QuoteCompare
-                embedded
-                focusKey=""
-                plans={crmPlans}
-                onClose={() => setQuote(null)}
-                onPick={(plan) => {
-                  const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
-                  setChoice({
-                    company,
-                    id: plan.key.slice(company.length + 1),
-                    title: plan.title,
-                    monthly: plan.monthly,
-                  });
-                }}
-              />
+            {plans.length > 0 ? (
+              <QuoteCompare embedded focusKey="" plans={plans} onClose={() => setQuote(null)} onPick={pickPlan} />
             ) : (
               <p className="quote-alert">No hubo planes para comparar.</p>
             )}
           </div>
-        ) : null}
-
-        {view === "plans" && quote && variant !== "crm" ? (
-          <>
-            <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
-              Editar datos
-            </button>
-            <h2>{quote.carDescription || hint || plate}</h2>
-            <div className="home-quote__results">
-              <CompanyPlans
-                name="San Cristóbal"
-                quote={quote.sancristobal}
-                selected={choice}
-                company="sancristobal"
-                onSelect={setChoice}
-                onDetail={setDetailKey}
-              />
-              <CompanyPlans
-                name="SMG"
-                quote={quote.smg}
-                selected={choice}
-                company="smg"
-                onSelect={setChoice}
-                onDetail={setDetailKey}
-              />
-            </div>
-          </>
         ) : null}
 
         {view === "emit" && choice ? (
@@ -557,13 +524,28 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
           </>
         ) : null}
 
+        {view === "plans" && quote && variant !== "crm" && plans.length === 0 ? (
+          <>
+            <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
+              Editar datos
+            </button>
+            <h2>{quote.carDescription || hint || plate}</h2>
+            {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
+            {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
+            <p className="quote-alert">No hubo planes para comparar.</p>
+          </>
+        ) : null}
+
         {error && view !== "plans" ? <p className="quote-alert">{error}</p> : null}
       </form>
-      {detailKey && quote ? (
+      {view === "plans" && quote && variant !== "crm" && plans.length > 0 ? (
         <QuoteCompare
-          focusKey={detailKey}
-          plans={comparePlans(quote)}
-          onClose={() => setDetailKey(null)}
+          focusKey=""
+          plans={plans}
+          notices={[quote.sancristobal.error, quote.smg.error].filter((item): item is string => Boolean(item))}
+          whatsapp
+          onClose={() => setQuote(null)}
+          onPick={pickPlan}
         />
       ) : null}
     </div>
@@ -633,51 +615,3 @@ function Pill({ label, value, onChange }: { label: string; value: string; onChan
   );
 }
 
-function CompanyPlans({
-  name,
-  quote,
-  selected,
-  company,
-  onSelect,
-  onDetail,
-}: {
-  name: string;
-  quote: CompanyQuote;
-  selected: Choice | null;
-  company: Choice["company"];
-  onSelect: (choice: Choice) => void;
-  onDetail: (key: string) => void;
-}) {
-  const logo = company === "smg" ? "/companias/smg.svg" : "/companias/sancristobal.svg";
-  return (
-    <section className="home-quote__company">
-      <header>
-        <img src={logo} alt={name} />
-        <span>Hacé clic para emitir</span>
-      </header>
-      {quote.error ? <p>{quote.error}</p> : null}
-      <ul>
-        {quote.plans.slice(0, 3).map((plan) => {
-          const on = selected?.company === company && selected.id === plan.id;
-          const detailKey = `${company}:${plan.id}`;
-          return (
-            <li key={plan.id} className={on ? "home-quote__plan is-on" : "home-quote__plan"}>
-              <button
-                type="button"
-                className="home-quote__plan-pick"
-                onClick={() => onSelect({ company, id: plan.id, title: plan.title, monthly: plan.monthly })}
-              >
-                <strong>{plan.title}</strong>
-                <b className="home-quote__price">{plan.monthly > 0 ? money(plan.monthly) : "Consultar"}</b>
-                {plan.monthly > 0 ? <span>por mes</span> : null}
-              </button>
-              <button type="button" className="home-quote__detail" onClick={() => onDetail(detailKey)}>
-                Ver detalle
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}

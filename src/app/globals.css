@@ -815,6 +815,7 @@ a {
   width: 100%;
   color: var(--navy);
 }
+.home-quote.is-comparing .quote-card { display: none; }
 
 .home-quote h2,
 .home-quote h3 {
@@ -1018,6 +1019,25 @@ a {
   letter-spacing: -0.03em;
   color: var(--navy);
 }
+.quote-compare__panel > .quote-alert { margin: 0 1.15rem 0.45rem; }
+.quote-compare__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.quote-compare__wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: #25d366;
+  padding: 0.45rem 0.75rem;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.quote-compare__wa:hover { background: #1ebe5d; }
 .quote-compare__close {
   border: 0;
   border-radius: 999px;
@@ -1026,6 +1046,29 @@ a {
   color: var(--navy);
   font-weight: 700;
   cursor: pointer;
+}
+.quote-compare__plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+}
+.quote-compare__emit {
+  margin-top: 0.45rem;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: var(--navy);
+  padding: 0.42rem 0.7rem;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.quote-compare__emit:hover { background: #2a2158; }
+.quote-compare__emit:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
 }
 .quote-compare__scroll { overflow: auto; padding: 0 0.6rem 1rem; }
 .quote-compare__table {
@@ -1163,35 +1206,6 @@ a {
   padding: 0;
   border: 1px solid #eceef5;
   border-radius: 1rem;
-}
-.quote-compare__pick {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.05rem;
-  border: 0;
-  background: transparent;
-  padding: 0.15rem 0.1rem 0.2rem;
-  color: inherit;
-  cursor: pointer;
-}
-.quote-compare__pick em {
-  margin-top: 0.28rem;
-  border-radius: 999px;
-  background: var(--navy);
-  padding: 0.22rem 0.7rem;
-  color: white;
-  font-size: 0.68rem;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.quote-compare__pick:hover em { background: #2a2158; }
-.quote-compare__pick:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 2px;
-  border-radius: 0.7rem;
 }
 .crm-content .quote-compare__table thead th {
   font-size: 0.82rem;

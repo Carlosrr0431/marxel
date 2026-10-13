@@ -103,10 +103,29 @@ async function placeForPostal(postalCode: number) {
   throw new Error("SMG no encontró la localidad de ese código postal");
 }
 
-async function matchVehicle(input: { brand: string; model: string; year: number; place: Record<string, unknown> }) {
+function modelScore(name: string, wanted: string) {
+  if (!name || !wanted) return 0;
+  if (name === wanted) return 1000;
+  if (wanted.includes(name) || name.includes(wanted)) return 400 + Math.min(name.length, wanted.length);
+  return wanted
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
+    .reduce((sum, word) => sum + (name.includes(word) ? word.length : 0), 0);
+}
+
+function bestModel(models: Record<string, unknown>[], wanted: string) {
+  return models.reduce<{ item: Record<string, unknown>; score: number } | null>((best, item) => {
+    const score = modelScore(fold(text(item, ["descripcion"])), fold(wanted));
+    if (!best || score > best.score) return { item, score };
+    return best;
+  }, null)?.item;
+}
+
+async function matchVehicle(input: { brand: string; model: string; version?: string; year: number; place: Record<string, unknown> }) {
   const province = Number(text(input.place, ["codProvincia"]));
   const locality = Number(text(input.place, ["codLocalidad"]));
-  const queries = [input.brand, input.model].filter(Boolean);
+  const wanted = input.version || input.model;
+  const queries = [input.version, input.model, input.brand].filter((item): item is string => Boolean(item));
   for (const query of queries) {
     const result = await smgVehiculos({
       codProducto: 10,
@@ -120,12 +139,8 @@ async function matchVehicle(input: { brand: string; model: string; year: number;
     const brand =
       brands.find((item) => fold(text(item, ["descripcion"])) === fold(input.brand)) || brands[0];
     const models = asList(brand?.modelo);
-    const wanted = fold(input.model);
-    const model =
-      models.find((item) => fold(text(item, ["descripcion"])) === wanted) ||
-      models.find((item) => fold(text(item, ["descripcion"])).includes(wanted)) ||
-      models[0];
-    if (!brand || !model) continue;
+    const model = bestModel(models, wanted);
+    if (!brand || !model || modelScore(fold(text(model, ["descripcion"])), fold(wanted)) < 3) continue;
     return {
       codMarca: text(model, ["codigoMarca"]),
       marca: text(brand, ["descripcion"]),
@@ -142,6 +157,7 @@ export async function quoteSmgPublic(input: {
   year: number;
   brand: string;
   model: string;
+  version?: string;
   postalCode: number;
   plate?: string;
 }) {
@@ -209,6 +225,7 @@ export async function emitSmgPublic(input: {
   year: number;
   brand: string;
   model: string;
+  version?: string;
   postalCode: number;
   plate: string;
   planId: string;

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { COVER_ROWS } from "@/lib/plan-covers";
+import { site } from "@/lib/content";
 
 export type ComparePlan = {
   key: string;
@@ -26,21 +27,33 @@ function mark(value: string | undefined) {
 }
 
 function PlanHead({ plan, onPick }: { plan: ComparePlan; onPick?: (plan: ComparePlan) => void }) {
-  const body = (
-    <>
+  return (
+    <div className="quote-compare__plan">
       <img src={plan.logo} alt="" />
       <span>{plan.company}</span>
       <strong>{plan.title}</strong>
       <b>{money(plan.monthly)}</b>
       <small>por mes</small>
-      {onPick ? <em>Emitir</em> : null}
-    </>
+      {onPick ? (
+        <button type="button" className="quote-compare__emit" onClick={() => onPick(plan)}>
+          Emitir
+        </button>
+      ) : null}
+    </div>
   );
-  if (!onPick) return body;
+}
+
+function WhatsAppAsk() {
+  const href = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(
+    "Hola MARXEN, tengo una duda sobre la cotización del auto."
+  )}`;
   return (
-    <button type="button" className="quote-compare__pick" onClick={() => onPick(plan)}>
-      {body}
-    </button>
+    <a className="quote-compare__wa" href={href} target="_blank" rel="noopener noreferrer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M20.5 3.5A11 11 0 0 0 2.4 17.1L1.5 22l5-1.3A11 11 0 0 0 12 23a11 11 0 0 0 8.5-19.5ZM12 21a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3A9 9 0 1 1 12 21Zm5-6.6c-.3-.1-1.6-.8-1.8-.9s-.4-.1-.6.1-.7.9-.8 1-.3.2-.6.1a7.4 7.4 0 0 1-2.2-1.4 8.2 8.2 0 0 1-1.5-1.9c-.2-.3 0-.4.1-.6l.4-.5c.1-.2.1-.3 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 1.8.8 2.3.7 3.1.6.5-.1 1.6-.7 1.8-1.3.2-.6.2-1.2.1-1.3s-.3-.2-.6-.3Z" />
+      </svg>
+      Consultar
+    </a>
   );
 }
 
@@ -92,12 +105,16 @@ export function QuoteCompare({
   onClose,
   embedded = false,
   onPick,
+  notices = [],
+  whatsapp = false,
 }: {
   plans: ComparePlan[];
   focusKey: string;
   onClose: () => void;
   embedded?: boolean;
   onPick?: (plan: ComparePlan) => void;
+  notices?: string[];
+  whatsapp?: boolean;
 }) {
   useEffect(() => {
     if (embedded) return undefined;
@@ -137,10 +154,16 @@ export function QuoteCompare({
             <p className="quote-compare__kicker">Coberturas</p>
             <h2 id="quote-compare-title">Qué incluye cada plan</h2>
           </div>
-          <button type="button" className="quote-compare__close" onClick={onClose} aria-label="Cerrar">
-            Cerrar
-          </button>
+          <div className="quote-compare__actions">
+            {whatsapp ? <WhatsAppAsk /> : null}
+            <button type="button" className="quote-compare__close" onClick={onClose} aria-label="Cerrar">
+              Cerrar
+            </button>
+          </div>
         </header>
+        {notices.map((notice) => (
+          <p key={notice} className="quote-alert">{notice}</p>
+        ))}
         {table}
       </div>
     </div>,
