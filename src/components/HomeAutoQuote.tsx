@@ -48,7 +48,13 @@ async function fetchJson(url: string, init?: RequestInit) {
   return data;
 }
 
-export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }) {
+export function HomeAutoQuote({
+  variant = "hero",
+  preset,
+}: {
+  variant?: "hero" | "crm";
+  preset?: { nombre?: string; celular?: string };
+}) {
   const yearList = useMemo(years, []);
   const [plate, setPlate] = useState("");
   const [yearId, setYearId] = useState("");
@@ -61,8 +67,8 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
   const [postal, setPostal] = useState("4400");
   const [location, setLocation] = useState<Location | null>(null);
   const [hasGnc, setHasGnc] = useState("no");
-  const [nombre, setNombre] = useState("");
-  const [celular, setCelular] = useState("");
+  const [nombre, setNombre] = useState(preset?.nombre || "");
+  const [celular, setCelular] = useState(preset?.celular || "");
   const [age, setAge] = useState("");
   const [hint, setHint] = useState("");
   const [looking, setLooking] = useState(false);

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { canResetWhatsappChat, normalizeArPhone } from "@/lib/whatsmeow/config";
 import { relativeTime } from "@/lib/crm/utils";
 import { ChatLeadDock } from "@/components/crm/chat/ChatLeadPanel";
+import { LeadQuoteSheet } from "@/components/crm/LeadQuoteSheet";
 import type { CrmChat, CrmChatMessage, CrmDeliveryStatus } from "@/lib/whatsmeow/crm-chat";
 
 const ACCEPT =
@@ -1121,6 +1122,11 @@ export function CrmWhatsappInbox({ initialPhone = "" }: { initialPhone?: string 
                 >
                   Ficha
                 </button>
+                <LeadQuoteSheet
+                  nombre={activeChat?.name || ""}
+                  celular={selected}
+                  className="crm-wa-headbtn"
+                />
                 <button
                   type="button"
                   className={`crm-wa-headbtn${agentEnabled ? " is-on" : " is-ai-off"}`}

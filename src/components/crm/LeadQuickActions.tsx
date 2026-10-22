@@ -5,6 +5,7 @@ import { useTransition, type ReactNode } from "react";
 import { logWhatsApp, convertLead } from "@/lib/crm/actions";
 import { whatsappLink } from "@/lib/crm/types";
 import { OpenCrmChatButton } from "@/components/crm/OpenCrmChatButton";
+import { LeadQuoteSheet } from "@/components/crm/LeadQuoteSheet";
 
 export function WhatsAppLogLink({
   leadId,
@@ -56,6 +57,11 @@ export function LeadQuickActions({
         name={nombre}
         existing={existing}
         className="px-4 py-2.5 text-sm"
+      />
+      <LeadQuoteSheet
+        nombre={nombre}
+        celular={celular}
+        className="rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-navy"
       />
       {estado !== "ganado" ? (
         <button
