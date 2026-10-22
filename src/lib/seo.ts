@@ -22,6 +22,10 @@ const PHONE_E164 = "+54-9-387-572-4473";
 export const DEFAULT_KEYWORDS = [
   "MARXEN",
   "MARXEN Salta",
+  "empresa de seguros Salta",
+  "empresa de seguros",
+  "productor de seguros Salta",
+  "seguros en Salta",
   "productores de seguros Salta",
   "seguro de auto Salta",
   "seguros de auto",
@@ -87,7 +91,13 @@ export function organizationNode(): JsonLd {
     "@type": ["InsuranceAgency", "LocalBusiness", "Organization"],
     "@id": ORG_ID,
     name: site.lockup,
-    alternateName: [site.name, "Marxel", "MARXEN Salta"],
+    alternateName: [
+      site.name,
+      "Marxel",
+      "MARXEN Salta",
+      "MARXEN empresa de seguros",
+      "empresa de seguros en Salta",
+    ],
     legalName: site.lockup,
     url: SITE_URL,
     logo: {
@@ -98,7 +108,7 @@ export function organizationNode(): JsonLd {
     telephone: PHONE_E164,
     email: site.email,
     description:
-      "Productores asesores de seguros, prepagas y asistencia al viajero en Salta, Argentina. Cotización de auto, moto y hogar con San Cristóbal, planes de Prevención Salud y asistencia al viajero.",
+      "Empresa de seguros y productor asesor en Salta Capital, Argentina. Cotización de auto, moto y hogar, planes de prepaga y asistencia al viajero.",
     slogan: "Tu protección, sin vueltas.",
     priceRange: "$$",
     currenciesAccepted: "ARS",
@@ -131,6 +141,8 @@ export function organizationNode(): JsonLd {
       { "@type": "Country", name: "Argentina" },
     ],
     knowsAbout: [
+      "Empresa de seguros en Salta",
+      "Productor de seguros en Salta",
       "Seguro de automóviles",
       "Seguros de auto en Salta",
       "Seguro de motos en Salta",

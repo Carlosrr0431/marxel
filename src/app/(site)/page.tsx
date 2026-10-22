@@ -11,9 +11,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { faqHome, productor, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
 
-const HOME_TITLE = "Seguros de auto, moto, prepaga y viajero en Salta | MARXEN";
+const HOME_TITLE = "Empresa de seguros en Salta | MARXEN";
 const HOME_DESCRIPTION =
-  "MARXEN, productor asesor en Salta Capital. Cotizá seguro de auto y moto, prepaga y obra social, y asistencia al viajero.";
+  "MARXEN es una empresa de seguros y productor asesor en Salta Capital. Cotizá seguro de auto, moto y hogar, prepaga y asistencia al viajero.";
 
 export const metadata: Metadata = pageMetadata({
   title: HOME_TITLE,
@@ -28,6 +28,10 @@ export const metadata: Metadata = pageMetadata({
     "seguro de salud Salta",
     "asistencia al viajero Salta",
     "MARXEN Salta",
+    "empresa de seguros Salta",
+    "empresa de seguros",
+    "productor de seguros Salta",
+    "seguros en Salta",
     "agente de seguros Salta",
     "San Cristóbal Seguros",
     "Prevención Salud",
@@ -56,7 +60,7 @@ export default function HomePage() {
           description: HOME_DESCRIPTION,
           crumbs: [{ name: "Inicio", path: "/" }],
           faqs: faqHome,
-          service: { name: "Asesoramiento en seguros, prepaga y viajero", serviceType: "Insurance brokerage" },
+          service: { name: "Empresa de seguros en Salta", serviceType: "Insurance agency" },
         })}
       />
       {/* ——— HERO ——— */}
@@ -65,15 +69,15 @@ export default function HomePage() {
         <div className="hero-cover-scrim" aria-hidden />
         <div className="container-mx hero-section__inner hero-section__inner--quote">
           <div className="hero-copy">
-            <p className="animate-rise eyebrow">Seguros de auto, prepaga y viajero en Salta</p>
+            <p className="animate-rise eyebrow">Productor asesor de seguros en Salta Capital</p>
             <h1 className="animate-rise-delay-1">
-              Tu protección,
+              Empresa de seguros en Salta,
               <br />
               <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
             <p className="hero-lede animate-rise-delay-2" data-seo-lede>
-              Ingresá la patente y cotizamos tu auto en San Cristóbal y SMG.
-              También asesoramos motos, prepaga, obra social y asistencia al viajero en Salta.
+              MARXEN cotiza tu seguro de auto en San Cristóbal y SMG.
+              También moto, hogar, prepaga, obra social y asistencia al viajero en Salta Capital.
             </p>
 
             <div className="hero-actions animate-rise-delay-3">
@@ -108,7 +112,7 @@ export default function HomePage() {
           <div>
             <p className="eyebrow">Quiénes somos</p>
             <h2 className="font-display text-2xl font-semibold text-navy sm:text-3xl">
-              {productor.nombre}
+              {productor.nombre}, productor de seguros en Salta
             </h2>
             <p className="mt-1 text-sm text-muted">
               {productor.rol} · Matrícula {productor.matricula}

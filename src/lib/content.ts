@@ -4,7 +4,7 @@ export const site = {
   tagline:
     "Asesoramiento integral en seguros, salud y asistencia al viajero. Brindándote el respaldo y la tranquilidad que necesitás en cada etapa de tu vida.",
   description:
-    "Productor asesor en Salta Capital: seguro de auto y moto, prepaga y obra social Prevención Salud, y asistencia al viajero.",
+    "Empresa de seguros y productor asesor en Salta Capital: seguro de auto, moto y hogar, prepaga y asistencia al viajero.",
   phone: "+54 9 387 572-4473",
   phoneLocal: "0387 572-4473",
   email: "comercial@marxen.com.ar",
@@ -167,6 +167,10 @@ export const modalidadesIngreso = [
 export type FaqItem = { q: string; a: string };
 
 export const faqHome: FaqItem[] = [
+  {
+    q: "¿MARXEN es una empresa de seguros en Salta?",
+    a: "Sí. MARXEN es un productor asesor de seguros en Salta Capital. Cotizamos seguro de auto, moto y hogar, prepaga y asistencia al viajero. La póliza la emite la compañía; nosotros te representamos y te acompañamos en el alta.",
+  },
   {
     q: "¿Qué es MARXEN y dónde está?",
     a: "MARXEN Protección Integral es un productor asesor de Salta Capital, Argentina. Cotizamos y tramitamos seguros, prepagas y asistencia al viajero: no somos la compañía que emite la póliza, te representamos frente a ella.",

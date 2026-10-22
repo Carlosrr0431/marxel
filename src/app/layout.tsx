@@ -12,12 +12,12 @@ const jakarta = Plus_Jakarta_Sans({
 
 const SHARE_TITLE = "Tu protección, sin vueltas.";
 const SHARE_DESCRIPTION =
-  "Productores asesores de seguros en Salta: auto, moto, hogar, prepagas Prevención Salud y asistencia al viajero.";
+  "MARXEN, empresa de seguros en Salta: auto, moto, hogar, prepaga y asistencia al viajero.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Seguro de auto, prepaga y viajero en Salta | MARXEN",
+    default: "Empresa de seguros en Salta | MARXEN",
     template: `%s · ${site.name}`,
   },
   description: site.description,
