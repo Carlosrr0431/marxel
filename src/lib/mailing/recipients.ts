@@ -13,7 +13,14 @@ export function normalizeEmail(value: string) {
 }
 
 export function isValidEmail(value: string) {
-  return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(value || "").trim());
+  const email = String(value || "").trim().toLowerCase();
+  if (email.length > 254 || email.includes("..")) return false;
+  const match = email.match(/^([a-z0-9._%+-]+)@([a-z0-9.-]+\.[a-z]{2,})$/);
+  if (!match) return false;
+  const local = match[1];
+  const domain = match[2];
+  if (local.startsWith(".") || local.endsWith(".")) return false;
+  return domain.split(".").every((part) => part && !part.startsWith("-") && !part.endsWith("-"));
 }
 
 function keyName(key: string) {

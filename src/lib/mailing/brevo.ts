@@ -1,3 +1,5 @@
+import { isValidEmail, normalizeEmail } from "@/lib/mailing/recipients";
+
 const BREVO_API = "https://api.brevo.com/v3";
 export const BREVO_CHUNK = 20;
 const WEBHOOK_URL = "https://www.marxen.com.ar/webhookMail";
@@ -53,7 +55,19 @@ export function explainBrevoError(payload: unknown, status: number) {
   if (/sender/i.test(message) && /not valid|invalid|verified|authenticat/i.test(message)) {
     return "El remitente no está verificado en Brevo. Usá comercial@marxen.com.ar (o el mail verificado de BREVO_SENDER_EMAIL).";
   }
+  if (/not valid in to/i.test(message)) {
+    return "Hay un destinatario con un mail mal escrito. Ese contacto se omite y el resto se envía.";
+  }
   return message || `Error Brevo HTTP ${status}${code ? ` (${code})` : ""}`;
+}
+
+function safeName(name: string, email: string) {
+  const clean = String(name || "")
+    .replace(/[<>"',;]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 70);
+  return clean || email.slice(0, 70);
 }
 
 async function brevoFetch(path: string, init?: RequestInit) {
@@ -98,48 +112,73 @@ export async function sendBrevoCampaign(input: BrevoSendInput) {
   if (!input.recipients.length) throw new Error("No hay destinatarios.");
 
   const chunkSize = Math.max(1, Math.min(80, input.chunkSize || BREVO_CHUNK));
+  const tags = input.tags?.filter(Boolean).length ? input.tags.filter(Boolean) : ["crm-mailing"];
+  const ready = input.recipients
+    .map((recipient, index) => ({
+      email: normalizeEmail(recipient.email),
+      name: recipient.name,
+      greeting: input.greetings[index] || "Hola,",
+    }))
+    .filter((recipient) => isValidEmail(recipient.email));
+  const skipped = input.recipients.filter((recipient) => !isValidEmail(normalizeEmail(recipient.email)));
+  if (!ready.length) {
+    throw new Error("Ningún destinatario tiene un mail válido. Revisá la lista.");
+  }
+
   const messageIds: string[] = [];
-  const total = input.recipients.length;
-  for (let i = 0; i < input.recipients.length; i += chunkSize) {
-    const slice = input.recipients.slice(i, i + chunkSize);
-    const greetings = input.greetings.slice(i, i + chunkSize);
-    const tags = input.tags?.filter(Boolean).length
-      ? input.tags.filter(Boolean)
-      : ["crm-mailing"];
+  let sent = 0;
+
+  async function deliver(
+    slice: { email: string; name: string; greeting: string }[]
+  ): Promise<void> {
     const body = {
       sender: { email: cfg.senderEmail, name: cfg.senderName },
       replyTo: { email: cfg.replyTo, name: cfg.senderName },
       subject: input.subject,
       htmlContent: input.html,
       tags,
-      messageVersions: slice.map((recipient, idx) => ({
-        to: [{ email: recipient.email, name: (recipient.name || recipient.email).slice(0, 70) }],
-        params: { greeting: greetings[idx] || "Hola," },
+      messageVersions: slice.map((recipient) => ({
+        to: [{ email: recipient.email, name: safeName(recipient.name, recipient.email) }],
+        params: { greeting: recipient.greeting },
       })),
     };
-
     const result = await brevoFetch("/smtp/email", {
       method: "POST",
       body: JSON.stringify(body),
     });
-    if (!result.ok) {
-      throw new Error(explainBrevoError(result.data, result.status));
+    const message = explainBrevoError(result.data, result.status);
+    if (!result.ok && /mail mal escrito|not valid in to/i.test(message) && slice.length > 1) {
+      const mid = Math.ceil(slice.length / 2);
+      await deliver(slice.slice(0, mid));
+      await deliver(slice.slice(mid));
+      return;
     }
+    if (!result.ok && slice.length === 1 && /mail mal escrito|not valid in to/i.test(message)) {
+      skipped.push(slice[0]);
+      return;
+    }
+    if (!result.ok) throw new Error(message);
     const ids = Array.isArray((result.data as { messageIds?: string[] }).messageIds)
       ? (result.data as { messageIds: string[] }).messageIds
       : [];
     const single = String((result.data as { messageId?: string }).messageId || "");
     const chunkIds = ids.length ? ids : single ? [single] : [];
     messageIds.push(...chunkIds);
+    sent += slice.length;
     await input.onChunk?.({
-      sent: Math.min(i + slice.length, total),
-      total,
+      sent,
+      total: ready.length,
       slice,
       messageIds: chunkIds,
     });
   }
 
-  return { sent: input.recipients.length, messageIds };
+  for (let i = 0; i < ready.length; i += chunkSize) {
+    await deliver(ready.slice(i, i + chunkSize));
+  }
+
+  if (!sent) throw new Error("Ningún destinatario tenía un mail que Brevo acepte.");
+  return { sent, messageIds, skipped: skipped.map((row) => row.email) };
 }
 
 export function mailingWebhookUrl() {

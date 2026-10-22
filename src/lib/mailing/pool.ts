@@ -44,7 +44,8 @@ export async function loadSentEmailSet(supabase: SupabaseClient) {
     const rows = data || [];
     for (const row of rows) {
       const status = statusByCampaign.get(String(row.campaign_id || ""));
-      if (status === "test" || status === "failed") continue;
+      if (status === "test") continue;
+      if (status === "failed" && String(row.last_event || "") === "queued") continue;
       const email = normalizeEmail(String(row.email || ""));
       if (email) sent.add(email);
     }

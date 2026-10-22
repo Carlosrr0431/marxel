@@ -160,13 +160,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (result.skipped.length) {
+      await supabase
+        .from("mailing_recipients")
+        .update({ last_event: "invalid" })
+        .eq("campaign_id", campaignId)
+        .in("email", result.skipped);
+    }
     await supabase
       .from("mailing_campaigns")
       .update({
         sent_count: result.sent,
         status: testEmail ? "test" : "sent",
         brevo_message_ids: result.messageIds.slice(0, 80),
-        error: null,
+        error: result.skipped.length ? `Se omitieron ${result.skipped.length} mails mal escritos.` : null,
       })
       .eq("id", campaignId);
 
