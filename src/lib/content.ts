@@ -57,6 +57,7 @@ export const seoLinks = [
   { href: "/guias", label: "Guías" },
   { href: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
   { href: "/companias", label: "Compañías en Salta" },
+  { href: "/mapa-del-sitio", label: "Mapa del sitio" },
 ];
 
 export const seguros = [

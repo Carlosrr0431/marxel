@@ -8,11 +8,11 @@ export type IndexablePage = {
 };
 
 /** Fecha de última actualización de contenido (zona Argentina, YYYY-MM-DD). */
-export const SITEMAP_LASTMOD = "2026-10-10";
+export const SITEMAP_LASTMOD = "2026-10-22";
 
 /**
- * URLs públicas a indexar (Search Console + sitemap). No incluir /crm ni /api.
- * Si cambia esta lista, actualizar también `public/sitemap.xml` y `public/sitemaps/pages.xml`.
+ * URLs públicas a indexar. El sitemap vivo está en src/app/sitemap.ts.
+ * No incluir /crm, /api ni /formulario.
  */
 export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
@@ -24,6 +24,8 @@ export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/seguro-de-auto/terceros-basico", changeFrequency: "monthly", priority: 0.85 },
   { path: "/seguros", changeFrequency: "weekly", priority: 0.85 },
   { path: "/companias", changeFrequency: "monthly", priority: 0.88 },
+  { path: "/quienes-somos", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/mapa-del-sitio", changeFrequency: "monthly", priority: 0.4 },
   { path: "/cotizar", changeFrequency: "weekly", priority: 0.85 },
   { path: "/guias/seguro-de-auto-en-salta", changeFrequency: "monthly", priority: 0.8 },
   { path: "/guias/prepaga-en-salta", changeFrequency: "monthly", priority: 0.8 },

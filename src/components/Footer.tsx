@@ -153,6 +153,9 @@ export function Footer() {
               .
             </p>
             <p className="flex flex-wrap gap-3">
+              <Link href="/mapa-del-sitio" className="footer-link">
+                Mapa del sitio
+              </Link>
               <Link href="/privacidad" className="footer-link">
                 Privacidad
               </Link>

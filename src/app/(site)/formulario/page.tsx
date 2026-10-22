@@ -5,11 +5,14 @@ import { pageMetadata } from "@/lib/seo";
 const TITLE = "Dejanos tu teléfono | MARXEN";
 const DESCRIPTION = "Dejá tu teléfono y un asesor de MARXEN en Salta te contacta. Mensaje opcional.";
 
-export const metadata: Metadata = pageMetadata({
-  title: TITLE,
-  description: DESCRIPTION,
-  path: "/formulario",
-});
+export const metadata: Metadata = {
+  ...pageMetadata({
+    title: TITLE,
+    description: DESCRIPTION,
+    path: "/formulario",
+  }),
+  robots: { index: false, follow: true },
+};
 
 export default async function FormularioPage({
   searchParams,
