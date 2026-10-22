@@ -167,7 +167,7 @@ export default async function LeadsPage({
         <LeadsBulkBar leads={leads.map((l) => ({ id: l.id, nombre: l.nombre }))}>
           <div className="space-y-3 md:hidden">
             {leads.map((lead) => (
-              <article key={lead.id} className="crm-card p-4">
+              <article key={lead.id} className="crm-card lead-row p-4">
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -237,7 +237,7 @@ export default async function LeadsPage({
                 <tbody>
                   {leads.map((lead) => {
                     return (
-                      <tr key={lead.id} className="border-t border-line/80 hover:bg-mist/30">
+                      <tr key={lead.id} className="lead-row border-t border-line/80">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <input

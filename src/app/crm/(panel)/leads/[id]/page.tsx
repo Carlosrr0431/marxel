@@ -153,50 +153,48 @@ export default async function LeadDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="crm-card overflow-hidden">
-        <div className="border-b border-line/70 bg-[linear-gradient(135deg,#eef2ff_0%,#ffffff_55%)] px-4 py-5 sm:px-6">
-          <Link href="/crm/leads" className="text-sm text-teal hover:underline">
-            ← Leads
-          </Link>
-          <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-0 gap-4">
-              <Avatar name={l.nombre} size="lg" />
-              <div className="min-w-0">
-                <h1 className="font-display text-2xl font-semibold text-pretty text-navy sm:text-3xl">
-                  {l.nombre}
-                </h1>
-                <p className="mt-1 text-sm text-muted">
-                  {l.celular}
-                  {l.email ? ` · ${l.email}` : ""}
-                  {l.localidad ? ` · ${l.localidad}` : l.provincia ? ` · ${l.provincia}` : ""}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={`crm-badge ${estado?.color}`}>{estado?.label}</span>
-                  <ProductoPill producto={l.producto} />
-                  {chatbot ? <ChatbotBadge /> : null}
-                  {l.modalidad && l.modalidad !== "sin_definir" ? (
-                    <span className="crm-badge bg-mist text-navy">{modalidadLabel}</span>
-                  ) : null}
-                  <LeadEstadoSelect leadId={l.id} value={l.estado} />
-                  {(l.tags || []).map((t) => (
-                    <span key={t} className="crm-badge bg-mist text-navy">
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col items-start gap-3 sm:items-end">
-              <ScoreRing score={puntaje} />
-              <LeadQuickActions
-                leadId={l.id}
-                nombre={l.nombre}
-                celular={l.celular}
-                estado={l.estado}
-                existing={Boolean(existingChat)}
-              />
+      <div className="lead-hero">
+        <Link href="/crm/leads" className="lead-hero__back">
+          ← Leads
+        </Link>
+        <div className="lead-hero__main">
+          <Avatar name={l.nombre} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-2xl font-semibold text-pretty text-navy sm:text-3xl">
+              {l.nombre}
+            </h1>
+            <p className="lead-hero__meta">
+              <span>{l.celular}</span>
+              {l.email ? <span>{l.email}</span> : null}
+              {l.localidad || l.provincia ? <span>{l.localidad || l.provincia}</span> : null}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={`crm-badge ${estado?.color}`}>{estado?.label}</span>
+              <ProductoPill producto={l.producto} />
+              {chatbot ? <ChatbotBadge /> : null}
+              {l.modalidad && l.modalidad !== "sin_definir" ? (
+                <span className="crm-badge bg-mist text-navy">{modalidadLabel}</span>
+              ) : null}
+              <LeadEstadoSelect leadId={l.id} value={l.estado} />
+              {(l.tags || []).map((t) => (
+                <span key={t} className="crm-badge bg-mist text-navy">
+                  #{t}
+                </span>
+              ))}
             </div>
           </div>
+          <div className="lead-hero__score">
+            <ScoreRing score={puntaje} />
+          </div>
+        </div>
+        <div className="lead-hero__actions">
+          <LeadQuickActions
+            leadId={l.id}
+            nombre={l.nombre}
+            celular={l.celular}
+            estado={l.estado}
+            existing={Boolean(existingChat)}
+          />
         </div>
       </div>
 
