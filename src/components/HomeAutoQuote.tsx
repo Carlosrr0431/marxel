@@ -79,6 +79,7 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
   const [vin, setVin] = useState("");
   const [engine, setEngine] = useState("");
   const [emitting, setEmitting] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [issued, setIssued] = useState("");
   const quotedTicket = useRef("");
 
@@ -442,6 +443,32 @@ export function HomeAutoQuote({ variant = "hero" }: { variant?: "hero" | "crm" }
               </button>
               <h2>{quote.carDescription || hint || plate}</h2>
               <p>Elegí un plan para emitir.</p>
+              {plans.length > 0 ? (
+                <button
+                  type="button"
+                  className="home-quote__back quote-pdf"
+                  disabled={pdfBusy}
+                  onClick={() => {
+                    setPdfBusy(true);
+                    void import("@/lib/quote-pdf")
+                      .then(({ downloadQuotePdf }) =>
+                        downloadQuotePdf({
+                          car: quote.carDescription || hint || plate,
+                          plate,
+                          customer: nombre.trim(),
+                          postal,
+                          statedAmount: quote.statedAmount,
+                          hasGnc: hasGnc === "si",
+                          plans,
+                        })
+                      )
+                      .catch(() => setError("No se pudo armar el PDF."))
+                      .finally(() => setPdfBusy(false));
+                  }}
+                >
+                  {pdfBusy ? "Armando PDF…" : "Descargar PDF"}
+                </button>
+              ) : null}
             </div>
             {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
             {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
