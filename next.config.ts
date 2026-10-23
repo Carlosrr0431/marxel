@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 127.0.0.1 is not covered by Next's default localhost allowlist. Without
+  // this, the dev server rejects the HMR socket and the page never hydrates.
+  allowedDevOrigins: ["127.0.0.1"],
   serverExternalPackages: ["xlsx"],
   images: {
     dangerouslyAllowSVG: true,
