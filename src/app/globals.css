@@ -7878,3 +7878,196 @@ button.crm-wa-file {
     font-size: 0.72rem;
   }
 }
+
+.lacaja {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(32, 37, 43, 0.08);
+  color: #20252b;
+  padding: 1.25rem;
+}
+
+.lacaja h2,
+.lacaja h3 {
+  color: #20252b;
+  font-weight: 700;
+  margin: 0;
+}
+
+.lacaja h2 { font-size: 1.7rem; }
+
+.lacaja__kicker {
+  color: #c21b17;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.lacaja__steps {
+  display: flex;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 1rem 0 1.25rem;
+  overflow-x: auto;
+  padding: 0;
+}
+
+.lacaja__steps li {
+  align-items: center;
+  color: #6f7072;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  gap: 0.4rem;
+}
+
+.lacaja__steps span {
+  align-items: center;
+  border: 1px solid #c8c7cc;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 1.6rem;
+  justify-content: center;
+  width: 1.6rem;
+}
+
+.lacaja__steps .is-on { color: #c21b17; font-weight: 700; }
+.lacaja__steps .is-on span,
+.lacaja__steps .is-done span {
+  background: #c21b17;
+  border-color: #c21b17;
+  color: #fff;
+}
+
+.lacaja__form,
+.lacaja__plans {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.lacaja label,
+.lacaja fieldset {
+  display: grid;
+  font-size: 0.92rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.lacaja input,
+.lacaja select {
+  background: #fff;
+  border: 1px solid #c8c7cc;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 500;
+  min-height: 2.8rem;
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
+.lacaja__matches,
+.lacaja__chips,
+.lacaja__choice,
+.lacaja__phone,
+.lacaja__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lacaja__matches {
+  list-style: none;
+  margin: -0.4rem 0 0;
+  padding: 0;
+}
+
+.lacaja__matches button,
+.lacaja__chips button,
+.lacaja__choice button,
+.lacaja__back {
+  background: #f6f6f6;
+  border: 1px solid #ebebeb;
+  border-radius: 999px;
+  color: #20252b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  padding: 0.45rem 0.8rem;
+}
+
+.lacaja__choice button.is-on {
+  background: #c21b17;
+  border-color: #c21b17;
+  color: #fff;
+}
+
+.lacaja__phone label { flex: 1; min-width: 8rem; }
+
+.lacaja__check {
+  align-items: flex-start;
+  font-weight: 500;
+  grid-template-columns: auto 1fr;
+}
+
+.lacaja__check input { min-height: 0; margin-top: 0.2rem; width: auto; }
+
+.lacaja__next {
+  background: #c21b17;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.7rem 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.lacaja__next:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.lacaja__actions .lacaja__next { flex: 1; }
+
+.lacaja__plans article {
+  border: 1px solid #ebebeb;
+  border-radius: 16px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.lacaja__plans article.is-recommended { border-color: #c21b17; }
+
+.lacaja__badge {
+  color: #c21b17;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.lacaja__price {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.lacaja__price small { font-size: 0.85rem; font-weight: 600; }
+
+.lacaja__note { color: #5b5b5b; font-size: 0.85rem; margin: 0; }
+
+.lacaja__error {
+  background: rgba(194, 27, 23, 0.12);
+  border-radius: 10px;
+  color: #c21b17;
+  font-weight: 650;
+  margin: 0.8rem 0 0;
+  padding: 0.7rem 0.8rem;
+}

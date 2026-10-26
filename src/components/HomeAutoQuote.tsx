@@ -342,6 +342,11 @@ export function HomeAutoQuote({
         <p className="home-quote__kicker">San Cristóbal y SMG</p>
         <h2>Cotizá tu auto en un minuto</h2>
         <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
+        {variant !== "crm" ? (
+          <p className="home-quote__lede">
+            <a href="#cotizador-la-caja">Cotizar también con La Caja</a>
+          </p>
+        ) : null}
 
         <label className="home-quote__plate">
           <span>Patente</span>

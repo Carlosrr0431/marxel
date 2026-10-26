@@ -20,6 +20,7 @@ const GROUPS = [
       { href: "/seguro-de-hogar", label: "Seguro de hogar" },
       { href: "/seguros", label: "Todos los seguros" },
       { href: "/cotizar", label: "Cotizar" },
+      { href: "/cotizador-la-caja", label: "Cotizador La Caja" },
     ],
   },
   {
