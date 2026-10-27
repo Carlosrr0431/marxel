@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { site } from "@/lib/content";
 
 type Option = { code: string; name: string };
@@ -48,6 +48,21 @@ async function cajaGet(params: Record<string, string>) {
   return data.items as Option[];
 }
 
+const DECIDIR_KEY = "8b2c4d66925643059b564999523d8e77";
+
+type DecidirSdk = {
+  setPublishableKey: (key: string) => void;
+  setTimeout: (ms: number) => void;
+  createToken: (
+    form: HTMLFormElement,
+    callback: (status: number, response: { last_four_digits?: string }) => void
+  ) => void;
+};
+
+function decidirSdk() {
+  return (window as unknown as { Decidir?: new (url: string, cyberSource: boolean) => DecidirSdk }).Decidir;
+}
+
 function matchBrand(query: string, list: Option[]) {
   const text = query.trim().toLowerCase();
   if (!text) return null;
@@ -88,7 +103,9 @@ export function LaCajaAutoQuote() {
   const [dni, setDni] = useState("");
   const [street, setStreet] = useState("");
   const [streetNumber, setStreetNumber] = useState("");
-  const [pay, setPay] = useState<"debito" | "tarjeta">("debito");
+  const [pay, setPay] = useState<"debito" | "credito">("credito");
+  const [cardLast4, setCardLast4] = useState("");
+  const cardForm = useRef<HTMLFormElement>(null);
 
   const years = useMemo(() => Array.from({ length: 2026 - 2006 + 1 }, (_, index) => String(2026 - index)), []);
   const brandMatches = useMemo(() => {
@@ -104,6 +121,16 @@ export function LaCajaAutoQuote() {
   useEffect(() => {
     cajaGet({ type: "brands" }).then(setBrands).catch((err: Error) => setError(err.message));
   }, []);
+
+  useEffect(() => {
+    if (screen !== "pay") return;
+    if (document.querySelector("script[data-decidir-sdk]")) return;
+    const script = document.createElement("script");
+    script.src = "https://live.decidir.com/static/v2.5/decidir.js";
+    script.async = true;
+    script.dataset.decidirSdk = "1";
+    document.head.appendChild(script);
+  }, [screen]);
 
   useEffect(() => {
     if (brand || !brands.length) return;
@@ -228,11 +255,12 @@ export function LaCajaAutoQuote() {
     }
   }
 
-  async function confirm() {
+  async function confirm(card?: { last4: string }) {
     if (!brand || !chosenModel || !chosenVersion || !plan) return;
     setBusy(true);
     setError("");
     const nombre = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const medio = pay === "debito" ? "tarjeta de débito" : "tarjeta de crédito";
     const notas = [
       "Cotización La Caja",
       `${year} ${brand.name} ${chosenModel.name} ${chosenVersion.name}`,
@@ -240,7 +268,7 @@ export function LaCajaAutoQuote() {
       `CP ${postal} ${chosenLocation?.name || ""}`,
       `Plan ${plan.title} ${money.format(plan.monthly)} / mes`,
       budget ? `Presupuesto La Caja ${budget}` : "",
-      `Pago elegido: ${pay === "debito" ? "débito por CBU" : "tarjeta de crédito"}`,
+      `Pago: ${medio}${card?.last4 ? ` terminada en ${card.last4}` : ""}`,
       street ? `Domicilio: ${street} ${streetNumber}` : "",
     ]
       .filter(Boolean)
@@ -263,12 +291,36 @@ export function LaCajaAutoQuote() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "No se pudo enviar el pedido.");
+      setCardLast4(card?.last4 || "");
       setScreen("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo enviar el pedido.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function payCard() {
+    const form = cardForm.current;
+    const Sdk = decidirSdk();
+    if (!form || !Sdk) {
+      setError("El cobro de la tarjeta todavía se está cargando. Probá de nuevo.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const decidir = new Sdk("https://live.decidir.com/api/v2", true);
+    decidir.setPublishableKey(DECIDIR_KEY);
+    decidir.setTimeout(0);
+    decidir.createToken(form, (status, response) => {
+      const last4 = String(response?.last_four_digits || "");
+      if ((status !== 200 && status !== 201) || last4.length !== 4) {
+        setBusy(false);
+        setError("No pudimos validar la tarjeta. Revisá el número, el vencimiento y el código de seguridad.");
+        return;
+      }
+      void confirm({ last4 });
+    });
   }
 
   const carReady = Boolean(year && brand && model && version && gnc !== null && particular);
@@ -329,28 +381,30 @@ export function LaCajaAutoQuote() {
               ))}
             </div>
           ) : null}
-          <label>
-            Modelo
-            <select value={model} onChange={(event) => setModel(event.target.value)} disabled={!models.length}>
-              <option value="">
-                {!year ? "Elegí el año arriba" : !brand ? "Elegí la marca" : modelsLoading ? "Cargando modelos…" : models.length ? "Elegí el modelo" : "Sin modelos para ese año"}
-              </option>
-              {models.map((item) => (
-                <option key={item.code} value={item.code}>{item.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Versión
-            <select value={version} onChange={(event) => setVersion(event.target.value)} disabled={!versions.length}>
-              <option value="">
-                {!model ? "Elegí el modelo" : versionsLoading ? "Cargando versiones…" : versions.length ? "Elegí la versión" : "Sin versiones"}
-              </option>
-              {versions.map((item) => (
-                <option key={item.code} value={item.code}>{item.name}</option>
-              ))}
-            </select>
-          </label>
+          <div className="lacaja__split">
+            <label>
+              Modelo
+              <select value={model} onChange={(event) => setModel(event.target.value)} disabled={!models.length}>
+                <option value="">
+                  {!year ? "Elegí el año" : !brand ? "Elegí la marca" : modelsLoading ? "Cargando…" : models.length ? "Elegí el modelo" : "Sin modelos"}
+                </option>
+                {models.map((item) => (
+                  <option key={item.code} value={item.code}>{item.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Versión
+              <select value={version} onChange={(event) => setVersion(event.target.value)} disabled={!versions.length}>
+                <option value="">
+                  {!model ? "Elegí el modelo" : versionsLoading ? "Cargando…" : versions.length ? "Elegí la versión" : "Sin versiones"}
+                </option>
+                {versions.map((item) => (
+                  <option key={item.code} value={item.code}>{item.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
           <fieldset>
             <legend>¿Tiene GNC?</legend>
             <div className="lacaja__choice">
@@ -413,34 +467,36 @@ export function LaCajaAutoQuote() {
       ) : null}
 
       {screen === "plans" ? (
-        <div className="lacaja__plans">
+        <div className="lacaja__planwrap">
           <p className="lacaja__note">
-            {year} {brand?.name} {chosenModel?.name} {chosenVersion?.name}. Precio mensual con IVA para débito automático.
+            {year} {brand?.name} {chosenModel?.name} {chosenVersion?.name}. Precio con IVA, débito automático.
           </p>
-          {plans.map((item) => (
-            <article key={item.code} className={item.recommended ? "is-recommended" : ""}>
-              {item.recommended ? <p className="lacaja__badge">Recomendado</p> : null}
-              <h3>{item.title}</h3>
-              <p className="lacaja__price">{money.format(item.monthly)} <small>/ mes</small></p>
-              {item.promoMonths && item.promoPercent ? (
-                <p className="lacaja__note">
-                  {item.promoPercent}% off los primeros {item.promoMonths} meses
-                  {item.laterMonthly ? `. Después ${money.format(item.laterMonthly)}` : ""}.
-                </p>
-              ) : null}
-              {item.franchise ? <p className="lacaja__note">Franquicia: {item.franchise}</p> : null}
-              <button
-                type="button"
-                className="lacaja__next"
-                onClick={() => {
-                  setPlan(item);
-                  setScreen("person");
-                }}
-              >
-                Elegir este plan
-              </button>
-            </article>
-          ))}
+          <div className="lacaja__plans">
+            {plans.map((item) => (
+              <article key={item.code} className={item.recommended ? "is-recommended" : ""}>
+                {item.recommended ? <p className="lacaja__badge">Recomendado</p> : null}
+                <h3>{item.title}</h3>
+                <p className="lacaja__price">{money.format(item.monthly)} <small>/ mes</small></p>
+                {item.promoMonths && item.promoPercent ? (
+                  <p className="lacaja__note">
+                    {item.promoPercent}% off {item.promoMonths} meses
+                    {item.laterMonthly ? `. Luego ${money.format(item.laterMonthly)}` : ""}.
+                  </p>
+                ) : null}
+                {item.franchise ? <p className="lacaja__note">Franquicia {item.franchise}</p> : null}
+                <button
+                  type="button"
+                  className="lacaja__next"
+                  onClick={() => {
+                    setPlan(item);
+                    setScreen("person");
+                  }}
+                >
+                  Elegir
+                </button>
+              </article>
+            ))}
+          </div>
           <button type="button" className="lacaja__back" onClick={() => setScreen("contact")}>Volver</button>
         </div>
       ) : null}
@@ -448,14 +504,16 @@ export function LaCajaAutoQuote() {
       {screen === "person" ? (
         <div className="lacaja__form">
           <p className="lacaja__note">{plan?.title} · {plan ? money.format(plan.monthly) : ""} / mes</p>
-          <label>
-            Nombre
-            <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-          </label>
-          <label>
-            Apellido
-            <input value={lastName} onChange={(event) => setLastName(event.target.value)} />
-          </label>
+          <div className="lacaja__split">
+            <label>
+              Nombre
+              <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+            </label>
+            <label>
+              Apellido
+              <input value={lastName} onChange={(event) => setLastName(event.target.value)} />
+            </label>
+          </div>
           <label>
             DNI
             <input inputMode="numeric" value={dni} onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))} />
@@ -478,30 +536,53 @@ export function LaCajaAutoQuote() {
       ) : null}
 
       {screen === "pay" ? (
-        <div className="lacaja__form">
-          <h3>Forma de pago</h3>
+        <form ref={cardForm} className="lacaja__form" onSubmit={(event) => { event.preventDefault(); payCard(); }}>
           <div className="lacaja__choice">
-            <button type="button" className={pay === "debito" ? "is-on" : ""} onClick={() => setPay("debito")}>Débito por CBU</button>
-            <button type="button" className={pay === "tarjeta" ? "is-on" : ""} onClick={() => setPay("tarjeta")}>Tarjeta de crédito</button>
+            <button type="button" className={pay === "debito" ? "is-on" : ""} onClick={() => setPay("debito")}>Tarjeta de débito</button>
+            <button type="button" className={pay === "credito" ? "is-on" : ""} onClick={() => setPay("credito")}>Tarjeta de crédito</button>
           </div>
+          <label>
+            Número de tarjeta
+            <input data-decidir="card_number" inputMode="numeric" autoComplete="cc-number" placeholder="•••• •••• •••• ••••" required />
+          </label>
+          <label>
+            Nombre en la tarjeta
+            <input data-decidir="card_holder_name" autoComplete="cc-name" defaultValue={`${firstName} ${lastName}`.trim()} required />
+          </label>
+          <div className="lacaja__cardrow">
+            <label>
+              Mes
+              <input data-decidir="card_expiration_month" inputMode="numeric" autoComplete="cc-exp-month" placeholder="MM" maxLength={2} required />
+            </label>
+            <label>
+              Año
+              <input data-decidir="card_expiration_year" inputMode="numeric" autoComplete="cc-exp-year" placeholder="AA" maxLength={2} required />
+            </label>
+            <label>
+              Código
+              <input data-decidir="security_code" inputMode="numeric" autoComplete="cc-csc" placeholder="CVV" maxLength={4} required />
+            </label>
+          </div>
+          <input type="hidden" data-decidir="card_holder_doc_type" value="dni" />
+          <input type="hidden" data-decidir="card_holder_doc_number" value={dni} />
           <p className="lacaja__note">
-            El precio publicado es para débito automático. La tarjeta o el CBU no se cargan en esta página: MARXEN toma el pedido y La Caja confirma la póliza.
+            {pay === "debito" ? "La cuota se debita de tu tarjeta de débito." : "La cuota se cobra a tu tarjeta de crédito."} El número lo procesa el cobro de La Caja y no queda guardado en MARXEN.
           </p>
           <div className="lacaja__actions">
             <button type="button" className="lacaja__back" onClick={() => setScreen("person")}>Volver</button>
-            <button type="button" className="lacaja__next" disabled={busy} onClick={() => void confirm()}>
-              {busy ? "Enviando…" : "Confirmar pedido"}
+            <button type="submit" className="lacaja__next" disabled={busy}>
+              {busy ? "Validando tarjeta…" : `Pagar ${plan ? money.format(plan.monthly) : ""}`}
             </button>
           </div>
-        </div>
+        </form>
       ) : null}
 
       {screen === "done" && plan ? (
         <div className="lacaja__form">
-          <h3>Pedido recibido</h3>
+          <h3>Tarjeta aceptada</h3>
           <p>
-            {firstName}, dejamos tu {year} {brand?.name} {chosenModel?.name} con el plan {plan.title} a {money.format(plan.monthly)} por mes.
-            Marcos te escribe para emitir la póliza en La Caja.
+            {firstName}, la cuota de {money.format(plan.monthly)} se debita de tu {pay === "debito" ? "tarjeta de débito" : "tarjeta de crédito"}
+            {cardLast4 ? ` terminada en ${cardLast4}` : ""}. La Caja confirma la póliza para iniciar el débito.
           </p>
           {budget ? <p className="lacaja__note">Número de cotización La Caja: {budget}</p> : null}
           <a

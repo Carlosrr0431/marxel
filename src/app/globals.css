@@ -7884,10 +7884,10 @@ button.crm-wa-file {
     radial-gradient(ellipse 80% 40% at 100% 0%, rgba(194, 27, 23, 0.08), transparent 55%),
     linear-gradient(180deg, #fff 0%, #fbfbfd 100%);
   border: 1px solid rgba(53, 40, 114, 0.08);
-  border-radius: 28px;
-  box-shadow: 0 24px 60px rgba(26, 16, 56, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(26, 16, 56, 0.07);
   color: var(--navy-deep);
-  padding: 1.4rem 1.25rem 1.3rem;
+  padding: 1rem 0.9rem 0.95rem;
 }
 
 .lacaja h2,
@@ -7899,7 +7899,8 @@ button.crm-wa-file {
   margin: 0;
 }
 
-.lacaja h2 { font-size: clamp(1.7rem, 3vw, 2.15rem); }
+.lacaja h2 { font-size: clamp(1.35rem, 2.4vw, 1.7rem); }
+.lacaja h3 { font-size: 0.95rem; line-height: 1.25; }
 
 .lacaja__kicker {
   color: #c21b17;
@@ -7955,7 +7956,38 @@ button.crm-wa-file {
 .lacaja__steps .is-on span { color: var(--navy); font-weight: 800; }
 
 .lacaja__form,
-.lacaja__plans { display: grid; gap: 0.95rem; }
+.lacaja__planwrap { display: grid; gap: 0.7rem; }
+
+.lacaja__split,
+.lacaja__cardrow {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.lacaja__cardrow { grid-template-columns: 1fr 1fr 1fr; }
+
+@media (min-width: 720px) {
+  .lacaja__split { grid-template-columns: 1fr 1fr; }
+}
+
+.lacaja__plans {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .lacaja__plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .lacaja__plans { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .lacaja__steps li { font-size: 0; gap: 0; padding: 0.22rem; }
+  .lacaja__steps span { font-size: 0.72rem; }
+}
 
 .lacaja__field,
 .lacaja label,
@@ -7973,13 +8005,14 @@ button.crm-wa-file {
   appearance: none;
   background: #fff;
   border: 1px solid #e4e1ee;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   color: var(--navy-deep);
   font: inherit;
+  font-size: 0.92rem;
   font-weight: 560;
-  min-height: 3rem;
-  padding: 0.65rem 0.9rem;
+  min-height: 2.55rem;
+  padding: 0.45rem 0.75rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   width: 100%;
 }
@@ -8015,14 +8048,15 @@ button.crm-wa-file {
 .lacaja__years button {
   background: #fff;
   border: 1px solid #e4e1ee;
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--navy-deep);
   cursor: pointer;
   flex: 0 0 auto;
   font: inherit;
+  font-size: 0.82rem;
   font-weight: 700;
-  min-width: 4.2rem;
-  padding: 0.55rem 0.7rem;
+  min-width: 3.4rem;
+  padding: 0.4rem 0.55rem;
   scroll-snap-align: start;
 }
 
@@ -8145,15 +8179,23 @@ button.crm-wa-file {
 .lacaja__plans article {
   background: #fff;
   border: 1px solid #eceaf3;
-  border-radius: 20px;
-  display: grid;
-  gap: 0.4rem;
-  padding: 1.05rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.8rem;
 }
 
 .lacaja__plans article.is-recommended {
   border-color: transparent;
   box-shadow: inset 0 0 0 1.5px #c21b17;
+}
+
+.lacaja__plans .lacaja__next {
+  margin-top: auto;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
 }
 
 .lacaja__badge {
@@ -8167,7 +8209,7 @@ button.crm-wa-file {
 
 .lacaja__price {
   font-family: var(--font-display);
-  font-size: 1.85rem;
+  font-size: 1.35rem;
   font-weight: 720;
   letter-spacing: -0.04em;
   margin: 0;

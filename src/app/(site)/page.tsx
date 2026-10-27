@@ -108,7 +108,7 @@ export default function HomePage() {
       <CompanyMarquee />
 
       <section className="bg-atmosphere">
-        <div className="container-mx max-w-3xl py-12 sm:py-16">
+        <div className="container-mx max-w-6xl py-12 sm:py-16">
           <LaCajaAutoQuote />
         </div>
       </section>

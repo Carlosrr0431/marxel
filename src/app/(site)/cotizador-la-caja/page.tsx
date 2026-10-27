@@ -28,7 +28,7 @@ export default function CotizadorLaCajaPage() {
         })}
       />
       <section className="bg-atmosphere">
-        <div className="container-mx max-w-3xl py-10 sm:py-14">
+        <div className="container-mx max-w-6xl py-10 sm:py-14">
           <LaCajaAutoQuote />
         </div>
       </section>
