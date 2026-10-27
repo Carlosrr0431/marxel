@@ -48,6 +48,15 @@ async function cajaGet(params: Record<string, string>) {
   return data.items as Option[];
 }
 
+function matchBrand(query: string, list: Option[]) {
+  const text = query.trim().toLowerCase();
+  if (!text) return null;
+  const exact = list.find((item) => item.name.toLowerCase() === text);
+  if (exact) return exact;
+  const starts = list.filter((item) => item.name.toLowerCase().startsWith(text));
+  return starts.length === 1 ? starts[0] : null;
+}
+
 export function LaCajaAutoQuote() {
   const [screen, setScreen] = useState<Screen>("car");
   const [error, setError] = useState("");
@@ -56,8 +65,10 @@ export function LaCajaAutoQuote() {
   const [brandQuery, setBrandQuery] = useState("");
   const [brand, setBrand] = useState<Option | null>(null);
   const [models, setModels] = useState<Option[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
   const [model, setModel] = useState("");
   const [versions, setVersions] = useState<Option[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const [version, setVersion] = useState("");
   const [year, setYear] = useState("");
   const [gnc, setGnc] = useState<boolean | null>(null);
@@ -82,7 +93,7 @@ export function LaCajaAutoQuote() {
   const years = useMemo(() => Array.from({ length: 2026 - 2006 + 1 }, (_, index) => String(2026 - index)), []);
   const brandMatches = useMemo(() => {
     const query = brandQuery.trim().toLowerCase();
-    if (!query || brand) return [];
+    if (!query || brand?.name.toLowerCase() === query) return [];
     return brands.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 8);
   }, [brand, brandQuery, brands]);
   const popular = brands.slice(0, 7);
@@ -95,49 +106,66 @@ export function LaCajaAutoQuote() {
   }, []);
 
   useEffect(() => {
-    if (!brand || year.length !== 4) {
+    if (brand || !brands.length) return;
+    const next = matchBrand(brandQuery, brands);
+    if (next) setBrand(next);
+  }, [brand, brandQuery, brands]);
+
+  useEffect(() => {
+    const code = brand?.code || "";
+    if (!code || year.length !== 4) {
       setModels([]);
       setModel("");
+      setModelsLoading(false);
       return;
     }
     let alive = true;
-    cajaGet({ type: "models", code: brand.code, year })
+    setModelsLoading(true);
+    cajaGet({ type: "models", code, year })
       .then((items) => {
         if (!alive) return;
         setModels(items);
         setModel("");
         setVersions([]);
         setVersion("");
+        setError(items.length ? "" : "No hay modelos para ese año. Probá con otro.");
       })
-      .catch((err: Error) => alive && setError(err.message));
+      .catch((err: Error) => alive && setError(err.message))
+      .finally(() => {
+        if (alive) setModelsLoading(false);
+      });
     return () => {
       alive = false;
     };
-  }, [brand, year]);
+  }, [brand?.code, year]);
 
   useEffect(() => {
     if (!model || year.length !== 4) {
       setVersions([]);
       setVersion("");
+      setVersionsLoading(false);
       return;
     }
     let alive = true;
+    setVersionsLoading(true);
     cajaGet({ type: "versions", code: model, year })
       .then((items) => {
         if (!alive) return;
         setVersions(items);
         setVersion("");
+        setError(items.length ? "" : "No hay versiones para ese modelo.");
       })
-      .catch((err: Error) => alive && setError(err.message));
+      .catch((err: Error) => alive && setError(err.message))
+      .finally(() => {
+        if (alive) setVersionsLoading(false);
+      });
     return () => {
       alive = false;
     };
   }, [model, year]);
 
   useEffect(() => {
-    if (!/^\d{4}$/.test(postal)) {
-      setLocations([]);
-      setLocation("");
+    if (screen !== "contact" || !/^\d{4}$/.test(postal)) {
       return;
     }
     let alive = true;
@@ -152,11 +180,17 @@ export function LaCajaAutoQuote() {
     return () => {
       alive = false;
     };
-  }, [postal]);
+  }, [postal, screen]);
 
   function pickBrand(item: Option) {
     setBrand(item);
     setBrandQuery(item.name);
+    setError("");
+  }
+
+  function onBrandChange(value: string) {
+    setBrandQuery(value);
+    setBrand(matchBrand(value, brands));
     setError("");
   }
 
@@ -260,36 +294,35 @@ export function LaCajaAutoQuote() {
 
       {screen === "car" ? (
         <div className="lacaja__form">
-          <label>
-            Año del auto
-            <select value={year} onChange={(event) => setYear(event.target.value)}>
-              <option value="">Entre 2006 y 2026</option>
+          <div className="lacaja__field">
+            <span>Año del auto</span>
+            <div className="lacaja__years">
               {years.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <button key={item} type="button" className={year === item ? "is-on" : ""} onClick={() => setYear(item)}>
+                  {item}
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
           <label>
             Marca
             <input
               value={brandQuery}
-              placeholder="Buscar"
-              onChange={(event) => {
-                setBrandQuery(event.target.value);
-                setBrand(null);
-              }}
+              placeholder="Escribí o elegí una marca"
+              onChange={(event) => onBrandChange(event.target.value)}
             />
           </label>
+          {brand ? <p className="lacaja__ok">{brand.name} lista</p> : null}
           {brandMatches.length > 0 ? (
             <ul className="lacaja__matches">
               {brandMatches.map((item) => (
                 <li key={item.code}>
-                  <button type="button" onClick={() => pickBrand(item)}>{item.name}</button>
+                  <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => pickBrand(item)}>{item.name}</button>
                 </li>
               ))}
             </ul>
           ) : null}
-          {!brand && popular.length > 0 ? (
+          {!brand && !brandQuery && popular.length > 0 ? (
             <div className="lacaja__chips">
               {popular.map((item) => (
                 <button key={item.code} type="button" onClick={() => pickBrand(item)}>{item.name}</button>
@@ -299,7 +332,9 @@ export function LaCajaAutoQuote() {
           <label>
             Modelo
             <select value={model} onChange={(event) => setModel(event.target.value)} disabled={!models.length}>
-              <option value="">{models.length ? "Elegí el modelo" : "Primero la marca y el año"}</option>
+              <option value="">
+                {!year ? "Elegí el año arriba" : !brand ? "Elegí la marca" : modelsLoading ? "Cargando modelos…" : models.length ? "Elegí el modelo" : "Sin modelos para ese año"}
+              </option>
               {models.map((item) => (
                 <option key={item.code} value={item.code}>{item.name}</option>
               ))}
@@ -308,7 +343,9 @@ export function LaCajaAutoQuote() {
           <label>
             Versión
             <select value={version} onChange={(event) => setVersion(event.target.value)} disabled={!versions.length}>
-              <option value="">{versions.length ? "Elegí la versión" : "Primero el modelo"}</option>
+              <option value="">
+                {!model ? "Elegí el modelo" : versionsLoading ? "Cargando versiones…" : versions.length ? "Elegí la versión" : "Sin versiones"}
+              </option>
               {versions.map((item) => (
                 <option key={item.code} value={item.code}>{item.name}</option>
               ))}
