@@ -266,6 +266,10 @@ export function HomeAutoQuote({
       setError("Completá DNI, email, domicilio, chasis y motor para emitir.");
       return;
     }
+    if (choice.company === "sancristobal" && plateKind !== "auto") {
+      setError("San Cristóbal pide la patente también en un 0 km.");
+      return;
+    }
     if (choice.company === "smg" && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
       setError("Para emitir en SMG falta la fecha de nacimiento.");
       return;
@@ -523,6 +527,10 @@ export function HomeAutoQuote({
             <label>
               <span>Altura</span>
               <input className="field" value={streetNumber} onChange={(event) => setStreetNumber(event.target.value)} />
+            </label>
+            <label>
+              <span>Patente</span>
+              <input className="field" maxLength={7} value={plate} onChange={(event) => setPlate(normalizeArPlate(event.target.value))} />
             </label>
             <label>
               <span>Chasis</span>

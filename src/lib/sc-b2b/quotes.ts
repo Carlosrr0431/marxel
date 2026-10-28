@@ -257,8 +257,8 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
   if (!email.includes("@")) throw new ScB2bError("Falta el email del asegurado", 400);
   if (phone.length < 8) throw new ScB2bError("Falta el celular del asegurado", 400);
   if (!street || !streetNumber) throw new ScB2bError("Falta la calle y la altura", 400);
-  if (!input.is0Km && !String(input.licensePlate || "").trim()) {
-    throw new ScB2bError("Falta la patente", 400);
+  if (!String(input.licensePlate || "").trim()) {
+    throw new ScB2bError("Falta la patente. San Cristóbal la pide también en un 0 km.", 400);
   }
   if (String(input.vin || "").trim().length < 6 || String(input.engineNumber || "").trim().length < 4) {
     throw new ScB2bError("Faltan el chasis y el motor", 400);
