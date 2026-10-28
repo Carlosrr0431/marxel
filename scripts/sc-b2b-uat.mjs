@@ -125,6 +125,9 @@ async function marketingVersion() {
     model: model.description || model.name,
     version: version.description || version.fullCarDescripcion,
     infoAutoCode: String(version.infoAutoCode || version.infoautoCode || ""),
+    category: version.category || "Car",
+    fuelCode: version.fuelCode || "NAF",
+    isImported: Boolean(version.isImported),
   };
 }
 
@@ -194,57 +197,83 @@ async function main() {
   } else {
     const versionLookup = await req(
       "GET",
-      `/api/CatalogoVehiculos/AutosVersionPorCodigoInfoauto?anio=${vehicle.year}&codigoInfoauto=${vehicle.infoAutoCode}`
+      `/api/Versiones/GetVersionByCodInfoAuto?codInfoAuto=${vehicle.infoAutoCode}&anio=${vehicle.year}`
     );
+    const precio = Number(versionLookup.data?.Versiones?.[0]?.Precio) || 0;
     record(
-      "catalogo-infoauto",
-      versionLookup.status === 200 || versionLookup.status === 500,
-      `${versionLookup.status} ${vehicle.brand} ${vehicle.model} ${vehicle.infoAutoCode} ${snippet(versionLookup.data)}`
+      "suma-asegurada",
+      versionLookup.status === 200 && precio > 0,
+      `${versionLookup.status} ${vehicle.brand} ${vehicle.model} ${vehicle.infoAutoCode} precio ${precio}`
     );
 
+    const start = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Salta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
     const quote = await req("POST", "/api/Quoted/QuoteCA7", {
       InsuredData: {
-        OfficialIDType: "Ext_CUIL86",
-        TaxID: "20-40111222-8",
+        OfficialIDType: "Ext_DNI96",
+        TaxID: "32546762",
         Gender: "M",
         Subtype: "person",
         ProducerCode: PRODUCER,
-        Age: 38,
-        UIFObligated: false,
       },
       PolicyData: {
-        StartDate: new Date().toISOString(),
+        StartDate: start,
         PolicyTermCode: "Annual",
-        PaymentMethodCode: "creditcard",
-        CurrencyCode: "ars",
-        PaymentFees: "Monthly",
+        PaymentMethodCode: "responsive",
+        CurrencyCode: "ARS",
+        PaymentFees: 1,
+        CommercialAlternative: "0",
+        AffinityGroupPublicId: null,
+        TypeOfContracting: "Rebilling",
         Product: "CA7CommAuto",
         PolicyType: "CA7_Car",
-        LocationPostalCode: 4400,
+        LocationPostalCode: "4400",
         LocationState: "AR_01",
       },
       VehicleData: {
         Vehicle: {
-          InfoautoCode: vehicle.infoAutoCode,
-          Year: vehicle.year,
-          Is0Km: false,
+          AccesoryAmount: 0,
+          AdditionalInterestTaxId: "",
+          AutomaticAdjust: "0",
+          Category: vehicle.category,
+          FuelType: vehicle.fuelCode,
+          Color: "Unspecified",
           HasGNC: false,
+          HasGPS: false,
+          IdVehicle: "",
+          InfoautoCode: vehicle.infoAutoCode,
+          Is0Km: false,
+          StatedAmount: precio,
           Usage: "Personal",
-          Category: "Car",
-          FuelType: "NAF",
-          RiskLocationPostalCode: 4400,
+          Year: vehicle.year,
+          IsNational: !vehicle.isImported,
+          RiskLocationPostalCode: "4400",
           RiskLocationState: "AR_01",
         },
-        Product: [{ ProductCode: "CA7_A" }, { ProductCode: "CA7_CM" }],
+        Product: [
+          { ProductCode: "CA7_A" },
+          { ProductCode: "CA7_B" },
+          { ProductCode: "CA7_B1" },
+          { ProductCode: "CA7_B3" },
+          { ProductCode: "CA7_Basic" },
+          { ProductCode: "CA7_C" },
+          { ProductCode: "CA7_CPlus" },
+          { ProductCode: "CA7_C1" },
+          { ProductCode: "CA7_C4" },
+          { ProductCode: "CA7_CM" },
+          { ProductCode: "CA7_D" },
+        ],
       },
     });
-    const nre = String(quote.data?.Message || "").includes("Object reference");
+    const summaries = Array.isArray(quote.data?.Summaries) ? quote.data.Summaries : [];
     record(
       "quote-ca7",
-      (quote.status === 200 && quote.data?.HasError !== true) || nre,
-      nre
-        ? `${quote.status} UAT Guidewire NRE con ${vehicle.infoAutoCode} (endpoint vivo)`
-        : `${quote.status} ${vehicle.infoAutoCode} ${snippet(quote.data)}`
+      quote.status === 200 && quote.data?.HasError !== true && summaries.length > 0,
+      `${quote.status} ${vehicle.infoAutoCode} planes ${summaries.length} ${snippet(quote.data)}`
     );
   }
 

@@ -48,9 +48,29 @@ export type Cp7QuoteInput = {
   additionalPlanCode?: string;
 };
 
-function isoDate(value?: string) {
-  if (value) return value;
-  return new Date().toISOString();
+const CA7_PRODUCTS = [
+  "CA7_A",
+  "CA7_B",
+  "CA7_B1",
+  "CA7_B3",
+  "CA7_Basic",
+  "CA7_C",
+  "CA7_CPlus",
+  "CA7_C1",
+  "CA7_C4",
+  "CA7_CM",
+  "CA7_D",
+];
+
+function quoteStartDate(value?: string) {
+  const match = String(value || "").trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Salta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function formatTaxId(raw: string) {
@@ -80,44 +100,60 @@ function fuelTypeOf(value?: string) {
   return key.length <= 4 ? key : "NAF";
 }
 
+function taxIdOf(raw: string, officialType: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (officialType === "Ext_DNI96") return digits;
+  return formatTaxId(raw);
+}
+
 export function buildCa7Quote(input: Ca7QuoteInput) {
   const producerCode = scB2bConfig().producerCode;
-  const productCodes = input.productCodes?.length ? input.productCodes : ["CA7_A", "CA7_CM"];
-  const statedAmount = Number(input.statedAmount);
+  const officialType = officialIdOf(input.taxId, input.officialIdType);
+  const productCodes = input.productCodes?.length ? input.productCodes : CA7_PRODUCTS;
+  const postal = String(input.postalCode || "");
+  const state = input.locationState || "AR_01";
+  const statedAmount = Number(input.statedAmount) > 0 ? Number(input.statedAmount) : 0;
   return {
     InsuredData: {
-      OfficialIDType: officialIdOf(input.taxId, input.officialIdType),
-      TaxID: formatTaxId(input.taxId),
+      OfficialIDType: officialType,
+      TaxID: taxIdOf(input.taxId, officialType),
       Gender: input.gender || "M",
       Subtype: input.subtype || "person",
       ProducerCode: producerCode,
-      Age: input.age || 35,
-      UIFObligated: false,
     },
     PolicyData: {
-      StartDate: isoDate(input.startDate),
+      StartDate: quoteStartDate(input.startDate),
       PolicyTermCode: input.policyTermCode || "Annual",
-      PaymentMethodCode: input.paymentMethodCode || "creditcard",
-      CurrencyCode: input.currencyCode || "ars",
-      PaymentFees: input.paymentFees || "Monthly",
+      PaymentMethodCode: input.paymentMethodCode || "responsive",
+      CurrencyCode: String(input.currencyCode || "ARS").toUpperCase(),
+      PaymentFees: Number(input.paymentFees) > 0 ? Number(input.paymentFees) : 1,
+      CommercialAlternative: "0",
+      AffinityGroupPublicId: null,
+      TypeOfContracting: "Rebilling",
       Product: input.product || "CA7CommAuto",
       PolicyType: input.policyType || "CA7_Car",
-      LocationPostalCode: Number(input.postalCode),
-      LocationState: input.locationState || "AR_01",
+      LocationPostalCode: postal,
+      LocationState: state,
     },
     VehicleData: {
       Vehicle: {
-        InfoautoCode: String(input.infoautoCode),
-        Year: Number(input.year),
-        Is0Km: Boolean(input.is0Km),
-        HasGNC: Boolean(input.hasGnc),
-        Usage: input.usage || "Personal",
+        AccesoryAmount: 0,
+        AdditionalInterestTaxId: "",
+        AutomaticAdjust: "0",
         Category: input.category || "Car",
         FuelType: fuelTypeOf(input.fuelType),
+        Color: "Unspecified",
+        HasGNC: Boolean(input.hasGnc),
+        HasGPS: Boolean(input.hasGps),
+        IdVehicle: "",
+        InfoautoCode: String(input.infoautoCode),
+        Is0Km: Boolean(input.is0Km),
+        StatedAmount: statedAmount,
+        Usage: input.usage || "Personal",
+        Year: Number(input.year),
         IsNational: input.isNational !== false,
-        ...(statedAmount > 0 ? { StatedAmount: statedAmount } : {}),
-        RiskLocationPostalCode: Number(input.postalCode),
-        RiskLocationState: input.locationState || "AR_01",
+        RiskLocationPostalCode: postal,
+        RiskLocationState: state,
       },
       Product: productCodes.map((ProductCode) => ({ ProductCode })),
     },
@@ -161,27 +197,14 @@ function firstCatalogVersion(data: unknown) {
 
 export async function quoteCa7(input: Ca7QuoteInput) {
   const { vehicleVersion } = await import("./ops");
-  let fuelType = input.fuelType;
-  let statedAmount = input.statedAmount;
-  let category = input.category;
-  let isNational = input.isNational;
+  let statedAmount = Number(input.statedAmount) || 0;
   try {
     const version = firstCatalogVersion(await vehicleVersion(String(input.infoautoCode), String(input.year)));
-    if (!fuelType && version.CombustibleCodigo) fuelType = String(version.CombustibleCodigo);
-    if (!(Number(statedAmount) > 0) && Number(version.Precio) > 0) statedAmount = Number(version.Precio);
-    if (!category && version.Categoria) category = String(version.Categoria);
-    if (isNational == null && typeof version.Importado === "boolean") isNational = !version.Importado;
+    if (Number(version.Precio) > 0) statedAmount = Number(version.Precio);
   } catch {
-    // Guidewire UAT a veces no responde el catálogo; cotizamos igual con el payload del swagger.
+    // GetVersionByCodInfoAuto solo aporta la suma asegurada. Categoría, combustible y origen vienen de InfoAuto.
   }
-  try {
-    return await scB2bPost("/api/Quoted/QuoteCA7", buildCa7Quote({ ...input, fuelType, statedAmount, category, isNational }));
-  } catch (err) {
-    if (err instanceof ScB2bError && /Object reference not set/i.test(err.message)) {
-      throw new ScB2bError(UAT_CATALOG_ERROR, 422, err.body);
-    }
-    throw err;
-  }
+  return scB2bPost("/api/Quoted/QuoteCA7", buildCa7Quote({ ...input, statedAmount }));
 }
 
 export async function quoteCp7(input: Cp7QuoteInput) {
@@ -195,9 +218,6 @@ export async function quoteAtm(body: unknown) {
 export async function quoteLife(body: unknown) {
   return scB2bPost("/api/Quoted/QuoteLifeIndividual", body);
 }
-
-const UAT_CATALOG_ERROR =
-  "San Cristóbal UAT devolvió el precio, pero el catálogo de autos vino sin marca ni modelo. Sin eso no hay número de cotización y no se puede emitir la póliza. Hay que pedirle a soporteb2b@sancristobal.com.ar que cargue el catálogo de vehículos en el ambiente de pruebas.";
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -244,15 +264,7 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
     throw new ScB2bError("Faltan el chasis y el motor", 400);
   }
 
-  let quoted: unknown;
-  try {
-    quoted = await quoteCa7({ ...input, productCodes: [productCode] });
-  } catch (err) {
-    if (err instanceof ScB2bError && /Object reference not set/i.test(err.message)) {
-      throw new ScB2bError(UAT_CATALOG_ERROR, 422, err.body);
-    }
-    throw err;
-  }
+  const quoted = await quoteCa7(input);
 
   const quoteId = quoteIdFrom(quoted, productCode);
   if (!quoteId) throw new ScB2bError("La cotización no trajo un número para emitir", 422, quoted);
