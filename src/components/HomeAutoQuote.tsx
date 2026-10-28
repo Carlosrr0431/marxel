@@ -307,7 +307,7 @@ export function HomeAutoQuote({
       const readable = note.startsWith("{") || note.startsWith("[") || note.length > 220
         ? "No se pudo emitir. El pedido quedó para el productor."
         : note;
-      setIssued(data.policyNumber ? `Póliza ${data.policyNumber}` : readable);
+      setIssued(readable.startsWith("Certificado") ? readable : data.policyNumber ? `Póliza ${data.policyNumber}` : readable);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo emitir.");
     } finally {
@@ -552,8 +552,16 @@ export function HomeAutoQuote({
             >
               Nueva cotización
             </button>
-            <h2>{issued.startsWith("Póliza") ? "Póliza emitida" : "No se pudo emitir"}</h2>
-            <p className={issued.startsWith("Póliza") ? "quote-found" : "quote-alert"}>{issued}</p>
+            <h2>
+              {issued.startsWith("Póliza")
+                ? "Póliza emitida"
+                : issued.startsWith("Certificado")
+                  ? "Certificado generado"
+                  : "No se pudo emitir"}
+            </h2>
+            <p className={issued.startsWith("Póliza") || issued.startsWith("Certificado") ? "quote-found" : "quote-alert"}>
+              {issued}
+            </p>
           </>
         ) : null}
 

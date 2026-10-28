@@ -275,6 +275,8 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
     PostalCode: postal,
     Street: street,
     StreetNumber: streetNumber,
+    Floor: "",
+    Block: "",
     City: city,
     StateCode: state,
     Phone: phone,
@@ -290,6 +292,8 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
       EngineNumber: String(input.engineNumber || "").trim(),
       LicensePlate: String(input.licensePlate || "").trim(),
       VIN: String(input.vin || "").trim(),
+      Accesories: [],
+      GpsProviderCode: "",
       Address: address,
     },
     InsuredData: {
@@ -300,10 +304,14 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
       UIfObligated: false,
     },
     IssueData: {
+      Documents: [],
+      TrackingPAS: "",
       WarningsThrowException: false,
       StartDate: new Date().toISOString(),
       DetailResponse: true,
     },
+    PepData: { Representatives: [] },
+    TruckData: { AdditionalInsured: [] },
   });
 }
 

@@ -209,9 +209,18 @@ async function emit(body: Record<string, unknown>) {
       })
     );
     policyNumber = String(issued.PolicyNumber || "");
-    note = policyNumber
-      ? `Póliza San Cristóbal ${policyNumber}`
-      : "San Cristóbal no devolvió número de póliza. El pedido quedó para el productor.";
+    const messages = Array.isArray(issued.Messages) ? issued.Messages : [];
+    const issueText = messages
+      .map((item) => {
+        const row = asRecord(item);
+        return String(row.MessageBeautiful || row.Description || "");
+      })
+      .join(" ");
+    note = /certificado|inspecci/i.test(issueText)
+      ? `Certificado San Cristóbal ${policyNumber}. El auto queda pendiente de inspección: sin eso la compañía no emite la póliza.`
+      : policyNumber
+        ? `Póliza San Cristóbal ${policyNumber}`
+        : "San Cristóbal no devolvió número de póliza. El pedido quedó para el productor.";
   }
   } catch (err) {
     const status = err instanceof AutoQuoteError || err instanceof ScB2bError ? err.status : 502;
