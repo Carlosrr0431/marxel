@@ -56,7 +56,6 @@ export const seoLinks = [
   { href: "/viajero", label: "Seguro de viaje" },
   { href: "/guias", label: "Guías" },
   { href: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
-  { href: "/cotizador-la-caja", label: "Cotizador La Caja" },
   { href: "/companias", label: "Compañías en Salta" },
   { href: "/mapa-del-sitio", label: "Mapa del sitio" },
 ];

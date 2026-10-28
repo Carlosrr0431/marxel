@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HomeAutoQuote } from "@/components/HomeAutoQuote";
-import { LaCajaAutoQuote } from "@/components/LaCajaAutoQuote";
 import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -106,12 +105,6 @@ export default function HomePage() {
       </section>
 
       <CompanyMarquee />
-
-      <section className="bg-atmosphere">
-        <div className="container-mx max-w-6xl py-12 sm:py-16">
-          <LaCajaAutoQuote />
-        </div>
-      </section>
 
       <section className="about-band">
         <div className="container-mx about-band__inner">

@@ -8,7 +8,7 @@ export type IndexablePage = {
 };
 
 /** Fecha de última actualización de contenido (zona Argentina, YYYY-MM-DD). */
-export const SITEMAP_LASTMOD = "2026-10-26";
+export const SITEMAP_LASTMOD = "2026-10-27";
 
 /**
  * URLs públicas a indexar. El sitemap vivo está en src/app/sitemap.ts.
@@ -17,7 +17,6 @@ export const SITEMAP_LASTMOD = "2026-10-26";
 export const INDEXABLE_PAGES: IndexablePage[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/seguro-de-auto", changeFrequency: "weekly", priority: 0.95 },
-  { path: "/cotizador-la-caja", changeFrequency: "weekly", priority: 0.9 },
   { path: "/seguro-de-auto/terceros-completo", changeFrequency: "monthly", priority: 0.9 },
   { path: "/seguro-de-auto/todo-riesgo", changeFrequency: "monthly", priority: 0.9 },
   { path: "/salud", changeFrequency: "weekly", priority: 0.9 },
