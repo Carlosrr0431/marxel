@@ -207,10 +207,7 @@ export async function createSeguimiento(formData: FormData) {
   const supabase = createServiceClient();
   const leadId = String(formData.get("lead_id") || "") || null;
   const afiliadoId = String(formData.get("afiliado_id") || "") || null;
-  let programado = String(formData.get("programado_para") || "");
-  if (programado && !programado.includes("Z") && programado.length === 16) {
-    programado = new Date(programado).toISOString();
-  }
+  const programado = localDateTime(String(formData.get("programado_para") || ""));
   const color = String(formData.get("color") || "");
   const everyDays = Math.min(365, Math.max(0, Math.floor(Number(formData.get("cada_dias") || 0) || 0)));
   const descripcion = packEventColor(String(formData.get("descripcion") || ""), color);
@@ -278,9 +275,16 @@ export async function createSeguimiento(formData: FormData) {
   revalidateCrm();
 }
 
+/** El formulario manda hora de Salta, sin zona. El servidor está en UTC y si no se corrige, las 17 quedan en 14. */
 function localDateTime(value: string) {
-  if (value && !value.includes("Z") && value.length === 16) return new Date(value).toISOString();
-  return value;
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) return value;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  return new Date(Date.UTC(year, month - 1, day, hour + 3, minute)).toISOString();
 }
 
 export async function updateSeguimiento(formData: FormData) {

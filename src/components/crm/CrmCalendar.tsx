@@ -80,9 +80,20 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+const SALTA = "America/Argentina/Salta";
+
 function toLocalInput(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SALTA,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const pick = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+  return `${pick("year")}-${pick("month")}-${pick("day")}T${pick("hour")}:${pick("minute")}`;
 }
 
 const NOTIFY_OPTIONS = [
@@ -93,7 +104,12 @@ const NOTIFY_OPTIONS = [
   { value: 1440, label: "1 día antes" },
 ];
 
-const timeLabel = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+const timeLabel = new Intl.DateTimeFormat("es-AR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: SALTA,
+});
 const dayName = new Intl.DateTimeFormat("es-AR", { weekday: "long" });
 const rangeLabel = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" });
 const monthLabel = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" });
