@@ -286,6 +286,7 @@ export async function upsertGoogleEvent(input: {
   reminderMinutes?: number;
   colorId?: string | null;
   everyDays?: number;
+  repeatCount?: number;
 }) {
   const connection = await readGoogleConnection();
   if (!connection || !googleConfigured()) return null;
@@ -294,13 +295,16 @@ export async function upsertGoogleEvent(input: {
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const minutes = input.reminderMinutes ?? 0;
   const everyDays = Math.min(365, Math.floor(input.everyDays || 0));
+  const repeatCount = Math.min(36, Math.floor(input.repeatCount || 0));
   const payload = {
     summary: input.title,
     description: input.description || "Seguimiento MARXEN CRM",
     start: { dateTime: start.toISOString(), timeZone: TZ },
     end: { dateTime: end.toISOString(), timeZone: TZ },
     ...(input.colorId ? { colorId: input.colorId } : {}),
-    ...(everyDays >= 1 ? { recurrence: [`RRULE:FREQ=DAILY;INTERVAL=${everyDays}`] } : {}),
+    ...(everyDays >= 1 && repeatCount >= 2
+      ? { recurrence: [`RRULE:FREQ=DAILY;INTERVAL=${everyDays};COUNT=${repeatCount}`] }
+      : {}),
     reminders: minutes
       ? {
           useDefault: false,

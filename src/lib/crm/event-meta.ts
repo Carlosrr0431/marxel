@@ -48,17 +48,15 @@ export function withEventSeries(text: string | null | undefined, serieId: string
   return [packed, `[MARXEN-SERIE:${serieId}]`].filter(Boolean).join("\n");
 }
 
-/** Fechas de una serie: la primera y, si hay intervalo, hasta 36 veces o un año. */
-export function repeatDates(startIso: string, everyDays: number) {
+/** Fechas de una serie. `times` incluye la primera y tiene un tope de 36. */
+export function repeatDates(startIso: string, everyDays: number, times = 1) {
   const start = new Date(startIso);
-  if (!Number.isFinite(start.getTime()) || everyDays < 1) return [startIso];
-  const limit = new Date(start);
-  limit.setFullYear(limit.getFullYear() + 1);
+  const count = Math.min(36, Math.max(1, Math.floor(times) || 1));
+  if (!Number.isFinite(start.getTime()) || everyDays < 1 || count < 2) return [startIso];
   const dates = [start.toISOString()];
   const cursor = new Date(start);
-  while (dates.length < 36) {
+  while (dates.length < count) {
     cursor.setDate(cursor.getDate() + everyDays);
-    if (cursor > limit) break;
     dates.push(cursor.toISOString());
   }
   return dates;

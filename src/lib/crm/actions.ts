@@ -210,6 +210,7 @@ export async function createSeguimiento(formData: FormData) {
   const programado = localDateTime(String(formData.get("programado_para") || ""));
   const color = String(formData.get("color") || "");
   const everyDays = Math.min(365, Math.max(0, Math.floor(Number(formData.get("cada_dias") || 0) || 0)));
+  const repeatCount = Math.min(36, Math.max(0, Math.floor(Number(formData.get("repeticiones") || 0) || 0)));
   const descripcion = packEventColor(String(formData.get("descripcion") || ""), color);
   const payload = {
     lead_id: leadId,
@@ -225,7 +226,7 @@ export async function createSeguimiento(formData: FormData) {
   if (!payload.titulo) {
     throw new Error("El título es obligatorio");
   }
-  const dates = repeatDates(payload.programado_para, everyDays);
+  const dates = repeatDates(payload.programado_para, everyDays, repeatCount);
   if (dates.length > 1) payload.descripcion = withEventSeries(descripcion, crypto.randomUUID());
   if (!leadId && !afiliadoId) {
     const notify = await readCalendarNotify();
@@ -236,6 +237,7 @@ export async function createSeguimiento(formData: FormData) {
       reminderMinutes: notify.googleMinutes,
       colorId: eventColor(color)?.googleId,
       everyDays,
+      repeatCount,
     });
     if (!googleId) throw new Error("Conectá Gmail para agendar sin contacto");
     await syncGoogleEventReminders(googleId, payload.titulo, payload.programado_para, descripcion);

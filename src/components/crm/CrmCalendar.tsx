@@ -572,6 +572,7 @@ function EventModal({
   const [when, setWhen] = useState(at);
   const [color, setColor] = useState<EventColorId>(event?.color || "azul");
   const [everyDays, setEveryDays] = useState("");
+  const [repeatCount, setRepeatCount] = useState("");
   const [date, time] = when.split("T");
   const text = query.trim().toLowerCase();
   const matches = text.length < 2
@@ -602,6 +603,7 @@ function EventModal({
           <input type="hidden" name="programado_para" value={when} />
           <input type="hidden" name="color" value={color} />
           <input type="hidden" name="cada_dias" value={everyDays} />
+          <input type="hidden" name="repeticiones" value={repeatCount} />
           <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
           <input type="hidden" name="afiliado_id" value={personId.startsWith("afiliado:") ? personId.slice(9) : ""} />
           <label className="block">
@@ -636,20 +638,35 @@ function EventModal({
             </div>
           </div>
           {mode === "create" ? (
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Repetir cada cuántos días</span>
-              <input
-                type="number"
-                min={1}
-                max={365}
-                inputMode="numeric"
-                value={everyDays}
-                onChange={(input) => setEveryDays(input.target.value.replace(/[^\d]/g, ""))}
-                className="crm-input"
-                placeholder="Vacío = una sola vez"
-              />
-              <span className="mt-1 block text-xs text-muted">Si ponés un número, se agenda esa repetición durante un año (hasta 36 veces). Cada uno avisa por WhatsApp.</span>
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Repetir cada cuántos días</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  inputMode="numeric"
+                  value={everyDays}
+                  onChange={(input) => setEveryDays(input.target.value.replace(/[^\d]/g, ""))}
+                  className="crm-input"
+                  placeholder="Vacío = una sola vez"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Cuántas veces</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={36}
+                  inputMode="numeric"
+                  value={repeatCount}
+                  onChange={(input) => setRepeatCount(input.target.value.replace(/[^\d]/g, ""))}
+                  className="crm-input"
+                  placeholder="Ej. 3"
+                />
+              </label>
+              <span className="col-span-2 block text-xs text-muted">La cantidad incluye la primera. Cada 7 días y 3 veces agenda tres avisos. Cada uno avisa por WhatsApp.</span>
+            </div>
           ) : null}
           {googleOnly ? null : (
             <div>
