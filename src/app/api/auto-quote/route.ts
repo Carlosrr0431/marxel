@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
 import { AutoQuoteError, quoteAutoVehicle, type AutoLocation, type AutoVersion } from "@/lib/sc-auto";
-import { quoteAndIssueCa7, ScB2bError } from "@/lib/sc-b2b";
+import { coverageCertificatePdf, quoteAndIssueCa7, ScB2bError } from "@/lib/sc-b2b";
 import { emitSmgPublic, quoteSmgPublic } from "@/lib/smg/public-auto";
 
 export const runtime = "nodejs";
@@ -146,6 +146,7 @@ async function emit(body: Record<string, unknown>) {
 
   let policyNumber = "";
   let note = "";
+  let certificatePdf = "";
   const calm = (message: string, fallback: string) => {
     const text = message.replace(/\s+/g, " ").trim();
     if (/catálogo de autos|Object reference not set|soporteb2b/i.test(text)) {
@@ -216,11 +217,18 @@ async function emit(body: Record<string, unknown>) {
         return String(row.MessageBeautiful || row.Description || "");
       })
       .join(" ");
-    note = /certificado|inspecci/i.test(issueText)
-      ? `Certificado San Cristóbal ${policyNumber}. El auto queda pendiente de inspección: sin eso la compañía no emite la póliza.`
-      : policyNumber
+    if (/certificado|inspecci/i.test(issueText) && policyNumber) {
+      note = `Certificado San Cristóbal ${policyNumber}. Quedó cargado en San Cristóbal, sujeto a inspección. La póliza y los cupones de pago salen cuando aprueban la inspección.`;
+      try {
+        certificatePdf = await coverageCertificatePdf(policyNumber);
+      } catch {
+        certificatePdf = "";
+      }
+    } else {
+      note = policyNumber
         ? `Póliza San Cristóbal ${policyNumber}`
         : "San Cristóbal no devolvió número de póliza. El pedido quedó para el productor.";
+    }
   }
   } catch (err) {
     const status = err instanceof AutoQuoteError || err instanceof ScB2bError ? err.status : 502;
@@ -256,5 +264,5 @@ async function emit(body: Record<string, unknown>) {
     });
   }
 
-  return NextResponse.json({ policyNumber, note });
+  return NextResponse.json({ policyNumber, note, certificatePdf });
 }

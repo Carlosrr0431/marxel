@@ -87,6 +87,7 @@ export function HomeAutoQuote({
   const [emitting, setEmitting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [issued, setIssued] = useState("");
+  const [certificatePdf, setCertificatePdf] = useState("");
   const quotedTicket = useRef("");
 
   const normalized = normalizeArPlate(plate);
@@ -311,6 +312,7 @@ export function HomeAutoQuote({
       const readable = note.startsWith("{") || note.startsWith("[") || note.length > 220
         ? "No se pudo emitir. El pedido quedó para el productor."
         : note;
+      setCertificatePdf(typeof data.certificatePdf === "string" ? data.certificatePdf : "");
       setIssued(readable.startsWith("Certificado") ? readable : data.policyNumber ? `Póliza ${data.policyNumber}` : readable);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo emitir.");
@@ -554,6 +556,7 @@ export function HomeAutoQuote({
               className="home-quote__back"
               onClick={() => {
                 setIssued("");
+                setCertificatePdf("");
                 setChoice(null);
                 setQuote(null);
               }}
@@ -570,6 +573,23 @@ export function HomeAutoQuote({
             <p className={issued.startsWith("Póliza") || issued.startsWith("Certificado") ? "quote-found" : "quote-alert"}>
               {issued}
             </p>
+            {certificatePdf ? (
+              <button
+                type="button"
+                className="btn btn-primary home-quote__submit"
+                onClick={() => {
+                  const bytes = Uint8Array.from(atob(certificatePdf), (char) => char.charCodeAt(0));
+                  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = "certificado-san-cristobal.pdf";
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Descargar certificado
+              </button>
+            ) : null}
           </>
         ) : null}
 

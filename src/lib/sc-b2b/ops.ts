@@ -318,6 +318,17 @@ export async function agriQuoteResult(id: string) {
   return scB2bGet(withQuery("/b2b-api-cp7/api/AgriQuote/result-by-id", { id }));
 }
 
+export async function coverageCertificatePdf(certificateNumber: string) {
+  const data = await scB2bGet(
+    withQuery("/api/Reportes/CertificadoDeCobertura", { certificateNumber: certificateNumber.trim() })
+  );
+  const report = String(asRecord(data).Reporte || "");
+  if (!report.startsWith("JVBER")) {
+    throw new ScB2bError("San Cristóbal no devolvió el PDF del certificado", 422, data);
+  }
+  return report;
+}
+
 export async function downloadReport(
   kind: ReportKind,
   query: Record<string, string | number | boolean | undefined>

@@ -37,6 +37,7 @@ export {
   claimByNumber,
   claimsByProducer,
   claimsNews,
+  coverageCertificatePdf,
   cuilsByDni,
   currentProducers,
   downloadReport,
