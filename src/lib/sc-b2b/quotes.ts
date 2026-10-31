@@ -1,4 +1,4 @@
-import { ScB2bError, scB2bConfig, scB2bPost } from "./client";
+import { ScB2bError, scB2bConfig, scB2bGet, scB2bPost, withQuery } from "./client";
 
 export type Ca7QuoteInput = {
   taxId: string;
@@ -231,6 +231,8 @@ function quoteIdFrom(data: unknown, productCode: string) {
   return String(asRecord(match).QuoteId || "");
 }
 
+export type InspectionPhoto = { name: string; content: string };
+
 export type Ca7IssueInput = Ca7QuoteInput & {
   productCode: string;
   email: string;
@@ -241,7 +243,20 @@ export type Ca7IssueInput = Ca7QuoteInput & {
   street?: string;
   streetNumber?: string;
   city?: string;
+  photos?: InspectionPhoto[];
 };
+
+function inspectionPhotos(raw: InspectionPhoto[] | undefined) {
+  return (raw || [])
+    .map((photo) => ({
+      name: String(photo.name || "foto").replace(/[^\w.-]+/g, "").slice(0, 40) || "foto",
+      content: String(photo.content || "")
+        .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "")
+        .replace(/\s/g, ""),
+    }))
+    .filter((photo) => photo.content.length > 100 && photo.content.length < 1_800_000)
+    .slice(0, 8);
+}
 
 export async function issueCa7(body: unknown) {
   return scB2bPost("/api/IssueSubmission/IssueCA7", body);
@@ -282,37 +297,77 @@ export async function quoteAndIssueCa7(input: Ca7IssueInput) {
     Phone: phone,
   };
 
-  return issueCa7({
-    QuoteId: quoteId,
-    PaymentInfo: {
-      PaymentMethodCode: "responsive",
-      SendCouponsByCode: "email",
-    },
-    VehicleInfo: {
-      EngineNumber: String(input.engineNumber || "").trim(),
-      LicensePlate: String(input.licensePlate || "").trim(),
-      VIN: String(input.vin || "").trim(),
-      Accesories: [],
-      GpsProviderCode: "",
-      Address: address,
-    },
-    InsuredData: {
-      CellPhone: phone,
-      Email: email,
-      Address: address,
-      ElectronicDocuments: true,
-      UIfObligated: false,
-    },
-    IssueData: {
-      Documents: [],
-      TrackingPAS: "",
-      WarningsThrowException: false,
-      StartDate: new Date().toISOString(),
-      DetailResponse: true,
-    },
-    PepData: { Representatives: [] },
-    TruckData: { AdditionalInsured: [] },
-  });
+  const photos = inspectionPhotos(input.photos);
+  const issued = asRecord(
+    await issueCa7({
+      QuoteId: quoteId,
+      PaymentInfo: {
+        PaymentMethodCode: "responsive",
+        SendCouponsByCode: "email",
+      },
+      VehicleInfo: {
+        EngineNumber: String(input.engineNumber || "").trim(),
+        LicensePlate: String(input.licensePlate || "").trim(),
+        VIN: String(input.vin || "").trim(),
+        Accesories: [],
+        GpsProviderCode: "",
+        Address: address,
+      },
+      InsuredData: {
+        CellPhone: phone,
+        Email: email,
+        Address: address,
+        ElectronicDocuments: true,
+        UIfObligated: false,
+      },
+      IssueData: {
+        Documents: photos.map((photo) => ({ nombre: `${photo.name}.jpg`, img: photo.content })),
+        TrackingPAS: "",
+        WarningsThrowException: false,
+        StartDate: new Date().toISOString(),
+        DetailResponse: true,
+      },
+      PepData: { Representatives: [] },
+      TruckData: { AdditionalInsured: [] },
+    })
+  );
+
+  let inspectionError = "";
+  if (photos.length) {
+    try {
+      await scB2bPost("/api/Inspection/deferred-inspection", {
+        PolicyPeriodId: String(issued.PolicyPeriodId || ""),
+        QuoteId: quoteId,
+        InspectionFiles: photos.map((photo) => ({
+          Name: `${photo.name}.jpg`,
+          Content: photo.content,
+        })),
+      });
+    } catch (err) {
+      inspectionError = err instanceof Error ? err.message : "No se pudieron cargar las fotos";
+    }
+  }
+
+  let bound = "";
+  const certificate = String(issued.PolicyNumber || "");
+  if (certificate) {
+    try {
+      const status = asRecord(
+        await scB2bGet(withQuery("/api/Vehicle/GetCertificateStatus", { CertificateNumber: certificate }))
+      );
+      const policyNumber = String(status.PolicyNumber || "");
+      if (/^\d{2}-\d{2}-\d{2}-3\d+$/.test(policyNumber)) bound = policyNumber;
+    } catch {
+      bound = "";
+    }
+  }
+
+  return {
+    ...issued,
+    BoundPolicyNumber: bound,
+    InspectionError: inspectionError,
+    PhotosSent: photos.length,
+  };
 }
 
 export async function issueCp7(body: unknown) {

@@ -41,11 +41,60 @@ function years() {
   return list;
 }
 
+const INSPECTION_SHOTS = [
+  { id: "frente", label: "Frente" },
+  { id: "trasera", label: "Trasera" },
+  { id: "lateral-izquierdo", label: "Lateral izquierdo" },
+  { id: "lateral-derecho", label: "Lateral derecho" },
+  { id: "kilometraje", label: "Kilometraje" },
+  { id: "chasis", label: "Número de chasis" },
+] as const;
+
+type ShotId = (typeof INSPECTION_SHOTS)[number]["id"];
+
 async function fetchJson(url: string, init?: RequestInit) {
   const res = await fetch(url, init);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Error");
   return data;
+}
+
+function downloadPdf(base64: string, filename: string) {
+  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function compressPhoto(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      const max = 1024;
+      const scale = Math.min(1, max / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("No se pudo leer la foto"));
+        return;
+      }
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve((canvas.toDataURL("image/jpeg", 0.62).split(",")[1] || ""));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo leer la foto. Usá JPG o PNG."));
+    };
+    image.src = url;
+  });
 }
 
 export function HomeAutoQuote({
@@ -88,6 +137,8 @@ export function HomeAutoQuote({
   const [pdfBusy, setPdfBusy] = useState(false);
   const [issued, setIssued] = useState("");
   const [certificatePdf, setCertificatePdf] = useState("");
+  const [couponPdf, setCouponPdf] = useState("");
+  const [photos, setPhotos] = useState<Partial<Record<ShotId, string>>>({});
   const quotedTicket = useRef("");
 
   const normalized = normalizeArPlate(plate);
@@ -271,6 +322,10 @@ export function HomeAutoQuote({
       setError("San Cristóbal pide la patente también en un 0 km.");
       return;
     }
+    if (choice.company === "sancristobal" && INSPECTION_SHOTS.some((shot) => !photos[shot.id])) {
+      setError("Adjuntá las 6 fotos de la inspección para que San Cristóbal emita la póliza.");
+      return;
+    }
     if (choice.company === "smg" && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
       setError("Para emitir en SMG falta la fecha de nacimiento.");
       return;
@@ -305,6 +360,10 @@ export function HomeAutoQuote({
           streetNumber: streetNumber.trim(),
           vin,
           engineNumber: engine,
+          photos:
+            choice.company === "sancristobal"
+              ? INSPECTION_SHOTS.map((shot) => ({ name: shot.id, content: photos[shot.id] || "" }))
+              : undefined,
           page_path: window.location.pathname,
         }),
       });
@@ -313,7 +372,14 @@ export function HomeAutoQuote({
         ? "No se pudo emitir. El pedido quedó para el productor."
         : note;
       setCertificatePdf(typeof data.certificatePdf === "string" ? data.certificatePdf : "");
-      setIssued(readable.startsWith("Certificado") ? readable : data.policyNumber ? `Póliza ${data.policyNumber}` : readable);
+      setCouponPdf(typeof data.couponPdf === "string" ? data.couponPdf : "");
+      setIssued(
+        readable.startsWith("Certificado") || readable.startsWith("Póliza")
+          ? readable
+          : data.policyNumber
+            ? `Póliza ${data.policyNumber}`
+            : readable
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo emitir.");
     } finally {
@@ -543,6 +609,39 @@ export function HomeAutoQuote({
               <input className="field" maxLength={20} value={engine} onChange={(event) => setEngine(event.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase())} />
             </label>
           </div>
+          {choice.company === "sancristobal" ? (
+            <div className="home-quote__grid">
+              <p className="sm:col-span-2">
+                San Cristóbal pide estas fotos de la inspección para emitir la póliza.
+              </p>
+              {INSPECTION_SHOTS.map((shot) => (
+                <label key={shot.id}>
+                  <span>
+                    {shot.label}
+                    {photos[shot.id] ? " · lista" : ""}
+                  </span>
+                  <input
+                    className="field"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      void compressPhoto(file)
+                        .then((content) => {
+                          if (!content) throw new Error("No se pudo leer la foto");
+                          setPhotos((current) => ({ ...current, [shot.id]: content }));
+                          setError("");
+                        })
+                        .catch((err: unknown) => {
+                          setError(err instanceof Error ? err.message : "No se pudo leer la foto.");
+                        });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          ) : null}
           <button type="submit" className="btn btn-primary home-quote__submit" disabled={emitting}>
             {emitting ? "Emitiendo…" : "Emitir póliza"}
           </button>
@@ -557,6 +656,7 @@ export function HomeAutoQuote({
               onClick={() => {
                 setIssued("");
                 setCertificatePdf("");
+                setCouponPdf("");
                 setChoice(null);
                 setQuote(null);
               }}
@@ -577,17 +677,18 @@ export function HomeAutoQuote({
               <button
                 type="button"
                 className="btn btn-primary home-quote__submit"
-                onClick={() => {
-                  const bytes = Uint8Array.from(atob(certificatePdf), (char) => char.charCodeAt(0));
-                  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = "certificado-san-cristobal.pdf";
-                  link.click();
-                  URL.revokeObjectURL(url);
-                }}
+                onClick={() => downloadPdf(certificatePdf, "certificado-san-cristobal.pdf")}
               >
                 Descargar certificado
+              </button>
+            ) : null}
+            {couponPdf ? (
+              <button
+                type="button"
+                className="btn btn-primary home-quote__submit"
+                onClick={() => downloadPdf(couponPdf, "cupones-san-cristobal.pdf")}
+              >
+                Descargar cupones
               </button>
             ) : null}
           </>

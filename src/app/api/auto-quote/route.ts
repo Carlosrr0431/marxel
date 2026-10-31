@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
 import { AutoQuoteError, quoteAutoVehicle, type AutoLocation, type AutoVersion } from "@/lib/sc-auto";
-import { coverageCertificatePdf, quoteAndIssueCa7, ScB2bError } from "@/lib/sc-b2b";
+import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, ScB2bError } from "@/lib/sc-b2b";
 import { emitSmgPublic, quoteSmgPublic } from "@/lib/smg/public-auto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function fail(err: unknown) {
   const status = err instanceof AutoQuoteError || err instanceof ScB2bError ? err.status : 502;
@@ -147,6 +148,7 @@ async function emit(body: Record<string, unknown>) {
   let policyNumber = "";
   let note = "";
   let certificatePdf = "";
+  let couponPdf = "";
   const calm = (message: string, fallback: string) => {
     const text = message.replace(/\s+/g, " ").trim();
     if (/catálogo de autos|Object reference not set|soporteb2b/i.test(text)) {
@@ -182,6 +184,10 @@ async function emit(body: Record<string, unknown>) {
       ? `Emisión SMG ${policyNumber}`
       : "SMG recibió el pedido y no devolvió número de póliza. Quedó para el productor.";
   } else {
+    const photos = inspectionPhotos(body.photos);
+    if (photos.length < 6) {
+      throw new ScB2bError("Faltan las fotos de la inspección. San Cristóbal las pide para emitir la póliza.", 400);
+    }
     const issued = asRecord(
       await quoteAndIssueCa7({
         taxId: dni,
@@ -207,9 +213,11 @@ async function emit(body: Record<string, unknown>) {
         street,
         streetNumber,
         city,
+        photos,
       })
     );
-    policyNumber = String(issued.PolicyNumber || "");
+    const bound = String(issued.BoundPolicyNumber || "");
+    policyNumber = bound || String(issued.PolicyNumber || "");
     const messages = Array.isArray(issued.Messages) ? issued.Messages : [];
     const issueText = messages
       .map((item) => {
@@ -217,8 +225,21 @@ async function emit(body: Record<string, unknown>) {
         return String(row.MessageBeautiful || row.Description || "");
       })
       .join(" ");
-    if (/certificado|inspecci/i.test(issueText) && policyNumber) {
-      note = `Certificado San Cristóbal ${policyNumber}. Quedó cargado en San Cristóbal, sujeto a inspección. La póliza y los cupones de pago salen cuando aprueban la inspección.`;
+    const inspectionError = String(issued.InspectionError || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    if (bound) {
+      note = `Póliza San Cristóbal ${bound}.`;
+      try {
+        couponPdf = await policyCouponsPdf(bound);
+        note = `Póliza San Cristóbal ${bound}. Los cupones de pago están listos para descargar.`;
+      } catch {
+        couponPdf = "";
+      }
+    } else if (/certificado|inspecci/i.test(issueText) && policyNumber) {
+      note = inspectionError
+        ? `Certificado San Cristóbal ${policyNumber}. Las fotos se enviaron con el alta, pero la inspección respondió: ${inspectionError}.`.slice(0, 220)
+        : Number(issued.PhotosSent) > 0
+          ? `Certificado San Cristóbal ${policyNumber}. Las fotos quedaron cargadas. La póliza y los cupones salen cuando San Cristóbal autoriza la inspección.`
+          : `Certificado San Cristóbal ${policyNumber}. Quedó cargado en San Cristóbal, sujeto a inspección. La póliza y los cupones de pago salen cuando aprueban la inspección.`;
       try {
         certificatePdf = await coverageCertificatePdf(policyNumber);
       } catch {
@@ -264,5 +285,15 @@ async function emit(body: Record<string, unknown>) {
     });
   }
 
-  return NextResponse.json({ policyNumber, note, certificatePdf });
+  return NextResponse.json({ policyNumber, note, certificatePdf, couponPdf });
+}
+
+function inspectionPhotos(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const row = asRecord(item);
+    const name = String(row.name || "").trim();
+    const content = String(row.content || "").trim();
+    return name && content ? [{ name, content }] : [];
+  });
 }

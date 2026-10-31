@@ -329,6 +329,24 @@ export async function coverageCertificatePdf(certificateNumber: string) {
   return report;
 }
 
+export async function policyCouponsPdf(policyNumber: string) {
+  const match = policyNumber.trim().match(/^(\d{2})-(\d{2})-(\d{2})-(\d+)$/);
+  if (!match) throw new ScB2bError("Número de póliza inválido", 400);
+  const data = await scB2bGet(
+    withQuery("/api/Reportes/CuponesDePoliza", {
+      casa: Number(match[1]),
+      ramo: Number(match[2]),
+      inciso: Number(match[3]),
+      polizaNro: Number(match[4]),
+    })
+  );
+  const report = String(asRecord(data).Reporte || "");
+  if (!report.startsWith("JVBER")) {
+    throw new ScB2bError("San Cristóbal no devolvió los cupones", 422, data);
+  }
+  return report;
+}
+
 export async function downloadReport(
   kind: ReportKind,
   query: Record<string, string | number | boolean | undefined>

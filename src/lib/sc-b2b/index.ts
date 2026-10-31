@@ -48,6 +48,7 @@ export {
   movementQueryDate,
   motoVersion,
   paymentHistory,
+  policyCouponsPdf,
   policyByNumber,
   policyDetailByProduct,
   producerAffinity,

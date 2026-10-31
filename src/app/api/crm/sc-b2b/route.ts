@@ -466,6 +466,14 @@ async function handlePost(request: NextRequest) {
       street: payload.street ? String(payload.street) : undefined,
       streetNumber: payload.streetNumber ? String(payload.streetNumber) : undefined,
       city: payload.city ? String(payload.city) : "SALTA",
+      photos: Array.isArray(payload.photos)
+        ? payload.photos.flatMap((item) => {
+            const row = asRecord(item);
+            const name = String(row.name || "").trim();
+            const content = String(row.content || "").trim();
+            return name && content ? [{ name, content }] : [];
+          })
+        : undefined,
     });
     return NextResponse.json({ ok: true, data });
   }
