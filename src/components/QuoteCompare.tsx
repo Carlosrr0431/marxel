@@ -26,9 +26,25 @@ function mark(value: string | undefined) {
   return { kind: "note" as const, text: value };
 }
 
-function PlanHead({ plan, onPick }: { plan: ComparePlan; onPick?: (plan: ComparePlan) => void }) {
+function PlanHead({
+  plan,
+  onPick,
+  picked,
+  onTogglePdf,
+}: {
+  plan: ComparePlan;
+  onPick?: (plan: ComparePlan) => void;
+  picked?: boolean;
+  onTogglePdf?: (key: string) => void;
+}) {
   return (
     <div className="quote-compare__plan">
+      {onTogglePdf ? (
+        <label className="quote-compare__pick">
+          <input type="checkbox" checked={Boolean(picked)} onChange={() => onTogglePdf(plan.key)} />
+          Incluir
+        </label>
+      ) : null}
       <img src={plan.logo} alt="" />
       <span>{plan.company}</span>
       <strong>{plan.title}</strong>
@@ -61,10 +77,14 @@ export function QuoteCompareTable({
   plans,
   focusKey = "",
   onPick,
+  pickedKeys,
+  onTogglePdf,
 }: {
   plans: ComparePlan[];
   focusKey?: string;
   onPick?: (plan: ComparePlan) => void;
+  pickedKeys?: string[];
+  onTogglePdf?: (key: string) => void;
 }) {
   return (
     <div className="quote-compare__scroll">
@@ -74,7 +94,12 @@ export function QuoteCompareTable({
             <th>Cobertura</th>
             {plans.map((plan) => (
               <th key={plan.key} className={plan.key === focusKey ? "is-focus" : undefined}>
-                <PlanHead plan={plan} onPick={onPick} />
+                <PlanHead
+                  plan={plan}
+                  onPick={onPick}
+                  picked={pickedKeys?.includes(plan.key)}
+                  onTogglePdf={onTogglePdf}
+                />
               </th>
             ))}
           </tr>
@@ -107,6 +132,8 @@ export function QuoteCompare({
   onPick,
   notices = [],
   whatsapp = false,
+  pickedKeys,
+  onTogglePdf,
 }: {
   plans: ComparePlan[];
   focusKey: string;
@@ -115,6 +142,8 @@ export function QuoteCompare({
   onPick?: (plan: ComparePlan) => void;
   notices?: string[];
   whatsapp?: boolean;
+  pickedKeys?: string[];
+  onTogglePdf?: (key: string) => void;
 }) {
   useEffect(() => {
     if (embedded) return undefined;
@@ -130,7 +159,15 @@ export function QuoteCompare({
     };
   }, [embedded, onClose]);
 
-  const table = <QuoteCompareTable plans={plans} focusKey={focusKey} onPick={onPick} />;
+  const table = (
+    <QuoteCompareTable
+      plans={plans}
+      focusKey={focusKey}
+      onPick={onPick}
+      pickedKeys={pickedKeys}
+      onTogglePdf={onTogglePdf}
+    />
+  );
 
   if (embedded) {
     return (

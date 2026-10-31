@@ -26,14 +26,6 @@ function money(value: number) {
   return value > 0 ? `$ ${moneyFmt.format(value)}` : "Consultar";
 }
 
-function coveredLines(plan: QuotePdfPlan) {
-  return COVER_ROWS.flatMap((row) => {
-    const value = plan.covers?.[row.key];
-    if (!value || value === "no") return [];
-    return [value === "si" ? row.label : `${row.label} (${value})`];
-  });
-}
-
 function stamp(date: Date) {
   return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
 }
@@ -98,15 +90,22 @@ function column(doc: jsPDF, x: number, y: number, width: number, title: string, 
   return cursor;
 }
 
-function tick(doc: jsPDF, x: number, y: number) {
+function tick(doc: jsPDF, x: number, y: number, scale = 1) {
   doc.setDrawColor(32, 148, 96);
-  doc.setLineWidth(0.45);
-  doc.line(x, y - 0.7, x + 1.15, y + 0.55);
-  doc.line(x + 1.15, y + 0.55, x + 2.9, y - 1.55);
+  doc.setLineWidth(0.4);
+  doc.line(x, y - 0.7 * scale, x + 1.15 * scale, y + 0.55 * scale);
+  doc.line(x + 1.15 * scale, y + 0.55 * scale, x + 2.9 * scale, y - 1.55 * scale);
   doc.setLineWidth(0.2);
 }
 
-export function renderQuotePdf(doc: jsPDF, input: QuotePdfInput, images: { logo?: string; marks: string[] }) {
+function clip(doc: jsPDF, text: string, width: number) {
+  if (doc.getTextWidth(text) <= width) return text;
+  let next = text;
+  while (next.length > 1 && doc.getTextWidth(`${next}...`) > width) next = next.slice(0, -1);
+  return `${next}...`;
+}
+
+export function renderQuotePdf(doc: jsPDF, input: QuotePdfInput, images: { logo?: string }) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 12;
@@ -160,103 +159,99 @@ export function renderQuotePdf(doc: jsPDF, input: QuotePdfInput, images: { logo?
   doc.setLineWidth(0.4);
   doc.roundedRect(margin, boxY, boxW, boxH, 2.2, 2.2, "S");
 
-  let y = boxY + boxH + 8;
+  let y = boxY + boxH + 7;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(90, 96, 112);
   doc.text(`Fecha de cotización: ${stamp(today)}`, margin, y);
-  y += 6;
+  y += 5;
 
-  const gap = 4;
-  const cardW = (boxW - gap) / 2;
-  const cardHeight = (plan: QuotePdfPlan, hasLogo: boolean) => {
-    const titleLines = Math.min(2, doc.splitTextToSize(plan.title, cardW - 8).length);
-    let height = 7 + (hasLogo ? 5 : 0) + 4.2 + titleLines * 3.8 + 1 + 5 + 6 + 3 + 5 + 5;
-    for (const item of coveredLines(plan)) {
-      height += Math.min(2, doc.splitTextToSize(item, cardW - 14).length) * 3.4 + 1.4;
-    }
-    return height + 4;
-  };
-  for (let index = 0; index < input.plans.length; index += 2) {
-    const pair = input.plans.slice(index, index + 2);
-    const cardH = Math.max(...pair.map((plan, offset) => cardHeight(plan, Boolean(images.marks[index + offset]))), 46);
-    if (y + cardH > pageH - 22) {
-      doc.addPage();
-      y = 16;
-    }
-    pair.forEach((plan, offset) => {
-      const x = margin + offset * (cardW + gap);
-      doc.setDrawColor(196, 202, 214);
-      doc.setLineWidth(0.35);
-      doc.roundedRect(x, y, cardW, cardH, 2.4, 2.4, "S");
-      let line = y + 7;
-      if (images.marks[index + offset]) {
-        doc.addImage(images.marks[index + offset], "PNG", x + 4, line - 4, 22, 6);
-        line += 5;
-      }
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(110, 116, 132);
-      doc.text(plan.company, x + 4, line);
-      line += 4.2;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(32, 40, 78);
-      const title = doc.splitTextToSize(plan.title, cardW - 8).slice(0, 2);
-      doc.text(title, x + 4, line);
-      line += title.length * 3.8 + 1;
-      doc.setDrawColor(210, 214, 224);
-      doc.setLineDashPattern([0.4, 0.8], 0);
-      doc.line(x + 4, line, x + cardW - 4, line);
-      doc.setLineDashPattern([], 0);
-      line += 5;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.text("Primera cuota", x + cardW / 2, line, { align: "center" });
-      line += 6;
-      doc.setFontSize(16);
-      doc.text(money(plan.monthly), x + cardW / 2, line, { align: "center" });
-      line += 3;
-      doc.setLineDashPattern([0.4, 0.8], 0);
-      doc.line(x + 4, line, x + cardW - 4, line);
-      doc.setLineDashPattern([], 0);
-      line += 5;
-      doc.setFontSize(8);
-      doc.text("Coberturas", x + 4, line);
-      line += 5;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(45, 50, 70);
-      for (const item of coveredLines(plan)) {
-        tick(doc, x + 4.5, line - 0.4);
-        const wrapped = doc.splitTextToSize(item, cardW - 14).slice(0, 2);
-        doc.text(wrapped, x + 9, line);
-        line += wrapped.length * 3.4 + 1.4;
-      }
-    });
-    y += cardH + gap;
-  }
-
+  const plans = input.plans;
   const note =
     "La presente cotización tiene una validez de siete (7) días corridos desde su emisión y está sujeta a confirmación de la compañía. No implica aceptación del riesgo. La prima puede modificarse si cambian los datos al emitir.";
+  doc.setFontSize(6.5);
   const noteLines = doc.splitTextToSize(note, boxW);
-  if (y + 8 + noteLines.length * 3.4 > pageH - 8) {
-    doc.addPage();
-    y = 16;
+  const noteBlock = noteLines.length * 2.8 + 3;
+  if (plans.length) {
+    const count = plans.length;
+    const labelW = count >= 7 ? 28 : 34;
+    const colW = (boxW - labelW) / count;
+    const font = colW < 16 ? 5.2 : colW < 22 ? 6 : 6.6;
+    const lineH = Math.max(2.5, font * 0.46);
+    const headH = 4 + lineH * 4 + 4.4;
+    const room = pageH - 10 - noteBlock - y;
+    const rowH = Math.min(7.2, (room - headH) / COVER_ROWS.length);
+    const tableH = headH + COVER_ROWS.length * rowH;
+    const tableTop = y;
+    doc.setDrawColor(196, 202, 214);
+    doc.setLineWidth(0.2);
+    doc.setFillColor(244, 246, 251);
+    doc.rect(margin, tableTop, boxW, headH, "FD");
+    COVER_ROWS.forEach((row, index) => {
+      const rowY = tableTop + headH + index * rowH;
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 251, 253);
+        doc.rect(margin, rowY, boxW, rowH, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(Math.min(7, font + 0.4));
+      doc.setTextColor(45, 50, 78);
+      doc.text(clip(doc, row.label, labelW - 3), margin + 1.5, rowY + rowH * 0.62);
+    });
+    plans.forEach((plan, index) => {
+      const x = margin + labelW + index * colW;
+      doc.setDrawColor(220, 224, 232);
+      doc.line(x, tableTop, x, tableTop + tableH);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(font - 0.4);
+      doc.setTextColor(110, 116, 132);
+      doc.text(clip(doc, plan.company, colW - 1.6), x + colW / 2, tableTop + 3.5, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(font);
+      doc.setTextColor(32, 40, 78);
+      const title = doc.splitTextToSize(plan.title, colW - 2).slice(0, 3);
+      doc.text(title, x + colW / 2, tableTop + 3.5 + lineH, { align: "center" });
+      doc.setFontSize(font + 0.5);
+      doc.text(money(plan.monthly), x + colW / 2, tableTop + headH - 2.3, { align: "center" });
+      COVER_ROWS.forEach((row, rowIndex) => {
+        const value = plan.covers?.[row.key];
+        const rowY = tableTop + headH + rowIndex * rowH;
+        const midY = rowY + rowH * 0.62;
+        if (!value || value === "no") {
+          doc.setDrawColor(176, 180, 190);
+          doc.setLineWidth(0.35);
+          doc.line(x + colW / 2 - 1.3, midY - 0.4, x + colW / 2 + 1.3, midY - 0.4);
+          doc.setLineWidth(0.2);
+          return;
+        }
+        if (value === "si") {
+          tick(doc, x + colW / 2 - 1.4, midY, colW < 18 ? 0.8 : 1);
+          return;
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(Math.max(4.8, font - 0.8));
+        doc.setTextColor(29, 111, 138);
+        doc.text(clip(doc, value, colW - 1.4), x + colW / 2, midY, { align: "center" });
+      });
+    });
+    doc.setDrawColor(196, 202, 214);
+    doc.rect(margin, tableTop, boxW, tableH);
+    doc.line(margin + labelW, tableTop, margin + labelW, tableTop + tableH);
+    doc.line(margin, tableTop + headH, margin + boxW, tableTop + headH);
+    y = tableTop + tableH + 4;
   }
+
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(90, 96, 112);
-  doc.text(noteLines, margin, y + 4);
+  doc.text(noteLines, margin, y + 2);
+  return y + 2 + noteLines.length * 2.8;
 }
 
 export async function downloadQuotePdf(input: QuotePdfInput) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const [logo, ...marks] = await Promise.all([
-    raster("/brand/marxel-logo.svg", 640, 148).catch(() => ""),
-    ...input.plans.map((plan) => raster(plan.logo, 220, 60).catch(() => "")),
-  ]);
-  renderQuotePdf(doc, input, { logo, marks });
+  const logo = await raster("/brand/marxel-logo.svg", 640, 148).catch(() => "");
+  renderQuotePdf(doc, input, { logo });
   doc.save(fileName(input.car));
 }

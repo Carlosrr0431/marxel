@@ -1053,6 +1053,21 @@ a {
   align-items: center;
   gap: 0.05rem;
 }
+.quote-compare__pick {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin-bottom: 0.2rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.quote-compare__pick input {
+  width: 0.9rem;
+  height: 0.9rem;
+  accent-color: var(--navy);
+}
 .quote-compare__emit {
   margin-top: 0.45rem;
   width: 100%;

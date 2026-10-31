@@ -135,6 +135,7 @@ export function HomeAutoQuote({
   const [engine, setEngine] = useState("");
   const [emitting, setEmitting] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfPick, setPdfPick] = useState<{ ticket: string; keys: string[] } | null>(null);
   const [issued, setIssued] = useState("");
   const [certificatePdf, setCertificatePdf] = useState("");
   const [couponPdf, setCouponPdf] = useState("");
@@ -393,6 +394,12 @@ export function HomeAutoQuote({
 
   const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
   const plans = quote ? comparePlans(quote) : [];
+  const planTicket = plans.map((plan) => plan.key).join("|");
+  const pdfKeys = pdfPick?.ticket === planTicket ? pdfPick.keys : plans.map((plan) => plan.key);
+  function togglePdfPlan(key: string) {
+    const next = pdfKeys.includes(key) ? pdfKeys.filter((item) => item !== key) : [...pdfKeys, key];
+    setPdfPick({ ticket: planTicket, keys: next });
+  }
   function pickPlan(plan: ComparePlan) {
     const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
     setChoice({
@@ -524,13 +531,15 @@ export function HomeAutoQuote({
                 Editar datos
               </button>
               <h2>{quote.carDescription || hint || plate}</h2>
-              <p>Elegí un plan para emitir.</p>
+              <p>Marcá las cotizaciones del PDF y elegí un plan para emitir.</p>
               {plans.length > 0 ? (
                 <button
                   type="button"
                   className="home-quote__back quote-pdf"
-                  disabled={pdfBusy}
+                  disabled={pdfBusy || pdfKeys.length === 0}
                   onClick={() => {
+                    const chosen = plans.filter((plan) => pdfKeys.includes(plan.key));
+                    if (!chosen.length) return;
                     setPdfBusy(true);
                     void import("@/lib/quote-pdf")
                       .then(({ downloadQuotePdf }) =>
@@ -541,21 +550,29 @@ export function HomeAutoQuote({
                           postal,
                           statedAmount: quote.statedAmount,
                           hasGnc: hasGnc === "si",
-                          plans,
+                          plans: chosen,
                         })
                       )
                       .catch(() => setError("No se pudo armar el PDF."))
                       .finally(() => setPdfBusy(false));
                   }}
                 >
-                  {pdfBusy ? "Armando PDF…" : "Descargar PDF"}
+                  {pdfBusy ? "Armando PDF…" : pdfKeys.length === 0 ? "Elegí un plan para el PDF" : `Descargar PDF (${pdfKeys.length})`}
                 </button>
               ) : null}
             </div>
             {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
             {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
             {plans.length > 0 ? (
-              <QuoteCompare embedded focusKey="" plans={plans} onClose={() => setQuote(null)} onPick={pickPlan} />
+              <QuoteCompare
+                embedded
+                focusKey=""
+                plans={plans}
+                pickedKeys={pdfKeys}
+                onTogglePdf={togglePdfPlan}
+                onClose={() => setQuote(null)}
+                onPick={pickPlan}
+              />
             ) : (
               <p className="quote-alert">No hubo planes para comparar.</p>
             )}
