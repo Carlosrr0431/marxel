@@ -322,8 +322,15 @@ export function HomeAutoQuote({
       setError("San Cristóbal pide la patente también en un 0 km.");
       return;
     }
-    if (choice.company === "sancristobal" && INSPECTION_SHOTS.some((shot) => !photos[shot.id])) {
-      setError("Adjuntá las 6 fotos de la inspección para que San Cristóbal emita la póliza.");
+    if (
+      (choice.company === "sancristobal" || choice.company === "smg") &&
+      INSPECTION_SHOTS.some((shot) => !photos[shot.id])
+    ) {
+      setError(
+        choice.company === "smg"
+          ? "Adjuntá las 6 fotos de la inspección para que Swiss Medical emita la póliza."
+          : "Adjuntá las 6 fotos de la inspección para que San Cristóbal emita la póliza.",
+      );
       return;
     }
     if (choice.company === "smg" && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
@@ -360,10 +367,7 @@ export function HomeAutoQuote({
           streetNumber: streetNumber.trim(),
           vin,
           engineNumber: engine,
-          photos:
-            choice.company === "sancristobal"
-              ? INSPECTION_SHOTS.map((shot) => ({ name: shot.id, content: photos[shot.id] || "" }))
-              : undefined,
+          photos: INSPECTION_SHOTS.map((shot) => ({ name: shot.id, content: photos[shot.id] || "" })),
           page_path: window.location.pathname,
         }),
       });
@@ -609,10 +613,12 @@ export function HomeAutoQuote({
               <input className="field" maxLength={20} value={engine} onChange={(event) => setEngine(event.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase())} />
             </label>
           </div>
-          {choice.company === "sancristobal" ? (
+          {choice.company === "sancristobal" || choice.company === "smg" ? (
             <div className="home-quote__grid">
               <p className="sm:col-span-2">
-                San Cristóbal pide estas fotos de la inspección para emitir la póliza.
+                {choice.company === "smg"
+                  ? "Swiss Medical pide estas fotos de la inspección para emitir la póliza."
+                  : "San Cristóbal pide estas fotos de la inspección para emitir la póliza."}
               </p>
               {INSPECTION_SHOTS.map((shot) => (
                 <label key={shot.id}>
@@ -677,7 +683,12 @@ export function HomeAutoQuote({
               <button
                 type="button"
                 className="btn btn-primary home-quote__submit"
-                onClick={() => downloadPdf(certificatePdf, "certificado-san-cristobal.pdf")}
+                onClick={() =>
+                  downloadPdf(
+                    certificatePdf,
+                    choice?.company === "smg" ? "certificado-swiss-medical.pdf" : "certificado-san-cristobal.pdf",
+                  )
+                }
               >
                 Descargar certificado
               </button>

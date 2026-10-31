@@ -1,5 +1,14 @@
 import { parseSmgCovers, type CoverMap } from "@/lib/plan-covers";
-import { buildQuoteBody, smgAsegurado, smgCotizar, smgUbicaciones, smgVehiculos, withEmission } from "./client";
+import {
+  buildQuoteBody,
+  smgArchivos,
+  smgAsegurado,
+  smgCertificado,
+  smgCotizar,
+  smgUbicaciones,
+  smgVehiculos,
+  withEmission,
+} from "./client";
 
 export type PublicSmgPlan = {
   id: string;
@@ -183,15 +192,72 @@ export async function quoteSmgPublic(input: {
   return { plans, quote: result.data, vehicle };
 }
 
-function policyNumberOf(data: unknown) {
+function usefulNumber(value: string) {
+  return value && value !== "0" ? value : "";
+}
+
+function issueNumbers(data: unknown) {
   const root = asRecord(data);
   const header = asRecord(root.encabezado);
   const solicitud = asRecord(root.respuestaSolicitud);
-  const number =
+  const nested = asRecord(root.data);
+  const nestedHeader = asRecord(nested.encabezado);
+  const nestedSolicitud = asRecord(nested.respuestaSolicitud);
+  const policy = usefulNumber(
+    text(header, ["nroPoliza", "numeroPoliza"]) ||
+      text(solicitud, ["nroPoliza", "numeroPoliza"]) ||
+      text(nestedHeader, ["nroPoliza", "numeroPoliza"]) ||
+      text(root, ["nroPoliza", "numeroPoliza"]),
+  );
+  const request = usefulNumber(
     text(solicitud, ["numerosolicitud", "nroSolicitud"]) ||
-    text(header, ["nroSolicitud", "nroPoliza", "numeroPoliza"]) ||
-    text(root, ["nroPoliza", "numeroPoliza", "nroSolicitud"]);
-  return number && number !== "0" ? number : "";
+      text(header, ["nroSolicitud"]) ||
+      text(nestedSolicitud, ["numerosolicitud", "nroSolicitud"]) ||
+      text(nestedHeader, ["nroSolicitud"]) ||
+      text(root, ["nroSolicitud"]),
+  );
+  return { policy, request };
+}
+
+function quoteIdOf(data: unknown) {
+  const root = asRecord(data);
+  const header = asRecord(root.encabezado);
+  const nested = asRecord(asRecord(root.data).encabezado);
+  const parsed = Number(header.idCotizacion || nested.idCotizacion || root.idCotizacion);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function pdfFrom(value: unknown, depth = 0): string {
+  if (depth > 6 || value == null) return "";
+  if (typeof value === "string") {
+    const compact = value.replace(/\s+/g, "");
+    const payload = compact.includes(",") ? compact.slice(compact.indexOf(",") + 1) : compact;
+    return payload.startsWith("JVBER") ? payload : "";
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = pdfFrom(item, depth + 1);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof value === "object") {
+    for (const item of Object.values(value)) {
+      const found = pdfFrom(item, depth + 1);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
+function inspectionPhotos(raw: { name: string; content: string }[] | undefined) {
+  return (raw ?? [])
+    .map((photo) => ({
+      name: String(photo.name || "").replace(/[^\w.-]/g, "").slice(0, 40) || "foto",
+      content: String(photo.content || "").replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, ""),
+    }))
+    .filter((photo) => photo.content.length > 100 && photo.content.length < 1_800_000)
+    .slice(0, 8);
 }
 
 function emissionProblem(data: unknown) {
@@ -240,8 +306,28 @@ export async function emitSmgPublic(input: {
   streetNumber: string;
   vin: string;
   engineNumber: string;
+  photos?: { name: string; content: string }[];
 }) {
+  const photos = inspectionPhotos(input.photos);
+  if (photos.length < 6) {
+    throw new Error("Faltan las fotos de la inspección. Swiss Medical las pide para emitir la póliza.");
+  }
   const quoted = await quoteSmgPublic(input);
+  const quoteId = quoteIdOf(quoted.quote);
+  if (!quoteId) throw new Error("SMG cotizó y no devolvió la cotización para adjuntar las fotos.");
+  for (const photo of photos) {
+    const uploaded = await smgArchivos({
+      idCotizacion: quoteId,
+      nombre: `${photo.name}.jpg`,
+      datosBase64: photo.content,
+    });
+    const saved = asList(asRecord(uploaded.data).archivoItem).flatMap((item) =>
+      asList(item.archivo).map((file) => text(file, ["txtNombre"])),
+    );
+    if (uploaded.status >= 400 || !saved.includes(`${photo.name}.jpg`)) {
+      throw new Error(messageOf(uploaded.data) || problemOf(uploaded.data) || "SMG no aceptó las fotos de la inspección.");
+    }
+  }
   const existing = await smgAsegurado({ codtipodocumento: "1", nrodoc: input.dni }).catch(() => null);
   const codAsegurado = existing ? customerCode(existing.data) : "";
   const issued = withEmission(quoted.quote, {
@@ -267,8 +353,16 @@ export async function emitSmgPublic(input: {
     condicionFiscal: 5,
   });
   const result = await smgCotizar(issued);
-  const policyNumber = policyNumberOf(result.data);
-  if (policyNumber) return { policyNumber, data: result.data };
-  const problem = emissionProblem(result.data);
-  throw new Error(problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor.");
+  const numbers = issueNumbers(result.data);
+  const policyNumber = numbers.policy || numbers.request;
+  if (!policyNumber) {
+    const problem = emissionProblem(result.data);
+    throw new Error(problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor.");
+  }
+  const requestNumber = Number(numbers.request || numbers.policy);
+  const certificate = requestNumber
+    ? await smgCertificado(requestNumber).catch(() => null)
+    : null;
+  const certificatePdf = certificate && certificate.status < 400 ? pdfFrom(certificate.data) : "";
+  return { policyNumber, isPolicy: Boolean(numbers.policy), certificatePdf, photosSent: photos.length };
 }

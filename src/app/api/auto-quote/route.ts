@@ -159,6 +159,10 @@ async function emit(body: Record<string, unknown>) {
   };
   try {
   if (company === "smg") {
+    const photos = inspectionPhotos(body.photos);
+    if (photos.length < 6) {
+      throw new AutoQuoteError("Faltan las fotos de la inspección. Swiss Medical las pide para emitir la póliza.", 400);
+    }
     const issued = await emitSmgPublic({
       year: Number(body.year),
       brand: String(brand.description || ""),
@@ -178,11 +182,13 @@ async function emit(body: Record<string, unknown>) {
       streetNumber,
       vin,
       engineNumber: engine,
+      photos,
     });
     policyNumber = issued.policyNumber;
-    note = policyNumber
-      ? `Emisión SMG ${policyNumber}`
-      : "SMG recibió el pedido y no devolvió número de póliza. Quedó para el productor.";
+    certificatePdf = issued.certificatePdf;
+    note = issued.isPolicy
+      ? `Póliza Swiss Medical ${policyNumber}. Las fotos de la inspección quedaron cargadas.`
+      : `Certificado Swiss Medical ${policyNumber}. Las fotos quedaron cargadas. La póliza sale cuando Swiss Medical autoriza la solicitud.`;
   } else {
     const photos = inspectionPhotos(body.photos);
     if (photos.length < 6) {

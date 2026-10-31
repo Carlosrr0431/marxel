@@ -48,7 +48,7 @@ function loginError(detail: string) {
     return "Swiss Medical no tiene habilitado el canal de esta API. Hay que pedirles que activen el acceso de MARXEN para cotizar.";
   }
   if (/error inesperado/i.test(detail)) {
-    return "Swiss Medical rechazó el login en el ambiente de pruebas. El usuario es el de Oficina Virtual, pero el servicio de pruebas responde con un error interno.";
+    return "Swiss Medical rechazó el login. Revisá el usuario de la oficina virtual y el API key de producción.";
   }
   return detail || "Swiss Medical rechazó el login";
 }
@@ -185,7 +185,16 @@ export function smgCotizar(body: unknown) {
   return smgRequest("/V1/ov/SegurosV3/op/Cotizar", { body });
 }
 
-export function smgArchivos(input: { idCotizacion: number; nombre: string; datosBase64: string }) {
+export function smgArchivos(input: {
+  idCotizacion: number;
+  nombre?: string;
+  datosBase64?: string;
+  archivos?: { nombre: string; datosBase64: string }[];
+}) {
+  const archivos = (input.archivos?.length
+    ? input.archivos
+    : [{ nombre: input.nombre || "archivo.jpg", datosBase64: input.datosBase64 || "" }]
+  ).filter((file) => file.datosBase64);
   return smgRequest("/V1/ov/SegurosV3/op/Cotizacion/Archivos", {
     body: {
       codRamo: RAMO_AUTOS,
@@ -193,7 +202,7 @@ export function smgArchivos(input: { idCotizacion: number; nombre: string; datos
       archivoItem: [
         {
           idItem: 1,
-          archivo: [{ txtNombre: input.nombre, datosBase64: input.datosBase64 }],
+          archivo: archivos.map((file) => ({ txtNombre: file.nombre, datosBase64: file.datosBase64 })),
         },
       ],
     },
