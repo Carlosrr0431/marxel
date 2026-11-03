@@ -15,7 +15,17 @@ function fail(err: unknown) {
 }
 
 function reasonOf(result: PromiseSettledResult<unknown>) {
-  return result.status === "rejected" && result.reason instanceof Error ? result.reason.message : "Sin precio";
+  const message = result.status === "rejected" && result.reason instanceof Error ? result.reason.message : "Sin precio";
+  if (/interno en el servidor/i.test(message)) {
+    return "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir.";
+  }
+  return message;
+}
+
+function splitInsuredName(nombre: string) {
+  const parts = nombre.split(/\s+/).filter(Boolean);
+  if (parts.length >= 3) return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
+  return { first: parts[0] || nombre, last: parts.slice(1).join(" ") || parts[0] || nombre };
 }
 
 function asRecord(value: unknown) {
@@ -132,9 +142,9 @@ async function emit(body: Record<string, unknown>) {
   const brand = asRecord(body.brand);
   const model = asRecord(body.model);
   const nombre = String(body.nombre || "").trim();
-  const parts = nombre.split(/\s+/);
-  const first = parts[0] || nombre;
-  const last = parts.slice(1).join(" ") || first;
+  const lookedUp = splitInsuredName(nombre);
+  const first = String(body.firstName || "").trim() || lookedUp.first;
+  const last = String(body.lastName || "").trim() || lookedUp.last;
   const plate = String(body.licensePlate || "").trim();
   const email = String(body.email || "").trim();
   const phone = String(body.celular || "").trim();
@@ -151,6 +161,11 @@ async function emit(body: Record<string, unknown>) {
   let couponPdf = "";
   const calm = (message: string, fallback: string) => {
     const text = message.replace(/\s+/g, " ").trim();
+    if (/interno en el servidor/i.test(text)) {
+      return company === "smg"
+        ? "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir."
+        : "San Cristóbal no pudo emitir la póliza. El pedido quedó para Marcos.";
+    }
     if (/catálogo de autos|Object reference not set|soporteb2b/i.test(text)) {
       return "San Cristóbal cotizó el plan, pero el ambiente de pruebas no puede emitir la póliza. El pedido quedó para Marcos.";
     }

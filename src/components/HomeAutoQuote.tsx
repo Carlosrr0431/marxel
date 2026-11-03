@@ -34,6 +34,12 @@ function money(value: number) {
   return `$ ${moneyFmt.format(value)}`;
 }
 
+function niceName(value: string) {
+  return value
+    .toLocaleLowerCase("es-AR")
+    .replace(/(^|\s)(\p{L})/gu, (_match, space: string, letter: string) => `${space}${letter.toLocaleUpperCase("es-AR")}`);
+}
+
 function years() {
   const current = new Date().getFullYear();
   const list = [{ id: `${current}-0km`, label: `${current} 0km` }];
@@ -126,6 +132,8 @@ export function HomeAutoQuote({
   const [quote, setQuote] = useState<QuotePayload | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [dni, setDni] = useState("");
+  const [insured, setInsured] = useState<{ dni: string; firstName: string; lastName: string } | null>(null);
+  const [personHint, setPersonHint] = useState("");
   const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -149,6 +157,47 @@ export function HomeAutoQuote({
   const brand = brands.find((item) => item.id === brandId) || null;
   const model = models.find((item) => item.id === modelId) || null;
   const version = versions.find((item) => String(item.id) === versionId) || null;
+
+  useEffect(() => {
+    if (dni.length < 7) {
+      setInsured(null);
+      setPersonHint("");
+      return;
+    }
+    let cancelled = false;
+    fetchJson(`/api/sc-auto?${new URLSearchParams({ kind: "dni", dni })}`)
+      .then((data) => {
+        if (cancelled) return;
+        const person = data.person as { firstName?: string; lastName?: string; gender?: string; dateOfBirth?: string } | null;
+        if (!person?.firstName && !person?.lastName) {
+          setInsured(null);
+          setPersonHint("");
+          return;
+        }
+        const firstName = String(person.firstName || "").trim();
+        const lastName = String(person.lastName || "").trim();
+        setInsured({ dni, firstName, lastName });
+        if (person.gender === "M" || person.gender === "F") {
+          setGender((current) => current || person.gender || "");
+        }
+        if (person.dateOfBirth) setBirthDate((current) => current || person.dateOfBirth || "");
+        const label = niceName([firstName, lastName].filter(Boolean).join(" "));
+        setPersonHint(
+          label
+            ? `Encontramos a ${label} en el padrón. Completá email, calle y altura: no figuran ahí.`
+            : ""
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInsured(null);
+          setPersonHint("");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dni]);
 
   useEffect(() => {
     if (postal.length !== 4) {
@@ -356,6 +405,8 @@ export function HomeAutoQuote({
           version,
           location,
           nombre: nombre.trim(),
+          firstName: insured?.dni === dni ? insured.firstName : "",
+          lastName: insured?.dni === dni ? insured.lastName : "",
           celular: celular.trim(),
           age: Number(age),
           hasGnc: hasGnc === "si",
@@ -588,6 +639,7 @@ export function HomeAutoQuote({
             <p className="home-quote__lede">
               {choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes
             </p>
+            {personHint ? <p className="quote-found">{personHint}</p> : null}
           <div className="home-quote__grid">
             <label>
               <span>DNI</span>

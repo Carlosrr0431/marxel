@@ -52,6 +52,20 @@ function messageOf(data: unknown) {
   return shortText(nested.errMessage || row.message || row.Message || row.errMessage);
 }
 
+function readableSmgError(data: unknown, fallback: string) {
+  const message = messageOf(data) || problemOf(data) || fallback;
+  if (/interno en el servidor/i.test(message)) {
+    return "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir.";
+  }
+  return message;
+}
+
+async function cotizar(body: unknown) {
+  const first = await smgCotizar(body);
+  if (first.status < 500) return first;
+  return smgCotizar(body);
+}
+
 function problemOf(data: unknown) {
   const row = asRecord(data);
   const lists = [row.Errores, row.errores, row.Validaciones, row.validaciones];
@@ -185,10 +199,10 @@ export async function quoteSmgPublic(input: {
     codUso: 1,
     txtUso: "PARTICULAR",
   });
-  const result = await smgCotizar(body);
-  if (result.status >= 400) throw new Error(messageOf(result.data) || "SMG no pudo cotizar");
+  const result = await cotizar(body);
+  if (result.status >= 400) throw new Error(readableSmgError(result.data, "SMG no pudo cotizar"));
   const plans = plansOf(result.data);
-  if (!plans.length) throw new Error("SMG no devolvió planes para este auto");
+  if (!plans.length) throw new Error(readableSmgError(result.data, "SMG no devolvió planes para este auto"));
   return { plans, quote: result.data, vehicle };
 }
 
@@ -325,7 +339,7 @@ export async function emitSmgPublic(input: {
       asList(item.archivo).map((file) => text(file, ["txtNombre"])),
     );
     if (uploaded.status >= 400 || !saved.includes(`${photo.name}.jpg`)) {
-      throw new Error(messageOf(uploaded.data) || problemOf(uploaded.data) || "SMG no aceptó las fotos de la inspección.");
+      throw new Error(readableSmgError(uploaded.data, "SMG no aceptó las fotos de la inspección."));
     }
   }
   const existing = await smgAsegurado({ codtipodocumento: "1", nrodoc: input.dni }).catch(() => null);
@@ -352,12 +366,12 @@ export async function emitSmgPublic(input: {
     esCliente: Boolean(codAsegurado),
     condicionFiscal: 5,
   });
-  const result = await smgCotizar(issued);
+  const result = await cotizar(issued);
   const numbers = issueNumbers(result.data);
   const policyNumber = numbers.policy || numbers.request;
   if (!policyNumber) {
     const problem = emissionProblem(result.data);
-    throw new Error(problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor.");
+    throw new Error(readableSmgError(result.data, problem || "SMG cotizó el plan y no emitió la solicitud. El pedido quedó para el productor."));
   }
   const requestNumber = Number(numbers.request || numbers.policy);
   const certificate = requestNumber

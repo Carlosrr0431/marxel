@@ -153,6 +153,7 @@ export type AutoPerson = {
   lastName: string;
   gender?: string;
   dateOfBirth?: string;
+  cuitCuil?: string;
   taxStatuses?: unknown[];
 };
 
@@ -1011,7 +1012,7 @@ export async function lookupPersonByDni(dni: string): Promise<AutoPerson | null>
     throw new AutoQuoteError("DNI inválido", 400);
   }
   const res = await fetch(
-    `${SC_API}/Account/contact-by-taxId?taxId=${encodeURIComponent(taxId)}&documentType=DNI`,
+    `${SC_API}/Account/contact-by-taxId?taxId=${encodeURIComponent(taxId)}&documentType=Ext_DNI96`,
     { cache: "no-store" }
   );
   if (res.status === 404) return null;
@@ -1021,11 +1022,14 @@ export async function lookupPersonByDni(dni: string): Promise<AutoPerson | null>
   const firstName = String(contact.firstName || "").trim();
   const lastName = String(contact.lastName || "").trim();
   if (!firstName && !lastName) return null;
+  const birth = String(contact.dateOfBirth || "").match(/^(\d{4}-\d{2}-\d{2})/);
+  const gender = String(contact.gender || "").toUpperCase();
   return {
     firstName,
     lastName,
-    gender: contact.gender != null ? String(contact.gender) : undefined,
-    dateOfBirth: contact.dateOfBirth != null ? String(contact.dateOfBirth) : undefined,
+    gender: gender === "M" || gender === "F" ? gender : undefined,
+    dateOfBirth: birth?.[1],
+    cuitCuil: String(contact.cuitCuil || "").trim() || undefined,
     taxStatuses: Array.isArray(contact.taxStatuses) ? contact.taxStatuses : undefined,
   };
 }
