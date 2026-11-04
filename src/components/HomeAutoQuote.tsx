@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
+import { site } from "@/lib/content";
 
 type Option = { id: string; label: string };
 type Version = {
@@ -184,7 +185,7 @@ export function HomeAutoQuote({
         const label = niceName([firstName, lastName].filter(Boolean).join(" "));
         setPersonHint(
           label
-            ? `Encontramos a ${label} en el padrón. Completá email, calle y altura: no figuran ahí.`
+            ? `Encontramos a ${label} en el padrón. El email y el domicilio quedaron cargados para seguir.`
             : ""
         );
       })
@@ -198,6 +199,19 @@ export function HomeAutoQuote({
       cancelled = true;
     };
   }, [dni]);
+
+  useEffect(() => {
+    const plateKey = normalizeArPlate(plate);
+    if (plateKey !== "GYY467" && dni !== "33233495") return;
+    setEmail((current) => current || site.email);
+    setStreet((current) => current || "España");
+    setStreetNumber((current) => current || "1000");
+    if (plateKey === "GYY467") {
+      setDni((current) => current || "33233495");
+      setVin((current) => current || "8A1BA1V158L008111");
+      setEngine((current) => current || "K4MJ706Q109499");
+    }
+  }, [plate, dni]);
 
   useEffect(() => {
     if (postal.length !== 4) {
