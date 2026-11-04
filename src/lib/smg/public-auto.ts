@@ -323,8 +323,9 @@ export async function emitSmgPublic(input: {
   photos?: { name: string; content: string }[];
 }) {
   const photos = inspectionPhotos(input.photos);
-  if (photos.length < 6) {
-    throw new Error("Faltan las fotos de la inspección. Swiss Medical las pide para emitir la póliza.");
+  const names = new Set(photos.map((photo) => photo.name));
+  if (["frente", "trasera", "lateral-izquierdo", "lateral-derecho"].some((name) => !names.has(name))) {
+    throw new Error("Faltan las fotos del auto: frente, trasera y los dos laterales.");
   }
   const quoted = await quoteSmgPublic(input);
   const quoteId = quoteIdOf(quoted.quote);

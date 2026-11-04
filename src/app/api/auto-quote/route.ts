@@ -175,8 +175,8 @@ async function emit(body: Record<string, unknown>) {
   try {
   if (company === "smg") {
     const photos = inspectionPhotos(body.photos);
-    if (photos.length < 6) {
-      throw new AutoQuoteError("Faltan las fotos de la inspección. Swiss Medical las pide para emitir la póliza.", 400);
+    if (!hasCarPhotos(photos)) {
+      throw new AutoQuoteError("Faltan las fotos del auto: frente, trasera y los dos laterales.", 400);
     }
     const issued = await emitSmgPublic({
       year: Number(body.year),
@@ -206,8 +206,8 @@ async function emit(body: Record<string, unknown>) {
       : `Certificado Swiss Medical ${policyNumber}. Las fotos quedaron cargadas. La póliza sale cuando Swiss Medical autoriza la solicitud.`;
   } else {
     const photos = inspectionPhotos(body.photos);
-    if (photos.length < 6) {
-      throw new ScB2bError("Faltan las fotos de la inspección. San Cristóbal las pide para emitir la póliza.", 400);
+    if (!hasCarPhotos(photos)) {
+      throw new ScB2bError("Faltan las fotos del auto: frente, trasera y los dos laterales.", 400);
     }
     const issued = asRecord(
       await quoteAndIssueCa7({
@@ -307,6 +307,13 @@ async function emit(body: Record<string, unknown>) {
   }
 
   return NextResponse.json({ policyNumber, note, certificatePdf, couponPdf });
+}
+
+const CAR_PHOTOS = ["frente", "trasera", "lateral-izquierdo", "lateral-derecho"];
+
+function hasCarPhotos(photos: { name: string }[]) {
+  const names = new Set(photos.map((photo) => photo.name));
+  return CAR_PHOTOS.every((name) => names.has(name));
 }
 
 function inspectionPhotos(value: unknown) {

@@ -49,12 +49,12 @@ function years() {
 }
 
 const INSPECTION_SHOTS = [
-  { id: "frente", label: "Frente" },
-  { id: "trasera", label: "Trasera" },
-  { id: "lateral-izquierdo", label: "Lateral izquierdo" },
-  { id: "lateral-derecho", label: "Lateral derecho" },
-  { id: "kilometraje", label: "Kilometraje" },
-  { id: "chasis", label: "Número de chasis" },
+  { id: "frente", label: "Frente", required: true },
+  { id: "trasera", label: "Trasera", required: true },
+  { id: "lateral-izquierdo", label: "Lateral izquierdo", required: true },
+  { id: "lateral-derecho", label: "Lateral derecho", required: true },
+  { id: "kilometraje", label: "Kilometraje", required: false },
+  { id: "chasis", label: "Número de chasis", required: false },
 ] as const;
 
 type ShotId = (typeof INSPECTION_SHOTS)[number]["id"];
@@ -388,12 +388,12 @@ export function HomeAutoQuote({
     }
     if (
       (choice.company === "sancristobal" || choice.company === "smg") &&
-      INSPECTION_SHOTS.some((shot) => !photos[shot.id])
+      INSPECTION_SHOTS.some((shot) => shot.required && !photos[shot.id])
     ) {
       setError(
         choice.company === "smg"
-          ? "Adjuntá las 6 fotos de la inspección para que Swiss Medical emita la póliza."
-          : "Adjuntá las 6 fotos de la inspección para que San Cristóbal emita la póliza.",
+          ? "Adjuntá frente, trasera y los dos laterales para que Swiss Medical emita la póliza."
+          : "Adjuntá frente, trasera y los dos laterales para que San Cristóbal emita la póliza.",
       );
       return;
     }
@@ -433,7 +433,9 @@ export function HomeAutoQuote({
           streetNumber: streetNumber.trim(),
           vin,
           engineNumber: engine,
-          photos: INSPECTION_SHOTS.map((shot) => ({ name: shot.id, content: photos[shot.id] || "" })),
+          photos: INSPECTION_SHOTS.flatMap((shot) =>
+            photos[shot.id] ? [{ name: shot.id, content: photos[shot.id] || "" }] : [],
+          ),
           page_path: window.location.pathname,
         }),
       });
@@ -700,13 +702,14 @@ export function HomeAutoQuote({
             <div className="home-quote__grid">
               <p className="sm:col-span-2">
                 {choice.company === "smg"
-                  ? "Swiss Medical pide estas fotos de la inspección para emitir la póliza."
-                  : "San Cristóbal pide estas fotos de la inspección para emitir la póliza."}
+                  ? "Swiss Medical pide frente, trasera y los dos laterales. Kilometraje y chasis son opcionales."
+                  : "San Cristóbal pide frente, trasera y los dos laterales. Kilometraje y chasis son opcionales."}
               </p>
               {INSPECTION_SHOTS.map((shot) => (
                 <label key={shot.id}>
                   <span>
                     {shot.label}
+                    {shot.required ? "" : " (opcional)"}
                     {photos[shot.id] ? " · lista" : ""}
                   </span>
                   <input
