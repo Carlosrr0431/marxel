@@ -202,8 +202,8 @@ async function emit(body: Record<string, unknown>) {
     policyNumber = issued.policyNumber;
     certificatePdf = issued.certificatePdf;
     note = issued.isPolicy
-      ? `Póliza Swiss Medical ${policyNumber}. Las fotos de la inspección quedaron cargadas.`
-      : `Certificado Swiss Medical ${policyNumber}. Las fotos quedaron cargadas. La póliza sale cuando Swiss Medical autoriza la solicitud.`;
+      ? `Póliza Swiss Medical ${policyNumber}. El pago con tarjeta se abre en el sitio de Swiss Medical.`
+      : `Certificado Swiss Medical ${policyNumber}. Las fotos quedaron cargadas. El pago con tarjeta se abre en el sitio de Swiss Medical.`;
   } else {
     const photos = inspectionPhotos(body.photos);
     if (!hasCarPhotos(photos)) {
@@ -248,10 +248,9 @@ async function emit(body: Record<string, unknown>) {
       .join(" ");
     const inspectionError = String(issued.InspectionError || "").replace(/\s+/g, " ").trim().slice(0, 80);
     if (bound) {
-      note = `Póliza San Cristóbal ${bound}.`;
+      note = `Póliza San Cristóbal ${bound}. El pago con tarjeta se abre en la autogestión de San Cristóbal.`;
       try {
         couponPdf = await policyCouponsPdf(bound);
-        note = `Póliza San Cristóbal ${bound}. Los cupones de pago están listos para descargar.`;
       } catch {
         couponPdf = "";
       }
@@ -259,8 +258,8 @@ async function emit(body: Record<string, unknown>) {
       note = inspectionError
         ? `Certificado San Cristóbal ${policyNumber}. Las fotos se enviaron con el alta, pero la inspección respondió: ${inspectionError}.`.slice(0, 220)
         : Number(issued.PhotosSent) > 0
-          ? `Certificado San Cristóbal ${policyNumber}. Las fotos quedaron cargadas. La póliza y los cupones salen cuando San Cristóbal autoriza la inspección.`
-          : `Certificado San Cristóbal ${policyNumber}. Quedó cargado en San Cristóbal, sujeto a inspección. La póliza y los cupones de pago salen cuando aprueban la inspección.`;
+          ? `Certificado San Cristóbal ${policyNumber}. Las fotos quedaron cargadas. El pago con tarjeta se abre en la autogestión de San Cristóbal.`
+          : `Certificado San Cristóbal ${policyNumber}. Quedó sujeto a inspección. El pago con tarjeta se abre en la autogestión de San Cristóbal.`;
       try {
         certificatePdf = await coverageCertificatePdf(policyNumber);
       } catch {
@@ -306,7 +305,12 @@ async function emit(body: Record<string, unknown>) {
     });
   }
 
-  return NextResponse.json({ policyNumber, note, certificatePdf, couponPdf });
+  const paymentUrl = policyNumber
+    ? company === "smg"
+      ? "https://www.swissmedicalseguros.com/clientes/login"
+      : "https://autogestion.sancristobal.com.ar"
+    : "";
+  return NextResponse.json({ policyNumber, note, certificatePdf, couponPdf, paymentUrl });
 }
 
 const CAR_PHOTOS = ["frente", "trasera", "lateral-izquierdo", "lateral-derecho"];

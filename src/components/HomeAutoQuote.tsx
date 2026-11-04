@@ -35,6 +35,12 @@ function money(value: number) {
   return `$ ${moneyFmt.format(value)}`;
 }
 
+function cardCheckout(company: "sancristobal" | "smg") {
+  return company === "smg"
+    ? "https://www.swissmedicalseguros.com/clientes/login"
+    : "https://autogestion.sancristobal.com.ar";
+}
+
 function niceName(value: string) {
   return value
     .toLocaleLowerCase("es-AR")
@@ -148,6 +154,7 @@ export function HomeAutoQuote({
   const [issued, setIssued] = useState("");
   const [certificatePdf, setCertificatePdf] = useState("");
   const [couponPdf, setCouponPdf] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
   const [photos, setPhotos] = useState<Partial<Record<ShotId, string>>>({});
   const quotedTicket = useRef("");
 
@@ -445,6 +452,9 @@ export function HomeAutoQuote({
         : note;
       setCertificatePdf(typeof data.certificatePdf === "string" ? data.certificatePdf : "");
       setCouponPdf(typeof data.couponPdf === "string" ? data.couponPdf : "");
+      const checkout = typeof data.paymentUrl === "string" && data.paymentUrl ? data.paymentUrl : cardCheckout(choice.company);
+      setPaymentUrl(data.policyNumber ? checkout : "");
+      if (data.policyNumber) window.open(checkout, "_blank", "noopener");
       setIssued(
         readable.startsWith("Certificado") || readable.startsWith("Póliza")
           ? readable
@@ -653,7 +663,7 @@ export function HomeAutoQuote({
             </button>
             <h2>Emitir {choice.title}</h2>
             <p className="home-quote__lede">
-              {choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes
+              {choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes. El pago con tarjeta se abre en el sitio de la compañía.
             </p>
             {personHint ? <p className="quote-found">{personHint}</p> : null}
           <div className="home-quote__grid">
@@ -749,6 +759,7 @@ export function HomeAutoQuote({
                 setIssued("");
                 setCertificatePdf("");
                 setCouponPdf("");
+                setPaymentUrl("");
                 setChoice(null);
                 setQuote(null);
               }}
@@ -765,6 +776,15 @@ export function HomeAutoQuote({
             <p className={issued.startsWith("Póliza") || issued.startsWith("Certificado") ? "quote-found" : "quote-alert"}>
               {issued}
             </p>
+            {paymentUrl ? (
+              <button
+                type="button"
+                className="btn btn-primary home-quote__submit"
+                onClick={() => window.open(paymentUrl, "_blank", "noopener")}
+              >
+                Pagar con tarjeta
+              </button>
+            ) : null}
             {certificatePdf ? (
               <button
                 type="button"
