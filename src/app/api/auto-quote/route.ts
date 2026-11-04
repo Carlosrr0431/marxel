@@ -255,7 +255,7 @@ async function emit(body: Record<string, unknown>) {
       } catch {
         couponPdf = "";
       }
-    } else if (/certificado|inspecci/i.test(issueText) && policyNumber) {
+    } else if (policyNumber && !/^\d{2}-\d{2}-\d{2}-3\d+$/.test(policyNumber)) {
       note = inspectionError
         ? `Certificado San Cristóbal ${policyNumber}. Las fotos se enviaron con el alta, pero la inspección respondió: ${inspectionError}.`.slice(0, 220)
         : Number(issued.PhotosSent) > 0
