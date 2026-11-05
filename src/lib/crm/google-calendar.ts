@@ -278,6 +278,14 @@ export async function findGoogleEventIdByMarker(seguimientoId: string) {
   return hit?.id || null;
 }
 
+function recurrenceRule(repeat: "semanal" | "quincenal" | "mensual" | null | undefined, count: number, start: Date) {
+  if (!repeat || count < 2) return null;
+  if (repeat === "semanal") return `RRULE:FREQ=WEEKLY;COUNT=${count}`;
+  if (repeat === "quincenal") return `RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=${count}`;
+  const day = new Date(start.getTime() - 3 * 60 * 60 * 1000).getUTCDate();
+  return `RRULE:FREQ=MONTHLY;BYMONTHDAY=${day};COUNT=${count}`;
+}
+
 export async function upsertGoogleEvent(input: {
   eventId?: string | null;
   title: string;
@@ -285,7 +293,7 @@ export async function upsertGoogleEvent(input: {
   start: string;
   reminderMinutes?: number;
   colorId?: string | null;
-  everyDays?: number;
+  repeat?: "semanal" | "quincenal" | "mensual" | null;
   repeatCount?: number;
 }) {
   const connection = await readGoogleConnection();
@@ -294,17 +302,15 @@ export async function upsertGoogleEvent(input: {
   const start = new Date(input.start);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const minutes = input.reminderMinutes ?? 0;
-  const everyDays = Math.min(365, Math.floor(input.everyDays || 0));
   const repeatCount = Math.min(36, Math.floor(input.repeatCount || 0));
+  const rule = recurrenceRule(input.repeat, repeatCount, start);
   const payload = {
     summary: input.title,
     description: input.description || "Seguimiento MARXEN CRM",
     start: { dateTime: start.toISOString(), timeZone: TZ },
     end: { dateTime: end.toISOString(), timeZone: TZ },
     ...(input.colorId ? { colorId: input.colorId } : {}),
-    ...(everyDays >= 1 && repeatCount >= 2
-      ? { recurrence: [`RRULE:FREQ=DAILY;INTERVAL=${everyDays};COUNT=${repeatCount}`] }
-      : {}),
+    ...(rule ? { recurrence: [rule] } : {}),
     reminders: minutes
       ? {
           useDefault: false,

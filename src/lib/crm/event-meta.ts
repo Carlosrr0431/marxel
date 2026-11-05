@@ -48,16 +48,55 @@ export function withEventSeries(text: string | null | undefined, serieId: string
   return [packed, `[MARXEN-SERIE:${serieId}]`].filter(Boolean).join("\n");
 }
 
-/** Fechas de una serie. `times` incluye la primera y tiene un tope de 36. */
-export function repeatDates(startIso: string, everyDays: number, times = 1) {
+export type RepeatEvery = "semanal" | "quincenal" | "mensual";
+
+const SALTA_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+export function repeatEveryOf(value: string): RepeatEvery | null {
+  if (value === "semanal" || value === "quincenal" || value === "mensual") return value;
+  return null;
+}
+
+/** Día y hora de Salta, que no tiene horario de verano. */
+function saltaParts(date: Date) {
+  const shifted = new Date(date.getTime() - SALTA_OFFSET_MS);
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth(),
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes(),
+  };
+}
+
+function fromSalta(year: number, month: number, day: number, hour: number, minute: number) {
+  return new Date(Date.UTC(year, month, day, hour + 3, minute)).toISOString();
+}
+
+/** Fechas de una serie. `times` incluye la primera y tiene un tope de 36. El mensual cae el mismo día del mes. */
+export function repeatDates(startIso: string, every: number | RepeatEvery | null, times = 1) {
   const start = new Date(startIso);
   const count = Math.min(36, Math.max(1, Math.floor(times) || 1));
-  if (!Number.isFinite(start.getTime()) || everyDays < 1 || count < 2) return [startIso];
+  if (!Number.isFinite(start.getTime()) || count < 2 || !every) return [startIso];
+  if (every === "mensual") return monthlyDates(start, count);
+  const days = every === "semanal" ? 7 : every === "quincenal" ? 14 : Math.floor(every);
+  if (days < 1) return [startIso];
   const dates = [start.toISOString()];
   const cursor = new Date(start);
   while (dates.length < count) {
-    cursor.setDate(cursor.getDate() + everyDays);
+    cursor.setUTCDate(cursor.getUTCDate() + days);
     dates.push(cursor.toISOString());
+  }
+  return dates;
+}
+
+function monthlyDates(start: Date, count: number) {
+  const { year, month, day, hour, minute } = saltaParts(start);
+  const dates = [start.toISOString()];
+  for (let step = 1; dates.length < count; step += 1) {
+    const target = new Date(Date.UTC(year, month + step, 1));
+    const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+    dates.push(fromSalta(target.getUTCFullYear(), target.getUTCMonth(), Math.min(day, last), hour, minute));
   }
   return dates;
 }

@@ -19,7 +19,7 @@ import { normalizeArPhone } from "@/lib/whatsmeow/config";
 import { setCrmChatName } from "@/lib/whatsmeow/crm-chat";
 import { deleteGoogleEvent, findGoogleEventIdByMarker, listGoogleEvents, readGoogleConnection, upsertGoogleEvent } from "@/lib/crm/google-calendar";
 import { isProducerCalendarAccount, isProducerCalendarEvent } from "@/lib/crm/producer-calendar";
-import { eventColor, packEventColor, readEventSeries, repeatDates, stripEventMeta, withEventSeries } from "@/lib/crm/event-meta";
+import { eventColor, packEventColor, readEventSeries, repeatDates, repeatEveryOf, stripEventMeta, withEventSeries } from "@/lib/crm/event-meta";
 import { cancelCalendarReminderPrefix, cancelCalendarReminders, syncCalendarReminders } from "@/lib/crm/calendar-reminders";
 import {
   CALENDAR_NOTIFY_COOKIE,
@@ -209,7 +209,7 @@ export async function createSeguimiento(formData: FormData) {
   const afiliadoId = String(formData.get("afiliado_id") || "") || null;
   const programado = localDateTime(String(formData.get("programado_para") || ""));
   const color = String(formData.get("color") || "");
-  const everyDays = Math.min(365, Math.max(0, Math.floor(Number(formData.get("cada_dias") || 0) || 0)));
+  const repeat = repeatEveryOf(String(formData.get("repetir") || ""));
   const repeatCount = Math.min(36, Math.max(0, Math.floor(Number(formData.get("repeticiones") || 0) || 0)));
   const descripcion = packEventColor(String(formData.get("descripcion") || ""), color);
   const payload = {
@@ -226,7 +226,7 @@ export async function createSeguimiento(formData: FormData) {
   if (!payload.titulo) {
     throw new Error("El título es obligatorio");
   }
-  const dates = repeatDates(payload.programado_para, everyDays, repeatCount);
+  const dates = repeatDates(payload.programado_para, repeat, repeatCount);
   if (dates.length > 1) payload.descripcion = withEventSeries(descripcion, crypto.randomUUID());
   if (!leadId && !afiliadoId) {
     const notify = await readCalendarNotify();
@@ -236,7 +236,7 @@ export async function createSeguimiento(formData: FormData) {
       start: payload.programado_para,
       reminderMinutes: notify.googleMinutes,
       colorId: eventColor(color)?.googleId,
-      everyDays,
+      repeat,
       repeatCount,
     });
     if (!googleId) throw new Error("Conectá Gmail para agendar sin contacto");

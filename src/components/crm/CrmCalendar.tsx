@@ -571,7 +571,7 @@ function EventModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [when, setWhen] = useState(at);
   const [color, setColor] = useState<EventColorId>(event?.color || "azul");
-  const [everyDays, setEveryDays] = useState("");
+  const [repeat, setRepeat] = useState<"" | "semanal" | "quincenal" | "mensual">("");
   const [repeatCount, setRepeatCount] = useState("");
   const [date, time] = when.split("T");
   const text = query.trim().toLowerCase();
@@ -602,8 +602,8 @@ function EventModal({
           <input type="hidden" name="prioridad" value={prioridad} />
           <input type="hidden" name="programado_para" value={when} />
           <input type="hidden" name="color" value={color} />
-          <input type="hidden" name="cada_dias" value={everyDays} />
-          <input type="hidden" name="repeticiones" value={repeatCount} />
+          <input type="hidden" name="repetir" value={repeat} />
+          <input type="hidden" name="repeticiones" value={repeat ? repeatCount : ""} />
           <input type="hidden" name="lead_id" value={personId.startsWith("lead:") ? personId.slice(5) : ""} />
           <input type="hidden" name="afiliado_id" value={personId.startsWith("afiliado:") ? personId.slice(9) : ""} />
           <label className="block">
@@ -638,34 +638,49 @@ function EventModal({
             </div>
           </div>
           {mode === "create" ? (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Repetir cada cuántos días</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  inputMode="numeric"
-                  value={everyDays}
-                  onChange={(input) => setEveryDays(input.target.value.replace(/[^\d]/g, ""))}
-                  className="crm-input"
-                  placeholder="Vacío = una sola vez"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Cuántas veces</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={36}
-                  inputMode="numeric"
-                  value={repeatCount}
-                  onChange={(input) => setRepeatCount(input.target.value.replace(/[^\d]/g, ""))}
-                  className="crm-input"
-                  placeholder="Ej. 3"
-                />
-              </label>
-              <span className="col-span-2 block text-xs text-muted">La cantidad incluye la primera. Cada 7 días y 3 veces agenda tres avisos. Cada uno avisa por WhatsApp.</span>
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Repetir</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["", "Una vez"],
+                    ["semanal", "Semanal"],
+                    ["quincenal", "Quincenal"],
+                    ["mensual", "Mensual"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value || "una"}
+                    type="button"
+                    onClick={() => setRepeat(value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${repeat === value ? "bg-navy text-white shadow-sm" : "bg-mist text-navy hover:bg-aqua"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {repeat ? (
+                <label className="mt-3 block">
+                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Cuántas veces</span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={36}
+                    inputMode="numeric"
+                    value={repeatCount}
+                    onChange={(input) => setRepeatCount(input.target.value.replace(/[^\d]/g, ""))}
+                    className="crm-input"
+                    placeholder="Ej. 3"
+                  />
+                </label>
+              ) : null}
+              <span className="mt-2 block text-xs text-muted">
+                {repeat === "mensual"
+                  ? "Incluye la primera. Avisa el mismo día de cada mes: el 3 queda siempre el 3, no cada 30 días. Si el mes no tiene ese día, avisa el último. Cada aviso sale por WhatsApp."
+                  : repeat
+                    ? "Incluye la primera. Semanal es el mismo día de la semana. Quincenal, cada dos semanas. Cada aviso sale por WhatsApp."
+                    : "Una vez no se repite. Semanal y quincenal mantienen el día de la semana. Mensual avisa siempre el mismo número de día."}
+              </span>
             </div>
           ) : null}
           {googleOnly ? null : (
