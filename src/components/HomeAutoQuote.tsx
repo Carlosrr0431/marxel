@@ -68,8 +68,9 @@ async function fetchJson(url: string, init?: RequestInit) {
   } catch {
     throw new Error("La compañía no respondió bien. Reintentá en un minuto.");
   }
-  if (!res.ok) throw new Error(data?.error || "No se pudo completar el pedido.");
-  return data;
+  if (!data) throw new Error("La compañía no respondió bien. Reintentá en un minuto.");
+  if (!res.ok) throw new Error(data.error || "No se pudo completar el pedido.");
+  return data as Record<string, any>;
 }
 
 function downloadPdf(base64: string, filename: string) {
