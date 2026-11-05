@@ -42,7 +42,16 @@ function fold(value: string) {
 
 function shortText(value: unknown) {
   const text = String(value ?? "").replace(/\s+/g, " ").trim();
-  if (!text || text.startsWith("{") || text.startsWith("[") || text.length > 180) return "";
+  if (!text || text.length > 240) return "";
+  if (text.startsWith("{") || text.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      const row = asRecord(parsed);
+      return shortText(row.Data || row.data || row.Message || row.message || row.errMessage);
+    } catch {
+      return "";
+    }
+  }
   return text;
 }
 
@@ -56,6 +65,9 @@ function readableSmgError(data: unknown, fallback: string) {
   const message = messageOf(data) || problemOf(data) || fallback;
   if (/interno en el servidor/i.test(message)) {
     return "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir.";
+  }
+  if (/no tiene permiso/i.test(message)) {
+    return "Swiss Medical no habilitó la cotización para este productor en el entorno de pruebas.";
   }
   return message;
 }

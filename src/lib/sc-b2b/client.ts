@@ -65,6 +65,7 @@ function messageFromBody(body: unknown, status: number) {
   if (typeof row.Message === "string" && row.Message) return row.Message;
   if (typeof row.message === "string" && row.message) return row.message;
   if (typeof row.failureReason === "string" && row.failureReason) return row.failureReason;
+  if (typeof row.raw === "string" && row.raw.trim()) return row.raw.trim().slice(0, 220);
   if (typeof row.errorMessage === "string" && row.errorMessage) return row.errorMessage;
   if (Array.isArray(row.Messages)) {
     const parts = row.Messages.map((item) => {

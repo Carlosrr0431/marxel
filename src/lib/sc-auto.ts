@@ -195,8 +195,13 @@ async function scGet(path: string, revalidate: number | false = 3600) {
     `${SC_API}${path}`,
     revalidate === false ? { cache: "no-store" } : { next: { revalidate } }
   );
+  const text = await res.text();
   if (!res.ok) throw new AutoQuoteError("No se pudo consultar San Cristóbal", 502);
-  return res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new AutoQuoteError("San Cristóbal no respondió bien. Reintentá en un minuto.", 502);
+  }
 }
 
 async function scPost(path: string, body: unknown, extraHeaders?: Record<string, string>) {

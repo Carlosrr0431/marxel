@@ -19,6 +19,12 @@ function reasonOf(result: PromiseSettledResult<unknown>) {
   if (/interno en el servidor/i.test(message)) {
     return "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir.";
   }
+  if (/no tiene permiso/i.test(message)) {
+    return "Swiss Medical no habilitó la cotización para este productor en el entorno de pruebas.";
+  }
+  if (/unexpected token|is not valid json|an error occurred/i.test(message)) {
+    return "La compañía no respondió bien. Reintentá en un minuto.";
+  }
   return message;
 }
 
@@ -166,8 +172,8 @@ async function emit(body: Record<string, unknown>) {
         ? "Swiss Medical no respondió. Reintentá en un minuto. Si San Cristóbal cotizó, ese plan se puede emitir."
         : "San Cristóbal no pudo emitir la póliza. El pedido quedó para Marcos.";
     }
-    if (/catálogo de autos|Object reference not set|soporteb2b/i.test(text)) {
-      return "San Cristóbal cotizó el plan, pero el ambiente de pruebas no puede emitir la póliza. El pedido quedó para Marcos.";
+    if (/catálogo de autos|Object reference not set|soporteb2b|unavailable|an error occurred|is not valid json/i.test(text)) {
+      return "San Cristóbal no pudo emitir la póliza en este momento. El pedido quedó para Marcos.";
     }
     if (!text || text.startsWith("{") || text.startsWith("[") || text.length > 220) return fallback;
     return text;

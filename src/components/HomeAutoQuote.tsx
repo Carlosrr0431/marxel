@@ -61,8 +61,14 @@ type ShotId = (typeof INSPECTION_SHOTS)[number]["id"];
 
 async function fetchJson(url: string, init?: RequestInit) {
   const res = await fetch(url, init);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error");
+  const text = await res.text();
+  let data: { error?: string } | null = null;
+  try {
+    data = text ? (JSON.parse(text) as { error?: string }) : null;
+  } catch {
+    throw new Error("La compañía no respondió bien. Reintentá en un minuto.");
+  }
+  if (!res.ok) throw new Error(data?.error || "No se pudo completar el pedido.");
   return data;
 }
 
@@ -367,6 +373,7 @@ export function HomeAutoQuote({
           ticket,
         }),
       });
+      setError("");
       setQuote(data as QuotePayload);
     } catch (err) {
       quotedTicket.current = "";
@@ -468,6 +475,7 @@ export function HomeAutoQuote({
     setPdfPick({ ticket: planTicket, keys: next });
   }
   function pickPlan(plan: ComparePlan) {
+    setError("");
     const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
     setChoice({
       company,
