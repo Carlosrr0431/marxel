@@ -872,6 +872,9 @@ a {
 .home-quote__grid,
 .home-quote__row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.4rem; }
 .home-quote__trio { grid-template-columns: 1.2fr 0.75fr 0.7fr; }
+.home-quote__contact { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.8fr) minmax(0, 0.95fr); }
+.home-quote__contact > label,
+.home-quote__contact .field { min-width: 0; }
 .home-quote__wide,
 .home-quote__grid .sm\:col-span-2 { grid-column: 1 / -1; }
 .home-quote .quote-alert { font-size: 0.85rem; font-weight: 600; }

@@ -361,7 +361,7 @@ async function handlePost(request: NextRequest) {
   const confirm = payload.confirm === true;
 
   if (action === "quote-ca7") {
-    const engine = String(payload.engine || "sitio_seguro");
+    const engine = String(payload.engine || "b2b");
     const useSitioSeguroDirectly = engine === "sitio_seguro";
 
     const runSitioSeguro = async () => {

@@ -349,7 +349,11 @@ export function HomeAutoQuote({
       setError("Completá nombre, WhatsApp y una edad mayor de 18.");
       return;
     }
-    const ticket = `${normalized}|${version.id}|${postal}|${age}|${hasGnc}|${nombre.trim()}|${celular.trim()}`;
+    if (dni.length < 7) {
+      setError("Ingresá el DNI para cotizar en San Cristóbal.");
+      return;
+    }
+    const ticket = `${normalized}|${version.id}|${postal}|${age}|${hasGnc}|${nombre.trim()}|${celular.trim()}|${dni}|${gender}`;
     quotedTicket.current = ticket;
     setQuoting(true);
     setIssued("");
@@ -367,6 +371,8 @@ export function HomeAutoQuote({
           postalCode: Number(postal),
           nombre: nombre.trim(),
           celular: celular.trim(),
+          dni,
+          gender: gender === "F" ? "F" : "M",
           age: Number(age),
           hasGnc: hasGnc === "si",
           licensePlate: normalized,
@@ -583,10 +589,14 @@ export function HomeAutoQuote({
             <input className="field" inputMode="numeric" maxLength={2} placeholder="34" value={age} onChange={(event) => setAge(event.target.value.replace(/\D/g, "").slice(0, 2))} />
           </label>
         </div>
-        <div className="home-quote__row">
+        <div className="home-quote__row home-quote__contact">
           <label>
             <span>Nombre</span>
             <input className="field" value={nombre} placeholder="Tu nombre" onChange={(event) => setNombre(event.target.value)} />
+          </label>
+          <label>
+            <span>DNI</span>
+            <input className="field" inputMode="numeric" maxLength={8} placeholder="DNI" value={dni} onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))} />
           </label>
           <label>
             <span>WhatsApp</span>

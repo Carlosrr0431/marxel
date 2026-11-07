@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
-import { AutoQuoteError, quoteAutoVehicle, type AutoLocation, type AutoVersion } from "@/lib/sc-auto";
-import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, ScB2bError } from "@/lib/sc-b2b";
+import { AutoQuoteError, formatScPlanDetail, type AutoLocation, type AutoVersion } from "@/lib/sc-auto";
+import { scCovers } from "@/lib/plan-covers";
+import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, quoteCa7, ScB2bError } from "@/lib/sc-b2b";
 import { emitSmgPublic, quoteSmgPublic } from "@/lib/smg/public-auto";
 
 export const runtime = "nodejs";
@@ -52,6 +53,41 @@ export async function POST(req: Request) {
   }
 }
 
+const SC_COMPARE = ["CA7_A", "CA7_CM", "CA7_D"];
+
+function scAmount(item: Record<string, unknown>) {
+  const monthly = Number(item.MonthlyCost ?? item.monthlyCost ?? item.InstallmentAmount);
+  if (Number.isFinite(monthly) && monthly > 0) return monthly;
+  const cost = Number(asRecord(item.TotalCost).Amount);
+  if (Number.isFinite(cost) && cost > 0) return cost;
+  return Number(asRecord(item.TotalPremium).Amount);
+}
+
+function scPlansFromB2b(data: unknown) {
+  const summaries = asRecord(data).Summaries;
+  const rows = Array.isArray(summaries) ? summaries : [];
+  const plans = rows
+    .map((row) => {
+      const item = asRecord(row);
+      const code = String(item.ProductCode || "").trim();
+      const amount = scAmount(item);
+      if (!code || !Number.isFinite(amount) || amount <= 0) return null;
+      const key = code.replace(/^CA7_/, "");
+      return {
+        id: code,
+        title: String(item.ProductOffering || formatScPlanDetail({ productCode: code })),
+        monthly: Math.round(amount),
+        description: String(item.DeductibleTypeFullDescription || formatScPlanDetail({ productCode: code })),
+        covers: scCovers(key === "A" || key === "D" || key === "CM" ? key : "CM"),
+      };
+    })
+    .filter((plan): plan is NonNullable<typeof plan> => Boolean(plan));
+  const compared = SC_COMPARE.map((code) => plans.find((plan) => plan.id === code)).filter(
+    (plan): plan is (typeof plans)[number] => Boolean(plan),
+  );
+  return compared.length ? compared : plans.slice(0, 3);
+}
+
 async function quote(body: Record<string, unknown>) {
   const location = asRecord(body.location) as AutoLocation;
   const version = asRecord(body.version) as AutoVersion;
@@ -61,24 +97,39 @@ async function quote(body: Record<string, unknown>) {
   const nombre = String(body.nombre || "").trim();
   const celular = String(body.celular || "").trim();
   const plate = String(body.licensePlate || "").trim();
+  const dni = String(body.dni || body.taxId || "").replace(/\D/g, "");
+  const infoauto = String(version.infoAutoCode || "").replace(/\D/g, "");
+  const stateKey = /^AR_\d+$/.test(String(location.stateKey || "")) ? String(location.stateKey) : "AR_01";
 
   const [sc, smg] = await Promise.allSettled([
-    quoteAutoVehicle({
-      year,
-      is0km: Boolean(body.is0km),
-      brand: { id: Number(brand.id), description: String(brand.description || "") },
-      model: { id: Number(model.id), description: String(model.description || "") },
-      version,
-      location,
-      nombre,
-      celular,
-      email: String(body.email || ""),
-      age: Number(body.age) || undefined,
-      hasGnc: Boolean(body.hasGnc),
-      hasTracker: Boolean(body.hasTracker),
-      licensePlate: plate,
-      source: "web",
-    }),
+    (async () => {
+      if (dni.length < 7) throw new AutoQuoteError("Falta el DNI para cotizar en San Cristóbal", 400);
+      if (!infoauto) throw new AutoQuoteError("Esa versión no tiene código InfoAuto", 400);
+      const quoted = await quoteCa7({
+        taxId: dni,
+        officialIdType: "Ext_DNI96",
+        gender: String(body.gender || "M").toLowerCase().startsWith("f") ? "F" : "M",
+        age: Number(body.age) || undefined,
+        postalCode: Number(body.postalCode) || Number(location.zipCode),
+        locationState: stateKey,
+        infoautoCode: infoauto,
+        year,
+        is0Km: Boolean(body.is0km),
+        hasGnc: Boolean(body.hasGnc),
+        hasGps: Boolean(body.hasTracker),
+        statedAmount: Number(version.statedAmount) || undefined,
+        fuelType: version.fuelCode ? String(version.fuelCode) : undefined,
+        category: version.category ? String(version.category) : undefined,
+        isNational: typeof version.isImported === "boolean" ? !version.isImported : undefined,
+      });
+      const plans = scPlansFromB2b(quoted);
+      if (!plans.length) throw new AutoQuoteError("San Cristóbal no devolvió planes para este auto", 422);
+      return {
+        carDescription: `${year} ${brand.description || ""} ${model.description || ""} ${version.description || ""}`.replace(/\s+/g, " ").trim(),
+        statedAmount: Number(version.statedAmount) || 0,
+        plans,
+      };
+    })(),
     quoteSmgPublic({
       year,
       brand: String(brand.description || ""),
@@ -125,14 +176,8 @@ async function quote(body: Record<string, unknown>) {
     statedAmount: scResult?.statedAmount || 0,
     sancristobal: scResult
       ? {
-          opportunityId: scResult.opportunityId,
-          plans: scResult.plans.map((plan) => ({
-            id: plan.productCode || plan.key,
-            title: plan.title,
-            monthly: plan.monthly,
-            description: plan.description,
-            covers: plan.covers,
-          })),
+          opportunityId: 0,
+          plans: scResult.plans,
         }
       : { opportunityId: 0, plans: [], error: reasonOf(sc) },
     smg: smgResult
