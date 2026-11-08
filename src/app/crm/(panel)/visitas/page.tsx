@@ -29,7 +29,7 @@ export default async function VisitasPage() {
         <PageHeader
           eyebrow="Sitio web"
           title="Visitas"
-          description="Personas que confirmaron el aviso y dejaron un dato para contactarlas."
+          description="Quienes dejaron el WhatsApp o el nombre en el sitio."
         />
         <EmptyState
           title="Falta crear la tabla"
@@ -46,7 +46,7 @@ export default async function VisitasPage() {
       <PageHeader
         eyebrow="Sitio web"
         title="Visitas"
-        description="Quienes confirmaron el aviso y dejaron nombre o WhatsApp."
+        description="Quienes dejaron el WhatsApp o el nombre en el sitio."
       />
       {visits.length ? (
         <div className="grid gap-3">
@@ -89,7 +89,7 @@ export default async function VisitasPage() {
       ) : (
         <EmptyState
           title="Todavía no hay contactos"
-          description="Cuando alguien confirme el aviso y deje su WhatsApp, aparece acá."
+          description="Cuando alguien deje su WhatsApp en el sitio, aparece acá."
         />
       )}
     </div>

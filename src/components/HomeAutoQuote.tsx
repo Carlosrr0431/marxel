@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
-import { CHOICE_COOKIE, VISITOR_COOKIE, readCookie } from "@/lib/cookies/visitor";
+import { VISITOR_COOKIE, readCookie, writeCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
 import { site } from "@/lib/content";
 
@@ -343,11 +343,14 @@ export function HomeAutoQuote({
 
   useEffect(() => {
     if (variant === "crm") return;
-    function send() {
-      if (readCookie(CHOICE_COOKIE) !== "1") return;
-      const visitorId = readCookie(VISITOR_COOKIE);
-      const phone = celular.replace(/\D/g, "");
-      if (!visitorId || nombre.trim().length < 2 || phone.length < 8) return;
+    const phone = celular.replace(/\D/g, "");
+    if (phone.length < 8) return;
+    const timer = window.setTimeout(() => {
+      let visitorId = readCookie(VISITOR_COOKIE);
+      if (!visitorId) {
+        visitorId = crypto.randomUUID();
+        writeCookie(VISITOR_COOKIE, visitorId);
+      }
       void fetch("/api/cookies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -362,13 +365,8 @@ export function HomeAutoQuote({
           page: window.location.pathname,
         }),
       }).catch(() => undefined);
-    }
-    const timer = window.setTimeout(send, 700);
-    window.addEventListener("mx-cookies-accepted", send);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("mx-cookies-accepted", send);
-    };
+    }, 500);
+    return () => window.clearTimeout(timer);
   }, [variant, nombre, celular, age, plate]);
 
   useEffect(() => {

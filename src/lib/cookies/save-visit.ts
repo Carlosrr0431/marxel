@@ -39,7 +39,7 @@ async function ensureLead(input: CookieVisitInput) {
   if (existingId) return existingId;
 
   const notas = [
-    "Confirmó el aviso del sitio.",
+    "Dejó el WhatsApp en el sitio.",
     input.patente ? `Patente ${input.patente}.` : "",
     input.interes ? `Interés: ${input.interes}.` : "",
   ]
