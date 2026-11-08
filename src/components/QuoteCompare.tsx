@@ -29,11 +29,13 @@ function mark(value: string | undefined) {
 function PlanHead({
   plan,
   onPick,
+  pickLabel = "Emitir",
   picked,
   onTogglePdf,
 }: {
   plan: ComparePlan;
   onPick?: (plan: ComparePlan) => void;
+  pickLabel?: string;
   picked?: boolean;
   onTogglePdf?: (key: string) => void;
 }) {
@@ -52,7 +54,7 @@ function PlanHead({
       <small>por mes</small>
       {onPick ? (
         <button type="button" className="quote-compare__emit" onClick={() => onPick(plan)}>
-          Emitir
+          {pickLabel}
         </button>
       ) : null}
     </div>
@@ -77,12 +79,14 @@ export function QuoteCompareTable({
   plans,
   focusKey = "",
   onPick,
+  pickLabel,
   pickedKeys,
   onTogglePdf,
 }: {
   plans: ComparePlan[];
   focusKey?: string;
   onPick?: (plan: ComparePlan) => void;
+  pickLabel?: string;
   pickedKeys?: string[];
   onTogglePdf?: (key: string) => void;
 }) {
@@ -97,6 +101,7 @@ export function QuoteCompareTable({
                 <PlanHead
                   plan={plan}
                   onPick={onPick}
+                  pickLabel={pickLabel}
                   picked={pickedKeys?.includes(plan.key)}
                   onTogglePdf={onTogglePdf}
                 />
@@ -130,6 +135,7 @@ export function QuoteCompare({
   onClose,
   embedded = false,
   onPick,
+  pickLabel,
   notices = [],
   whatsapp = false,
   pickedKeys,
@@ -140,6 +146,7 @@ export function QuoteCompare({
   onClose: () => void;
   embedded?: boolean;
   onPick?: (plan: ComparePlan) => void;
+  pickLabel?: string;
   notices?: string[];
   whatsapp?: boolean;
   pickedKeys?: string[];
@@ -164,6 +171,7 @@ export function QuoteCompare({
       plans={plans}
       focusKey={focusKey}
       onPick={onPick}
+      pickLabel={pickLabel}
       pickedKeys={pickedKeys}
       onTogglePdf={onTogglePdf}
     />

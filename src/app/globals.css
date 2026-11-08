@@ -817,9 +817,9 @@ a {
 .hero-section__inner--wizard {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   gap: 0.85rem;
-  width: min(100%, 920px);
+  width: min(100%, 72rem);
   margin-inline: auto;
   padding-block: 1.35rem 2.25rem;
 }
@@ -854,9 +854,11 @@ a {
     display: flex;
     grid-template-columns: 1fr;
     height: auto;
-    max-width: 920px;
+    width: min(100%, 72rem);
+    max-width: 72rem;
     margin-inline: auto;
     padding-block: 1.5rem 2.5rem;
+    align-items: center;
   }
 }
 
@@ -931,12 +933,47 @@ a {
 .home-quote__grid .sm\:col-span-2 { grid-column: 1 / -1; }
 .home-quote .quote-alert { font-size: 0.85rem; font-weight: 600; }
 .home-quote__submit { width: 100%; margin-top: 0.55rem; min-height: 2.35rem; font-size: 0.86rem; }
+.home-quote--wizard {
+  width: min(100%, 42rem);
+  margin-inline: auto;
+}
+.home-quote--wizard.is-comparing {
+  width: min(100%, 72rem);
+}
+.home-plans {
+  width: 100%;
+  border: 1px solid rgba(10, 53, 92, 0.08);
+  border-radius: 1.35rem;
+  background: white;
+  padding: 1rem 0.85rem 0.4rem;
+  box-shadow: 0 18px 40px rgba(10, 53, 92, 0.07);
+}
+.home-plans__bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.2rem 0.7rem 0.6rem;
+}
+.home-plans__bar h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+}
+.home-plans__bar p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
 .home-quote--wizard .quote-card {
   max-height: none;
   overflow: visible;
   padding: 1.35rem 1.35rem 1.45rem;
 }
+.home-quote--wizard .quote-card > .home-quote__kicker,
+.home-quote--wizard .quote-card > h2,
+.home-quote--wizard .quote-card > .home-quote__lede { text-align: center; }
 .home-quote--wizard h2 { font-size: clamp(1.45rem, 2.4vw, 1.85rem); }
+.home-plans__bar { align-items: center; text-align: center; width: 100%; }
 .home-quote--wizard .field {
   min-height: 2.85rem;
   padding: 0.7rem 0.9rem;
@@ -1077,6 +1114,8 @@ a {
   cursor: pointer;
 }
 .cookie-note__later:hover { color: var(--navy); }
+.wizard-pair { animation: cookie-note-in 0.28s ease; }
+.home-quote--wizard .home-quote__grid > div { display: flex; flex-direction: column; gap: 0.28rem; }
 @keyframes cookie-note-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

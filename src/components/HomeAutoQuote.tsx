@@ -523,7 +523,27 @@ export function HomeAutoQuote({
     const next = pdfKeys.includes(key) ? pdfKeys.filter((item) => item !== key) : [...pdfKeys, key];
     setPdfPick({ ticket: planTicket, keys: next });
   }
+  function continueOnWhatsapp(plan: ComparePlan) {
+    const text = [
+      "Hola Marcos, quiero continuar con esta cotización.",
+      nombre.trim() ? `Soy ${nombre.trim()}.` : "",
+      celular.trim() ? `Mi WhatsApp: ${celular.trim()}.` : "",
+      dni ? `DNI: ${dni}.` : "",
+      plate ? `Patente: ${plate}.` : "",
+      quote?.carDescription || hint || "",
+      `Plan: ${plan.company} · ${plan.title} · $${plan.monthly} por mes.`,
+      `CP ${postal}. Edad ${age || "—"}. GNC: ${hasGnc === "si" ? "sí" : "no"}.`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    window.open(`https://wa.me/${site.whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
   function pickPlan(plan: ComparePlan) {
+    if (wizard) {
+      continueOnWhatsapp(plan);
+      return;
+    }
     setError("");
     const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
     setChoice({
@@ -550,30 +570,50 @@ export function HomeAutoQuote({
         <h2>Cotizá tu auto en un minuto</h2>
         <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
 
-        <label className="home-quote__plate">
-          <span>Patente</span>
-          <input
-            className="field quote-plate"
-            placeholder="AB123CD"
-            autoComplete="off"
-            spellCheck={false}
-            value={plate}
-            onChange={(event) => {
-              setPlate(normalizeArPlate(event.target.value));
-              setVersionId("");
-              setQuote(null);
-              setChoice(null);
-              setIssued("");
-              setHint("");
-            }}
-          />
-        </label>
-        {looking ? <p className="quote-lookup">Buscando el auto…</p> : null}
-        {hint ? <p className={plateKind === "moto" ? "quote-alert" : "quote-found"}>{hint}</p> : null}
+        {wizard ? null : (
+          <label className="home-quote__plate">
+            <span>Patente</span>
+            <input
+              className="field quote-plate"
+              placeholder="AB123CD"
+              autoComplete="off"
+              spellCheck={false}
+              value={plate}
+              onChange={(event) => {
+                setPlate(normalizeArPlate(event.target.value));
+                setVersionId("");
+                setQuote(null);
+                setChoice(null);
+                setIssued("");
+                setHint("");
+              }}
+            />
+          </label>
+        )}
+        {wizard ? null : looking ? <p className="quote-lookup">Buscando el auto…</p> : null}
+        {wizard ? null : hint ? <p className={plateKind === "moto" ? "quote-alert" : "quote-found"}>{hint}</p> : null}
 
         {wizard ? (
           <>
             <div className="home-quote__grid">
+              <label>
+                <span>Patente</span>
+                <input
+                  className="field quote-plate"
+                  placeholder="AB123CD"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={plate}
+                  onChange={(event) => {
+                    setPlate(normalizeArPlate(event.target.value));
+                    setVersionId("");
+                    setQuote(null);
+                    setChoice(null);
+                    setIssued("");
+                    setHint("");
+                  }}
+                />
+              </label>
               <AutoSelect
                 label="Año"
                 value={yearId}
@@ -625,6 +665,11 @@ export function HomeAutoQuote({
                 options={models}
                 empty={brandId ? "Buscando modelos…" : "Primero elegí la marca"}
               />
+            </div>
+            {looking ? <p className="quote-lookup">Buscando el auto…</p> : null}
+            {hint ? <p className={plateKind === "moto" ? "quote-alert" : "quote-found"}>{hint}</p> : null}
+            {modelId ? (
+            <div className="home-quote__grid wizard-pair">
               <AutoSelect
                 label="Versión"
                 value={versionId}
@@ -639,9 +684,11 @@ export function HomeAutoQuote({
                 options={versions.map((item) => ({ id: String(item.id), label: item.fullCarDescripcion || item.description }))}
                 empty={modelId ? "Buscando versiones…" : "Primero elegí el modelo"}
               />
-            </div>
-            <div className="home-quote__row home-quote__trio">
               <Pill label="GNC" value={hasGnc} onChange={setHasGnc} />
+            </div>
+            ) : null}
+            {versionId ? (
+            <div className="home-quote__row wizard-pair">
               <label>
                 <span>CP</span>
                 <input className="field" inputMode="numeric" maxLength={4} value={postal} onChange={(event) => setPostal(event.target.value.replace(/\D/g, "").slice(0, 4))} />
@@ -663,7 +710,9 @@ export function HomeAutoQuote({
                 />
               </label>
             </div>
-            <div className="home-quote__row">
+            ) : null}
+            {age.replace(/\D/g, "").length >= 2 ? (
+            <div className="home-quote__grid wizard-pair">
               <label>
                 <span>Nombre</span>
                 <input
@@ -681,10 +730,22 @@ export function HomeAutoQuote({
                 />
               </label>
               <label>
+                <span>DNI</span>
+                <input
+                  className="field"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="DNI"
+                  value={dni}
+                  onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))}
+                />
+              </label>
+              <label className="home-quote__wide">
                 <span>WhatsApp</span>
                 <input ref={phoneRef} className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
               </label>
             </div>
+            ) : null}
           </>
         ) : (
           <>
@@ -764,9 +825,11 @@ export function HomeAutoQuote({
         </div>
           </>
         )}
-        <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
-          {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
-        </button>
+        {!wizard || age.replace(/\D/g, "").length >= 2 ? (
+          <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
+            {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
+          </button>
+        ) : null}
         {quoting ? <p className="quote-info">Cotizando en San Cristóbal y SMG…</p> : null}
           </>
         ) : null}
@@ -971,29 +1034,32 @@ export function HomeAutoQuote({
           </>
         ) : null}
 
-        {view === "plans" && quote && variant !== "crm" && plans.length === 0 ? (
-          <>
+        {error && view !== "plans" ? <p className="quote-alert">{error}</p> : null}
+      </form>
+      {view === "plans" && quote && wizard ? (
+        <div className="home-plans">
+          <div className="home-plans__bar">
             <button type="button" className="home-quote__back" onClick={() => setQuote(null)}>
               Editar datos
             </button>
             <h2>{quote.carDescription || hint || plate}</h2>
-            {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
-            {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
+            <p>Elegí un plan y seguimos por WhatsApp con Marcos.</p>
+          </div>
+          {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
+          {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
+          {plans.length > 0 ? (
+            <QuoteCompare
+              embedded
+              focusKey=""
+              plans={plans}
+              pickLabel="Continuar"
+              onClose={() => setQuote(null)}
+              onPick={pickPlan}
+            />
+          ) : (
             <p className="quote-alert">No hubo planes para comparar.</p>
-          </>
-        ) : null}
-
-        {error && view !== "plans" ? <p className="quote-alert">{error}</p> : null}
-      </form>
-      {view === "plans" && quote && variant !== "crm" && plans.length > 0 ? (
-        <QuoteCompare
-          focusKey=""
-          plans={plans}
-          notices={[quote.sancristobal.error, quote.smg.error].filter((item): item is string => Boolean(item))}
-          whatsapp
-          onClose={() => setQuote(null)}
-          onPick={pickPlan}
-        />
+          )}
+        </div>
       ) : null}
     </div>
   );

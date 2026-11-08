@@ -163,6 +163,7 @@ async function quote(body: Record<string, unknown>) {
       nombre,
       celular,
       email: String(body.email || ""),
+      dni: dni || null,
       edad: Number(body.age) || null,
       localidad: location.description || null,
       interes: "Seguro de auto",
