@@ -63,7 +63,8 @@ export default function PrivacidadPage() {
             <h2 className="font-display text-xl font-semibold">Aviso del sitio</h2>
             <p className="mt-2 text-muted">
               Guardamos una cookie en tu navegador para reconocer esta visita: las páginas que
-              miraste, cuántas veces volviste y de dónde llegaste. Si confirmás el aviso, o si dejás
+              miraste, cuánto te quedaste, en qué paso del cotizador te frenaste, cuántas veces
+              volviste y de dónde llegaste. Si confirmás el aviso, o si dejás
               tu nombre o WhatsApp, usamos eso para contactarte con la cotización. “Ahora no” deja
               el recorrido solo en este navegador hasta que dejes un dato. Podés pedir que lo
               borremos en {site.email}.

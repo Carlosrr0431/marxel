@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       leadId: body.leadId || null,
       landing: body.landing || null,
       pages: body.pages || null,
+      recorrido: body.recorrido || null,
       visitas: Number(body.visitas) || null,
     });
     return NextResponse.json({ ok: Boolean(id) || true, leadId: id });

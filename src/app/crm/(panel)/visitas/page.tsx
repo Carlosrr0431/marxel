@@ -15,6 +15,7 @@ type Visit = {
   referrer?: string | null;
   utm_source?: string | null;
   pages?: string | null;
+  recorrido?: string | null;
   landing_path?: string | null;
   last_seen_at?: string | null;
   visitas_count?: number | null;
@@ -39,9 +40,9 @@ export default async function VisitasPage() {
   const supabase = createServiceClient();
   const full = await supabase
     .from("cookie_visitas")
-    .select("id, nombre, celular, patente, page_path, lead_id, created_at, referrer, utm_source, pages, landing_path, last_seen_at, visitas_count")
+    .select("id, nombre, celular, patente, page_path, lead_id, created_at, referrer, utm_source, pages, landing_path, last_seen_at, visitas_count, recorrido")
     .eq("consentimiento", "aceptado")
-    .order("last_seen_at", { ascending: false })
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
     .limit(80);
   const basic = full.error
     ? await supabase
@@ -99,8 +100,8 @@ export default async function VisitasPage() {
                       {visit.patente ? ` · ${visit.patente}` : ""}
                       {` · ${visitLabel(visit.visitas_count)} · ${sourceOf(visit)} · ${relativeTime(visit.last_seen_at || visit.created_at)}`}
                     </p>
-                    {visit.pages || visit.page_path ? (
-                      <p className="mt-1 text-sm text-muted">Miró {visit.pages || visit.page_path}</p>
+                    {visit.recorrido || visit.pages || visit.page_path ? (
+                      <p className="mt-1 text-sm text-muted">{visit.recorrido || `Miró ${visit.pages || visit.page_path}`}</p>
                     ) : null}
                   </div>
                 </div>

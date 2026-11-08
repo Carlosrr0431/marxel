@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
-import { VISITOR_COOKIE, postCookieVisit, readCookie, readTrail, touchTrail, writeCookie } from "@/lib/cookies/visitor";
+import { VISITOR_COOKIE, noteTrail, postCookieVisit, readCookie, touchTrail, writeCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
 import { site } from "@/lib/content";
 
@@ -351,7 +351,7 @@ export function HomeAutoQuote({
         visitorId = crypto.randomUUID();
         writeCookie(VISITOR_COOKIE, visitorId);
       }
-      const trail = readTrail() || touchTrail(window.location.pathname);
+      const trail = touchTrail(window.location.pathname);
       postCookieVisit(visitorId, trail, {
         nombre: nombre.trim(),
         celular: celular.trim(),
@@ -727,6 +727,9 @@ export function HomeAutoQuote({
 
   function pickPlan(plan: ComparePlan) {
     if (wizard) {
+      const trail = noteTrail(`Eligió ${plan.title}`);
+      const visitorId = readCookie(VISITOR_COOKIE);
+      if (visitorId) postCookieVisit(visitorId, trail);
       continueOnWhatsapp(plan);
       return;
     }
@@ -752,6 +755,20 @@ export function HomeAutoQuote({
     { label: "WhatsApp", done: celular.replace(/\D/g, "").length >= 8 },
   ];
   const vehicleDone = progressMarks.slice(0, 4).every((mark) => mark.done);
+  const pendingStep = progressMarks.find((mark) => !mark.done)?.label || "";
+
+  useEffect(() => {
+    if (!wizard) return;
+    const note =
+      view === "plans" && plans.length > 0
+        ? "Vio los planes"
+        : quoting
+          ? "Cotizando"
+          : pendingStep
+            ? `Quedó en ${pendingStep}`
+            : "Listo para cotizar";
+    noteTrail(note);
+  }, [wizard, pendingStep, view, quoting, plans.length]);
   const progressPhase: "vehiculo" | "datos" | "planes" =
     view === "plans" || quoting ? "planes" : vehicleDone ? "datos" : "vehiculo";
 

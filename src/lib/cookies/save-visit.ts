@@ -20,12 +20,19 @@ export type CookieVisitInput = {
   leadId?: string | null;
   landing?: string | null;
   pages?: string | null;
+  recorrido?: string | null;
   visitas?: number | null;
 };
 
 function clip(value: string | null | undefined, max = 240) {
   const text = String(value || "").trim();
   return text ? text.slice(0, max) : null;
+}
+
+function clipEnd(value: string | null | undefined, max: number) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  return text.length <= max ? text : text.slice(text.length - max);
 }
 
 function phoneOk(value: string | null) {
@@ -154,16 +161,21 @@ export async function saveCookieVisit(input: CookieVisitInput) {
     lead_id: leadId,
     landing_path: previous?.landing_path || clip(input.landing, 180),
     pages: clip(input.pages, 240) || previous?.pages || null,
+    recorrido: clipEnd(input.recorrido, 1000),
     last_seen_at: seen,
     visitas_count: visitas,
   };
   const filled = Object.fromEntries(Object.entries(row).filter(([, value]) => value != null));
-  let { error } = await supabase.from("cookie_visitas").upsert(filled, { onConflict: "visitor_id" });
-  if (error && /landing_path|pages|last_seen_at|visitas_count/.test(error.message)) {
-    const basic = Object.fromEntries(
-      Object.entries(filled).filter(([key]) => !["landing_path", "pages", "last_seen_at", "visitas_count"].includes(key)),
-    );
-    ({ error } = await supabase.from("cookie_visitas").upsert(basic, { onConflict: "visitor_id" }));
+  const extras = ["landing_path", "pages", "last_seen_at", "visitas_count", "recorrido"];
+  let payload = { ...filled };
+  let error: { message: string } | null = null;
+  for (let attempt = 0; attempt < extras.length; attempt += 1) {
+    const result = await supabase.from("cookie_visitas").upsert(payload, { onConflict: "visitor_id" });
+    error = result.error;
+    if (!error) break;
+    const missing = extras.find((key) => error?.message.includes(key));
+    if (!missing) break;
+    delete payload[missing];
   }
   if (error) {
     console.error("[cookie-visita]", error.message);

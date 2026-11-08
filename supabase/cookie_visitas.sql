@@ -47,3 +47,4 @@ alter table public.cookie_visitas add column if not exists landing_path text;
 alter table public.cookie_visitas add column if not exists pages text;
 alter table public.cookie_visitas add column if not exists last_seen_at timestamptz;
 alter table public.cookie_visitas add column if not exists visitas_count int not null default 1;
+alter table public.cookie_visitas add column if not exists recorrido text;
