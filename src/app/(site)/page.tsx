@@ -53,15 +53,6 @@ export default function HomePage() {
       {/* ——— HERO ——— */}
       <section className="hero-section hero-section--wizard">
         <div className="container-mx hero-section__inner hero-section__inner--quote hero-section__inner--wizard">
-          <div className="hero-copy hero-copy--wizard">
-            <p className="eyebrow">Productor asesor de seguros en Salta Capital</p>
-            <h1>
-              Empresa de seguros en Salta, <span className="hero-gradient-text">sin vueltas.</span>
-            </h1>
-            <p className="hero-lede" data-seo-lede>
-              La patente completa el auto. Si no la tenés, elegí año, marca, modelo y versión: cada lista se abre sola.
-            </p>
-          </div>
           <div id="cotizar-auto" className="hero-visual hero-visual--quote hero-visual--wizard">
             <HomeAutoQuote />
           </div>

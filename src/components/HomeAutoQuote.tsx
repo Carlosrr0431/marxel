@@ -624,8 +624,24 @@ export function HomeAutoQuote({
     });
   }
 
+  const progressMarks = [
+    { label: "Año", done: Boolean(yearId) },
+    { label: "Marca", done: Boolean(brandId) },
+    { label: "Modelo", done: Boolean(modelId) },
+    { label: "Versión", done: Boolean(versionId) },
+    { label: "CP", done: Boolean(location) },
+    { label: "Edad", done: ageReady },
+    { label: "Nombre", done: nombre.trim().length >= 2 },
+    { label: "DNI", done: dni.length >= 7 },
+    { label: "WhatsApp", done: celular.replace(/\D/g, "").length >= 8 },
+  ];
+  const vehicleDone = progressMarks.slice(0, 4).every((mark) => mark.done);
+  const progressPhase: "vehiculo" | "datos" | "planes" =
+    view === "plans" || quoting ? "planes" : vehicleDone ? "datos" : "vehiculo";
+
   return (
     <div className={variant === "crm" ? "home-quote home-quote--crm" : `home-quote home-quote--wizard${view === "plans" && plans.length > 0 ? " is-comparing" : ""}`}>
+      {wizard ? <QuoteProgress marks={progressMarks} phase={progressPhase} quoting={quoting} /> : null}
       <form
         className="quote-card"
         onSubmit={(event) => {
@@ -636,9 +652,11 @@ export function HomeAutoQuote({
       >
         {view === "form" ? (
           <>
-        <p className="home-quote__kicker">San Cristóbal y SMG</p>
-        <h2>Cotizá tu auto en un minuto</h2>
-        <p className="home-quote__lede">La patente completa el auto y cotiza en las dos.</p>
+        {wizard ? null : <p className="home-quote__kicker">San Cristóbal y SMG</p>}
+        {wizard ? <h1>Cotizá tu auto en un minuto</h1> : <h2>Cotizá tu auto en un minuto</h2>}
+        <p className="home-quote__lede" {...(wizard ? { "data-seo-lede": true } : {})}>
+          La patente completa el auto y cotiza en las dos.
+        </p>
 
         {wizard ? null : (
           <label className="home-quote__plate">
@@ -1137,6 +1155,48 @@ export function HomeAutoQuote({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function QuoteProgress({
+  marks,
+  phase,
+  quoting,
+}: {
+  marks: { label: string; done: boolean }[];
+  phase: "vehiculo" | "datos" | "planes";
+  quoting: boolean;
+}) {
+  const phases = [
+    { id: "vehiculo", label: "Vehículo" },
+    { id: "datos", label: "Tus datos" },
+    { id: "planes", label: "Resultados" },
+  ] as const;
+  const current = phases.findIndex((item) => item.id === phase);
+  const pending = marks.find((mark) => !mark.done);
+
+  return (
+    <div className="quote-progress">
+      <ol className="quote-progress__steps">
+        {phases.map((item, index) => {
+          const state = index < current ? "done" : index === current ? "current" : "next";
+          return (
+            <li key={item.id} className={`quote-progress__step is-${state}`} aria-current={state === "current" ? "step" : undefined}>
+              <span>{state === "done" ? "✓" : index + 1}</span>
+              {item.label}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="quote-progress__meter" aria-hidden="true">
+        {marks.map((mark) => (
+          <i key={mark.label} className={mark.done ? "is-done" : mark === pending ? "is-now" : undefined} />
+        ))}
+      </div>
+      <p className="quote-progress__now">
+        {quoting ? "Buscando los planes…" : phase === "planes" ? "Elegí un plan para seguir" : pending ? `Ahora: ${pending.label}` : "Listo para cotizar"}
+      </p>
     </div>
   );
 }
