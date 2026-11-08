@@ -12,16 +12,47 @@ type Visit = {
   page_path: string | null;
   lead_id: string | null;
   created_at: string;
+  referrer?: string | null;
+  utm_source?: string | null;
+  pages?: string | null;
+  landing_path?: string | null;
+  last_seen_at?: string | null;
+  visitas_count?: number | null;
 };
+
+function sourceOf(visit: Visit) {
+  if (visit.utm_source) return visit.utm_source;
+  if (!visit.referrer) return "Entrada directa";
+  try {
+    return new URL(visit.referrer).hostname.replace(/^www\./, "");
+  } catch {
+    return "Otro sitio";
+  }
+}
+
+function visitLabel(count: number | null | undefined) {
+  const total = count && count > 0 ? count : 1;
+  return total === 1 ? "1 visita" : `${total} visitas`;
+}
 
 export default async function VisitasPage() {
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+  const full = await supabase
     .from("cookie_visitas")
-    .select("id, nombre, celular, patente, page_path, lead_id, created_at")
+    .select("id, nombre, celular, patente, page_path, lead_id, created_at, referrer, utm_source, pages, landing_path, last_seen_at, visitas_count")
     .eq("consentimiento", "aceptado")
-    .order("created_at", { ascending: false })
+    .order("last_seen_at", { ascending: false })
     .limit(80);
+  const basic = full.error
+    ? await supabase
+        .from("cookie_visitas")
+        .select("id, nombre, celular, patente, page_path, lead_id, created_at")
+        .eq("consentimiento", "aceptado")
+        .order("created_at", { ascending: false })
+        .limit(80)
+    : null;
+  const data = full.error ? basic?.data : full.data;
+  const error = full.error ? basic?.error : null;
 
   if (error) {
     return (
@@ -29,7 +60,7 @@ export default async function VisitasPage() {
         <PageHeader
           eyebrow="Sitio web"
           title="Visitas"
-          description="Quienes dejaron el WhatsApp o el nombre en el sitio."
+          description="De dónde llegaron, qué miraron y cuántas veces volvieron."
         />
         <EmptyState
           title="Falta crear la tabla"
@@ -46,7 +77,7 @@ export default async function VisitasPage() {
       <PageHeader
         eyebrow="Sitio web"
         title="Visitas"
-        description="Quienes dejaron el WhatsApp o el nombre en el sitio."
+        description="De dónde llegaron, qué miraron y cuántas veces volvieron."
       />
       {visits.length ? (
         <div className="grid gap-3">
@@ -66,8 +97,11 @@ export default async function VisitasPage() {
                     <p className="mt-1 text-sm text-muted">
                       {visit.celular || "Sin WhatsApp"}
                       {visit.patente ? ` · ${visit.patente}` : ""}
-                      {visit.page_path ? ` · ${visit.page_path}` : ""} · {relativeTime(visit.created_at)}
+                      {` · ${visitLabel(visit.visitas_count)} · ${sourceOf(visit)} · ${relativeTime(visit.last_seen_at || visit.created_at)}`}
                     </p>
+                    {visit.pages || visit.page_path ? (
+                      <p className="mt-1 text-sm text-muted">Miró {visit.pages || visit.page_path}</p>
+                    ) : null}
                   </div>
                 </div>
                 {visit.celular ? (

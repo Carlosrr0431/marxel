@@ -42,3 +42,8 @@ create policy "cookie_visitas_anon_all" on public.cookie_visitas
 
 grant select, insert, update, delete on table public.cookie_visitas
   to anon, authenticated, service_role;
+
+alter table public.cookie_visitas add column if not exists landing_path text;
+alter table public.cookie_visitas add column if not exists pages text;
+alter table public.cookie_visitas add column if not exists last_seen_at timestamptz;
+alter table public.cookie_visitas add column if not exists visitas_count int not null default 1;

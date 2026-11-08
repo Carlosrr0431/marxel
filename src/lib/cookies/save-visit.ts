@@ -18,6 +18,9 @@ export type CookieVisitInput = {
   utmCampaign?: string | null;
   userAgent?: string | null;
   leadId?: string | null;
+  landing?: string | null;
+  pages?: string | null;
+  visitas?: number | null;
 };
 
 function clip(value: string | null | undefined, max = 240) {
@@ -27,6 +30,17 @@ function clip(value: string | null | undefined, max = 240) {
 
 function phoneOk(value: string | null) {
   return (value || "").replace(/\D/g, "").length >= 8;
+}
+
+function outsideReferrer(value: string | null) {
+  if (!value) return null;
+  try {
+    const host = new URL(value).hostname.replace(/^www\./, "");
+    if (!host || host === "localhost" || host.endsWith("marxen.com.ar")) return null;
+    return value;
+  } catch {
+    return null;
+  }
 }
 
 async function ensureLead(input: CookieVisitInput) {
@@ -42,6 +56,8 @@ async function ensureLead(input: CookieVisitInput) {
     "Dejó el WhatsApp en el sitio.",
     input.patente ? `Patente ${input.patente}.` : "",
     input.interes ? `Interés: ${input.interes}.` : "",
+    input.utmSource ? `Vino de ${clip(input.utmSource, 80)}.` : "",
+    input.visitas && input.visitas > 1 ? `Volvió ${input.visitas} veces.` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -83,14 +99,46 @@ async function ensureLead(input: CookieVisitInput) {
   return String(data.id);
 }
 
+type PreviousVisit = {
+  referrer?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  landing_path?: string | null;
+  pages?: string | null;
+  visitas_count?: number | null;
+};
+
+async function previousVisit(visitorId: string): Promise<PreviousVisit | null> {
+  const supabase = createServiceClient();
+  const full = await supabase
+    .from("cookie_visitas")
+    .select("referrer, utm_source, utm_medium, utm_campaign, landing_path, pages, visitas_count")
+    .eq("visitor_id", visitorId)
+    .maybeSingle();
+  if (!full.error) return full.data;
+  const base = await supabase
+    .from("cookie_visitas")
+    .select("referrer, utm_source, utm_medium, utm_campaign")
+    .eq("visitor_id", visitorId)
+    .maybeSingle();
+  return base.data;
+}
+
 export async function saveCookieVisit(input: CookieVisitInput) {
   if (!isVisitorId(input.visitorId)) return null;
   const supabase = createServiceClient();
-  const leadId = await ensureLead(input);
+  const previous = await previousVisit(input.visitorId);
+  const leadId = await ensureLead({
+    ...input,
+    utmSource: previous?.utm_source || input.utmSource,
+  });
+  const seen = new Date().toISOString();
+  const visitas = Math.max(previous?.visitas_count || 0, input.visitas && input.visitas > 0 ? input.visitas : 1);
   const row = {
     visitor_id: input.visitorId,
     consentimiento: "aceptado",
-    consented_at: new Date().toISOString(),
+    consented_at: seen,
     nombre: clip(input.nombre, 120),
     celular: clip(input.celular, 40),
     email: clip(input.email, 160),
@@ -98,15 +146,25 @@ export async function saveCookieVisit(input: CookieVisitInput) {
     patente: clip(input.patente, 12),
     interes: clip(input.interes, 40),
     page_path: clip(input.pagePath, 180),
-    referrer: clip(input.referrer, 240),
-    utm_source: clip(input.utmSource, 80),
-    utm_medium: clip(input.utmMedium, 80),
-    utm_campaign: clip(input.utmCampaign, 80),
+    referrer: previous?.referrer || outsideReferrer(clip(input.referrer, 240)),
+    utm_source: previous?.utm_source || clip(input.utmSource, 80),
+    utm_medium: previous?.utm_medium || clip(input.utmMedium, 80),
+    utm_campaign: previous?.utm_campaign || clip(input.utmCampaign, 80),
     user_agent: clip(input.userAgent, 240),
     lead_id: leadId,
+    landing_path: previous?.landing_path || clip(input.landing, 180),
+    pages: clip(input.pages, 240) || previous?.pages || null,
+    last_seen_at: seen,
+    visitas_count: visitas,
   };
   const filled = Object.fromEntries(Object.entries(row).filter(([, value]) => value != null));
-  const { error } = await supabase.from("cookie_visitas").upsert(filled, { onConflict: "visitor_id" });
+  let { error } = await supabase.from("cookie_visitas").upsert(filled, { onConflict: "visitor_id" });
+  if (error && /landing_path|pages|last_seen_at|visitas_count/.test(error.message)) {
+    const basic = Object.fromEntries(
+      Object.entries(filled).filter(([key]) => !["landing_path", "pages", "last_seen_at", "visitas_count"].includes(key)),
+    );
+    ({ error } = await supabase.from("cookie_visitas").upsert(basic, { onConflict: "visitor_id" }));
+  }
   if (error) {
     console.error("[cookie-visita]", error.message);
     return null;

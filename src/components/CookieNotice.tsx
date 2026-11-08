@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CHOICE_COOKIE, VISITOR_COOKIE, readCookie, writeCookie } from "@/lib/cookies/visitor";
+import {
+  CHOICE_COOKIE,
+  VISITOR_COOKIE,
+  postCookieVisit,
+  readCookie,
+  touchTrail,
+  writeCookie,
+} from "@/lib/cookies/visitor";
 
 export function CookieNotice() {
   const [phase, setPhase] = useState<"ask" | "done" | "hidden">("hidden");
@@ -18,19 +25,7 @@ export function CookieNotice() {
     writeCookie(CHOICE_COOKIE, "1");
     window.dispatchEvent(new Event("mx-cookies-accepted"));
     setPhase("done");
-    const params = new URLSearchParams(window.location.search);
-    void fetch("/api/cookies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        choice: "aceptado",
-        visitorId,
-        page: window.location.pathname,
-        utm_source: params.get("utm_source"),
-        utm_medium: params.get("utm_medium"),
-        utm_campaign: params.get("utm_campaign"),
-      }),
-    }).catch(() => undefined);
+    postCookieVisit(visitorId, touchTrail(window.location.pathname));
     window.setTimeout(() => setPhase("hidden"), 1400);
   }
 
@@ -73,7 +68,7 @@ export function CookieVisitorField() {
   const [id, setId] = useState("");
 
   useEffect(() => {
-    if (readCookie(CHOICE_COOKIE) === "1") setId(readCookie(VISITOR_COOKIE));
+    setId(readCookie(VISITOR_COOKIE));
   }, []);
 
   if (!id) return null;

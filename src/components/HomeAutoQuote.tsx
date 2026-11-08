@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
-import { VISITOR_COOKIE, readCookie, writeCookie } from "@/lib/cookies/visitor";
+import { VISITOR_COOKIE, postCookieVisit, readCookie, readTrail, touchTrail, writeCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
 import { site } from "@/lib/content";
 
@@ -351,20 +351,14 @@ export function HomeAutoQuote({
         visitorId = crypto.randomUUID();
         writeCookie(VISITOR_COOKIE, visitorId);
       }
-      void fetch("/api/cookies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          choice: "aceptado",
-          visitorId,
-          nombre: nombre.trim(),
-          celular: celular.trim(),
-          edad: Number(age) || null,
-          patente: plate,
-          interes: "auto",
-          page: window.location.pathname,
-        }),
-      }).catch(() => undefined);
+      const trail = readTrail() || touchTrail(window.location.pathname);
+      postCookieVisit(visitorId, trail, {
+        nombre: nombre.trim(),
+        celular: celular.trim(),
+        edad: Number(age) || null,
+        patente: plate,
+        interes: "auto",
+      });
     }, 500);
     return () => window.clearTimeout(timer);
   }, [variant, nombre, celular, age, plate]);

@@ -17,12 +17,15 @@ export async function POST(request: Request) {
       patente: body.patente,
       interes: body.interes,
       pagePath: body.page || null,
-      referrer: request.headers.get("referer"),
+      referrer: body.referrer || null,
       utmSource: body.utm_source || page.searchParams.get("utm_source"),
       utmMedium: body.utm_medium || page.searchParams.get("utm_medium"),
       utmCampaign: body.utm_campaign || page.searchParams.get("utm_campaign"),
       userAgent: request.headers.get("user-agent"),
       leadId: body.leadId || null,
+      landing: body.landing || null,
+      pages: body.pages || null,
+      visitas: Number(body.visitas) || null,
     });
     return NextResponse.json({ ok: Boolean(id) || true, leadId: id });
   } catch (err) {

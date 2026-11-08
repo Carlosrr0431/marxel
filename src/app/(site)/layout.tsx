@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CookieNotice } from "@/components/CookieNotice";
+import { SiteVisit } from "@/components/SiteVisit";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { JsonLd } from "@/components/JsonLd";
 import { jsonLdGraph, organizationNode, personNode, websiteNode } from "@/lib/seo";
@@ -16,6 +17,7 @@ export default function SiteLayout({
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <SiteVisit />
       <CookieNotice />
       <WhatsAppButton />
     </>
