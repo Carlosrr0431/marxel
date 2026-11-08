@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
+import { CHOICE_COOKIE, VISITOR_COOKIE, readCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
 import { site } from "@/lib/content";
 
@@ -156,7 +157,12 @@ export function HomeAutoQuote({
   const [certificatePdf, setCertificatePdf] = useState("");
   const [couponPdf, setCouponPdf] = useState("");
   const [photos, setPhotos] = useState<Partial<Record<ShotId, string>>>({});
+  const [openField, setOpenField] = useState<"" | "year" | "brand" | "model" | "version">("");
   const quotedTicket = useRef("");
+  const ageRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const wizard = variant !== "crm";
 
   const normalized = normalizeArPlate(plate);
   const plateKind = classifyArPlate(normalized);
@@ -221,6 +227,36 @@ export function HomeAutoQuote({
   }, [plate, dni]);
 
   useEffect(() => {
+    if (variant === "crm") return;
+    function send() {
+      if (readCookie(CHOICE_COOKIE) !== "1") return;
+      const visitorId = readCookie(VISITOR_COOKIE);
+      const phone = celular.replace(/\D/g, "");
+      if (!visitorId || nombre.trim().length < 2 || phone.length < 8) return;
+      void fetch("/api/cookies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          choice: "aceptado",
+          visitorId,
+          nombre: nombre.trim(),
+          celular: celular.trim(),
+          edad: Number(age) || null,
+          patente: plate,
+          interes: "auto",
+          page: window.location.pathname,
+        }),
+      }).catch(() => undefined);
+    }
+    const timer = window.setTimeout(send, 700);
+    window.addEventListener("mx-cookies-accepted", send);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("mx-cookies-accepted", send);
+    };
+  }, [variant, nombre, celular, age, plate]);
+
+  useEffect(() => {
     if (postal.length !== 4) {
       setLocation(null);
       return;
@@ -265,6 +301,12 @@ export function HomeAutoQuote({
           if (data.brand) setBrandId(String(data.brand.id));
           if (data.model) setModelId(String(data.model.id));
           if (data.version) setVersionId(String(data.version.id));
+          if (data.version) {
+            setOpenField("");
+            window.setTimeout(() => ageRef.current?.focus(), 60);
+          } else if (data.model) setOpenField("version");
+          else if (data.brand) setOpenField("model");
+          else if (data.year) setOpenField("brand");
         })
         .catch((err) => {
           if (!cancelled) setHint(err instanceof Error ? err.message : "No pudimos leer la patente.");
@@ -493,7 +535,7 @@ export function HomeAutoQuote({
   }
 
   return (
-    <div className={variant === "crm" ? "home-quote home-quote--crm" : `home-quote${view === "plans" && plans.length > 0 ? " is-comparing" : ""}`}>
+    <div className={variant === "crm" ? "home-quote home-quote--crm" : `home-quote home-quote--wizard${view === "plans" && plans.length > 0 ? " is-comparing" : ""}`}>
       <form
         className="quote-card"
         onSubmit={(event) => {
@@ -529,6 +571,123 @@ export function HomeAutoQuote({
         {looking ? <p className="quote-lookup">Buscando el auto…</p> : null}
         {hint ? <p className={plateKind === "moto" ? "quote-alert" : "quote-found"}>{hint}</p> : null}
 
+        {wizard ? (
+          <>
+            <div className="home-quote__grid">
+              <AutoSelect
+                label="Año"
+                value={yearId}
+                open={openField === "year"}
+                onOpen={() => setOpenField("year")}
+                onChange={(value) => {
+                  setYearId(value);
+                  setBrandId("");
+                  setModelId("");
+                  setVersionId("");
+                  setBrands([]);
+                  setModels([]);
+                  setVersions([]);
+                  setOpenField("brand");
+                }}
+                placeholder="Elegí el año"
+                options={yearList}
+                empty="No hay años"
+              />
+              <AutoSelect
+                label="Marca"
+                value={brandId}
+                open={openField === "brand"}
+                onOpen={() => setOpenField("brand")}
+                onChange={(value) => {
+                  setBrandId(value);
+                  setModelId("");
+                  setVersionId("");
+                  setModels([]);
+                  setVersions([]);
+                  setOpenField("model");
+                }}
+                placeholder="Elegí la marca"
+                options={brands}
+                empty={yearId ? "Buscando marcas…" : "Primero elegí el año"}
+              />
+              <AutoSelect
+                label="Modelo"
+                value={modelId}
+                open={openField === "model"}
+                onOpen={() => setOpenField("model")}
+                onChange={(value) => {
+                  setModelId(value);
+                  setVersionId("");
+                  setVersions([]);
+                  setOpenField("version");
+                }}
+                placeholder="Elegí el modelo"
+                options={models}
+                empty={brandId ? "Buscando modelos…" : "Primero elegí la marca"}
+              />
+              <AutoSelect
+                label="Versión"
+                value={versionId}
+                open={openField === "version"}
+                onOpen={() => setOpenField("version")}
+                onChange={(value) => {
+                  setVersionId(value);
+                  setOpenField("");
+                  window.setTimeout(() => ageRef.current?.focus(), 40);
+                }}
+                placeholder="Elegí la versión"
+                options={versions.map((item) => ({ id: String(item.id), label: item.fullCarDescripcion || item.description }))}
+                empty={modelId ? "Buscando versiones…" : "Primero elegí el modelo"}
+              />
+            </div>
+            <div className="home-quote__row home-quote__trio">
+              <Pill label="GNC" value={hasGnc} onChange={setHasGnc} />
+              <label>
+                <span>CP</span>
+                <input className="field" inputMode="numeric" maxLength={4} value={postal} onChange={(event) => setPostal(event.target.value.replace(/\D/g, "").slice(0, 4))} />
+              </label>
+              <label>
+                <span>Edad</span>
+                <input
+                  ref={ageRef}
+                  className="field"
+                  inputMode="numeric"
+                  maxLength={2}
+                  placeholder="34"
+                  value={age}
+                  onChange={(event) => {
+                    const next = event.target.value.replace(/\D/g, "").slice(0, 2);
+                    setAge(next);
+                    if (next.length === 2) nameRef.current?.focus();
+                  }}
+                />
+              </label>
+            </div>
+            <div className="home-quote__row">
+              <label>
+                <span>Nombre</span>
+                <input
+                  ref={nameRef}
+                  className="field"
+                  value={nombre}
+                  placeholder="Tu nombre"
+                  onChange={(event) => setNombre(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      phoneRef.current?.focus();
+                    }
+                  }}
+                />
+              </label>
+              <label>
+                <span>WhatsApp</span>
+                <input ref={phoneRef} className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
+              </label>
+            </div>
+          </>
+        ) : (
+          <>
         <div className="home-quote__grid">
           <Select
             label="Año"
@@ -603,6 +762,8 @@ export function HomeAutoQuote({
             <input className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
           </label>
         </div>
+          </>
+        )}
         <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
           {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
         </button>
@@ -852,6 +1013,69 @@ function comparePlans(quote: QuotePayload): ComparePlan[] {
       monthly: plan.monthly,
       covers: plan.covers,
     }))
+  );
+}
+
+function AutoSelect({
+  label,
+  value,
+  open,
+  onOpen,
+  onChange,
+  placeholder,
+  options,
+  empty,
+}: {
+  label: string;
+  value: string;
+  open: boolean;
+  onOpen: () => void;
+  onChange: (value: string) => void;
+  placeholder: string;
+  options: Option[];
+  empty: string;
+}) {
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const selected = options.find((option) => option.id === value);
+  const text = query.trim().toLowerCase();
+  const shown = text ? options.filter((option) => option.label.toLowerCase().includes(text)) : options;
+
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 20);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  return (
+    <div className={`wizard-field${open ? " is-open" : ""}`}>
+      <span>{label}</span>
+      <button type="button" className="field wizard-trigger" aria-expanded={open} onClick={onOpen}>
+        {selected?.label || placeholder}
+      </button>
+      {open ? (
+        <div className="wizard-list">
+          <input
+            ref={searchRef}
+            className="field wizard-search"
+            value={query}
+            placeholder="Buscar"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {shown.length === 0 ? <p>{options.length === 0 ? empty : "Sin resultados"}</p> : null}
+          <ul role="listbox">
+            {shown.map((option) => (
+              <li key={option.id}>
+                <button type="button" role="option" aria-selected={option.id === value} onClick={() => onChange(option.id)}>
+                  {option.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

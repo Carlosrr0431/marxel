@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { findLeadIdByPhone } from "@/lib/chatbot/persist-lead";
+import { saveCookieVisit } from "@/lib/cookies/save-visit";
+import { isVisitorId } from "@/lib/cookies/visitor";
 import { scoreLead } from "@/lib/crm/utils";
 import { createServiceClient } from "@/lib/supabase/server";
 import { normalizeArPhone } from "@/lib/whatsmeow/config";
@@ -122,6 +124,22 @@ export async function POST(request: Request) {
       autor: "web",
     });
     await notifyProducer({ celular, notas: payload.notas_iniciales, leadId });
+    const visitorId = String(form.get("visitor_id") || "");
+    if (isVisitorId(visitorId)) {
+      await saveCookieVisit({
+        visitorId,
+        nombre: "Contacto web",
+        celular,
+        interes: "contacto",
+        pagePath,
+        referrer: referer,
+        utmSource: utm.utm_source,
+        utmMedium: utm.utm_medium,
+        utmCampaign: utm.utm_campaign,
+        userAgent: request.headers.get("user-agent"),
+        leadId,
+      });
+    }
   }
   return NextResponse.redirect(destination(request, "enviado=1"), 303);
 }

@@ -6,7 +6,6 @@ import { Icon, seguroIconMap } from "@/components/Icon";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Reveal } from "@/components/Reveal";
 import { FaqAccordion } from "@/components/FaqAccordion";
-import { CartillaMedicaSection } from "@/components/CartillaMedicaSection";
 import { JsonLd } from "@/components/JsonLd";
 import { faqHome, productor, site, seguros } from "@/lib/content";
 import { pageJsonLd, pageMetadata } from "@/lib/seo";
@@ -38,18 +37,6 @@ export const metadata: Metadata = pageMetadata({
   ],
 });
 
-const STATS = [
-  { value: "+500", label: "Clientes activos" },
-  { value: "3", label: "Especialidades" },
-  { value: "24 hs", label: "Respuesta garantizada" },
-];
-
-const STEPS = [
-  "Contanos tu situación laboral.",
-  "Te orientamos al plan adecuado.",
-  "Te guiamos en el alta digital.",
-];
-
 export default function HomePage() {
   return (
     <>
@@ -64,41 +51,18 @@ export default function HomePage() {
         })}
       />
       {/* ——— HERO ——— */}
-      <section className="hero-section hero-section--cover">
-        <img className="hero-cover" src="/brand/marxen-portada.jpg" alt="" />
-        <div className="hero-cover-scrim" aria-hidden />
-        <div className="container-mx hero-section__inner hero-section__inner--quote">
-          <div className="hero-copy">
-            <p className="animate-rise eyebrow">Productor asesor de seguros en Salta Capital</p>
-            <h1 className="animate-rise-delay-1">
-              Empresa de seguros en Salta,
-              <br />
-              <span className="hero-gradient-text">sin vueltas.</span>
+      <section className="hero-section hero-section--wizard">
+        <div className="container-mx hero-section__inner hero-section__inner--quote hero-section__inner--wizard">
+          <div className="hero-copy hero-copy--wizard">
+            <p className="eyebrow">Productor asesor de seguros en Salta Capital</p>
+            <h1>
+              Empresa de seguros en Salta, <span className="hero-gradient-text">sin vueltas.</span>
             </h1>
-            <p className="hero-lede animate-rise-delay-2" data-seo-lede>
-              MARXEN cotiza tu seguro de auto en San Cristóbal y SMG.
-              También moto, hogar, prepaga, obra social y asistencia al viajero en Salta Capital.
+            <p className="hero-lede" data-seo-lede>
+              La patente completa el auto. Si no la tenés, elegí año, marca, modelo y versión: cada lista se abre sola.
             </p>
-
-            <div className="hero-actions animate-rise-delay-3">
-              <Link href="/contacto" className="btn btn-primary btn-lg">
-                Contactar para más información
-              </Link>
-              <Link href="/salud" className="btn btn-secondary btn-lg">
-                Prepagas A2 / A4
-              </Link>
-            </div>
-
-            <div className="hero-stats animate-rise-delay-3">
-              {STATS.map((s) => (
-                <div key={s.label} className="hero-stats__item">
-                  <span className="hero-stats__value">{s.value}</span>
-                  <span className="hero-stats__label">{s.label}</span>
-                </div>
-              ))}
-            </div>
           </div>
-          <div id="cotizar-auto" className="hero-visual hero-visual--quote animate-rise-delay-2">
+          <div id="cotizar-auto" className="hero-visual hero-visual--quote hero-visual--wizard">
             <HomeAutoQuote />
           </div>
         </div>
@@ -223,65 +187,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ——— SALUD CTA ——— */}
-      <section className="section-salud relative overflow-hidden">
-        <div className="section-salud__glow" aria-hidden />
-        <div className="container-mx grid items-center gap-12 py-20 sm:py-24 lg:grid-cols-2">
-          <Reveal>
-            <div>
-              <p className="eyebrow !text-teal-soft">MARXEN Salud</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold leading-tight sm:text-4xl">
-                Tu plan de salud ideal,
-                <br />
-                <span className="text-teal-soft">para vos y tu familia.</span>
-              </h2>
-              <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
-                Compará diferentes opciones, optimizá tus aportes laborales y
-                elegí la mejor cobertura con acompañamiento personalizado.
-              </p>
-              <ul className="mt-6 flex flex-col gap-3 text-sm">
-                {[
-                  "Comparativa personalizada de planes y cartillas",
-                  "Derivación de aportes (Monotributo, Relación de dependencia o Particular)",
-                  "Asesoramiento transparente sin letra chica",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-white/85">
-                    <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal/30 text-teal-soft text-[10px] font-bold">
-                      ✓
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/salud#planes-a2-a4" className="btn btn-lg mt-8 bg-white text-navy hover:bg-mist">
-                Comparar planes
-              </Link>
-            </div>
-          </Reveal>
-
-          <Reveal delay={120}>
-            <div className="salud-steps-card">
-              <p className="font-display text-xl font-semibold text-white">
-                ¿Cómo empezar?
-              </p>
-              <ol className="mt-6 flex flex-col gap-5">
-                {STEPS.map((step, i) => (
-                  <li key={step} className="flex gap-4">
-                    <span className="step-number">{i + 1}</span>
-                    <div>
-                      <p className="text-sm leading-relaxed text-white/75">{step}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ——— CARTILLA MÉDICA ——— */}
-      <CartillaMedicaSection />
 
       {/* ——— COTIZÁ ——— */}
       <section className="bg-atmosphere">

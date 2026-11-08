@@ -60,6 +60,15 @@ export default function PrivacidadPage() {
             </p>
           </div>
           <div>
+            <h2 className="font-display text-xl font-semibold">Aviso del sitio</h2>
+            <p className="mt-2 text-muted">
+              Si confirmás el aviso, guardamos una cookie en tu navegador y la página por la que
+              entraste. Si después dejás tu nombre o WhatsApp, los usamos para contactarte con la
+              cotización. “Ahora no” no guarda esos datos. Podés pedir que los borremos en{" "}
+              {site.email}.
+            </p>
+          </div>
+          <div>
             <h2 className="font-display text-xl font-semibold">Conservación y derechos</h2>
             <p className="mt-2 text-muted">
               Guardamos la ficha mientras haga falta para el asesoramiento o una obligación legal.
@@ -67,7 +76,7 @@ export default function PrivacidadPage() {
               al {site.phoneLocal}. También podés desconectar Gmail desde el calendario del CRM.
             </p>
           </div>
-          <p className="text-muted">Vigente desde el 22 de septiembre de 2026.</p>
+          <p className="text-muted">Vigente desde el 8 de noviembre de 2026.</p>
         </div>
       </section>
     </>

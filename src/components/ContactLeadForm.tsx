@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieVisitorField } from "@/components/CookieNotice";
 
 export function ContactLeadForm({ sent, invalid }: { sent: boolean; invalid: boolean }) {
   if (sent) {
@@ -15,6 +16,7 @@ export function ContactLeadForm({ sent, invalid }: { sent: boolean; invalid: boo
 
   return (
     <form id="formulario-contacto" method="post" action="/api/contacto" className="surface space-y-4 p-6 sm:p-8">
+      <CookieVisitorField />
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal">Contacto</p>
         <h2 className="mt-2 font-display text-2xl font-semibold text-navy">Dejanos tu teléfono</h2>
