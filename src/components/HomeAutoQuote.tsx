@@ -1376,6 +1376,7 @@ function AutoSelect({
   empty: string;
 }) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const selected = options.find((option) => option.id === value);
   const text = query.trim().toLowerCase();
@@ -1384,12 +1385,29 @@ function AutoSelect({
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    const timer = window.setTimeout(() => searchRef.current?.focus(), 20);
+    const narrow = window.matchMedia("(max-width: 639px)").matches;
+    const timer = window.setTimeout(() => {
+      if (!narrow) searchRef.current?.focus({ preventScroll: true });
+    }, 20);
     return () => window.clearTimeout(timer);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      const list = boxRef.current?.querySelector(".wizard-list");
+      if (!(list instanceof HTMLElement)) return;
+      const narrow = window.matchMedia("(max-width: 639px)").matches;
+      const margin = narrow ? 104 : 24;
+      const rect = list.getBoundingClientRect();
+      const overflow = rect.bottom - (window.innerHeight - margin);
+      if (overflow > 8) window.scrollBy({ top: overflow + 12, behavior: "smooth" });
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [open, options.length]);
+
   return (
-    <div className={`wizard-field${open ? " is-open" : ""}`}>
+    <div ref={boxRef} className={`wizard-field${open ? " is-open" : ""}`}>
       <span>{label}</span>
       <button type="button" className="field wizard-trigger" aria-expanded={open} onClick={onOpen}>
         {selected?.label || (value ? fallback : "") || placeholder}
