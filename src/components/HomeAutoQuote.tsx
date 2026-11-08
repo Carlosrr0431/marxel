@@ -558,6 +558,10 @@ export function HomeAutoQuote({
   }
 
   const view = issued ? "done" : choice ? "emit" : quote ? "plans" : "form";
+  useEffect(() => {
+    if (!wizard || view !== "plans") return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [wizard, view]);
   const plans = quote ? comparePlans(quote) : [];
   const planTicket = plans.map((plan) => plan.key).join("|");
   const pdfKeys = pdfPick?.ticket === planTicket ? pdfPick.keys : plans.map((plan) => plan.key);
@@ -924,7 +928,6 @@ export function HomeAutoQuote({
             {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
           </button>
         ) : null}
-        {quoting ? <p className="quote-info">Cotizando en San Cristóbal y SMG…</p> : null}
           </>
         ) : null}
 
@@ -1144,6 +1147,7 @@ export function HomeAutoQuote({
           {plans.length > 0 ? (
             <QuoteCompare
               embedded
+              deck
               focusKey=""
               plans={plans}
               pickLabel="Continuar"

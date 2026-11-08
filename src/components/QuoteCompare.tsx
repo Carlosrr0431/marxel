@@ -129,11 +129,61 @@ export function QuoteCompareTable({
   );
 }
 
+function PlanCards({
+  plans,
+  onPick,
+  pickLabel = "Continuar",
+}: {
+  plans: ComparePlan[];
+  onPick?: (plan: ComparePlan) => void;
+  pickLabel?: string;
+}) {
+  return (
+    <div className="plan-cards">
+      <p className="plan-cards__hint">Deslizá para ver cada plan</p>
+      <div className="plan-cards__row">
+        {plans.map((plan) => (
+          <article key={plan.key} className="plan-card">
+            <header className="plan-card__head">
+              <img src={plan.logo} alt="" />
+              <div>
+                <span>{plan.company}</span>
+                <strong>{plan.title}</strong>
+              </div>
+            </header>
+            <p className="plan-card__price">
+              <b>{money(plan.monthly)}</b>
+              <small>por mes</small>
+            </p>
+            {onPick ? (
+              <button type="button" className="quote-compare__emit" onClick={() => onPick(plan)}>
+                {pickLabel}
+              </button>
+            ) : null}
+            <ul className="plan-card__covers">
+              {COVER_ROWS.map((row) => {
+                const item = mark(plan.covers?.[row.key]);
+                return (
+                  <li key={row.key}>
+                    <span>{row.label}</span>
+                    <b className={`is-${item.kind}`}>{item.text}</b>
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function QuoteCompare({
   plans,
   focusKey,
   onClose,
   embedded = false,
+  deck = false,
   onPick,
   pickLabel,
   notices = [],
@@ -145,6 +195,7 @@ export function QuoteCompare({
   focusKey: string;
   onClose: () => void;
   embedded?: boolean;
+  deck?: boolean;
   onPick?: (plan: ComparePlan) => void;
   pickLabel?: string;
   notices?: string[];
@@ -179,7 +230,8 @@ export function QuoteCompare({
 
   if (embedded) {
     return (
-      <section className="quote-compare quote-compare--inline" aria-label="Comparación de coberturas">
+      <section className={`quote-compare quote-compare--inline${deck ? " quote-compare--deck" : ""}`} aria-label="Comparación de coberturas">
+        {deck ? <PlanCards plans={plans} onPick={onPick} pickLabel={pickLabel} /> : null}
         {table}
       </section>
     );
