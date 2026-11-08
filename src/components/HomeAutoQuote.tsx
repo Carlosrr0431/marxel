@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
 import { CHOICE_COOKIE, VISITOR_COOKIE, readCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
@@ -35,6 +35,55 @@ type Offer = { id: string; title: string; monthly: number; description?: string;
 type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number };
 type QuotePayload = { carDescription: string; statedAmount: number; sancristobal: CompanyQuote; smg: CompanyQuote };
 type Choice = { company: "sancristobal" | "smg"; id: string; title: string; monthly: number };
+
+const QUOTE_DRAFT_KEY = "mx_cotizacion_auto";
+
+type QuoteDraft = {
+  plate: string;
+  yearId: string;
+  brandId: string;
+  modelId: string;
+  versionId: string;
+  brandLabel: string;
+  modelLabel: string;
+  versionLabel: string;
+  postal: string;
+  locationId: number | null;
+  hasGnc: string;
+  age: string;
+  nombre: string;
+  dni: string;
+  celular: string;
+};
+
+function readQuoteDraft(): QuoteDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(QUOTE_DRAFT_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Partial<QuoteDraft>;
+    if (!data || typeof data !== "object") return null;
+    return {
+      plate: String(data.plate || ""),
+      yearId: String(data.yearId || ""),
+      brandId: String(data.brandId || ""),
+      modelId: String(data.modelId || ""),
+      versionId: String(data.versionId || ""),
+      brandLabel: String(data.brandLabel || ""),
+      modelLabel: String(data.modelLabel || ""),
+      versionLabel: String(data.versionLabel || ""),
+      postal: String(data.postal || "4400").replace(/\D/g, "").slice(0, 4),
+      locationId: typeof data.locationId === "number" ? data.locationId : null,
+      hasGnc: data.hasGnc === "si" ? "si" : "no",
+      age: String(data.age || "").replace(/\D/g, "").slice(0, 2),
+      nombre: String(data.nombre || ""),
+      dni: String(data.dni || "").replace(/\D/g, "").slice(0, 8),
+      celular: String(data.celular || ""),
+    };
+  } catch {
+    return null;
+  }
+}
 
 const moneyFmt = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 
@@ -172,12 +221,48 @@ export function HomeAutoQuote({
   const phoneRef = useRef<HTMLInputElement>(null);
   const tailRef = useRef<HTMLDivElement>(null);
   const tailShown = useRef(false);
+  const skipPlateFill = useRef(false);
+  const restoredAge = useRef(false);
+  const savedLocationId = useRef<number | null>(null);
+  const [labels, setLabels] = useState({ brand: "", model: "", version: "" });
+  const [hydrated, setHydrated] = useState(false);
   const wizard = variant !== "crm";
   const ageReady = age.replace(/\D/g, "").length >= 2;
 
+  useLayoutEffect(() => {
+    if (!wizard || hydrated) return;
+    const draft = readQuoteDraft();
+    if (draft) {
+      if (draft.plate && draft.yearId) skipPlateFill.current = true;
+      if (draft.age.length >= 2) {
+        tailShown.current = true;
+        restoredAge.current = true;
+      }
+      savedLocationId.current = draft.locationId;
+      setPlate(draft.plate);
+      setYearId(draft.yearId);
+      setBrandId(draft.brandId);
+      setModelId(draft.modelId);
+      setVersionId(draft.versionId);
+      setPostal(draft.postal || "4400");
+      setHasGnc(draft.hasGnc);
+      setAge(draft.age);
+      setNombre(draft.nombre);
+      setDni(draft.dni);
+      setCelular(draft.celular);
+      setLabels({ brand: draft.brandLabel, model: draft.modelLabel, version: draft.versionLabel });
+    }
+    setHydrated(true);
+  }, [wizard, hydrated]);
+
   useEffect(() => {
     if (!wizard || !ageReady) {
-      tailShown.current = false;
+      if (!restoredAge.current) tailShown.current = false;
+      return;
+    }
+    if (restoredAge.current) {
+      restoredAge.current = false;
+      tailShown.current = true;
       return;
     }
     if (tailShown.current) return;
@@ -302,6 +387,11 @@ export function HomeAutoQuote({
         setLocations(list);
         setLocation((current) => {
           if (current && list.some((item) => item.locationId === current.locationId)) return current;
+          const kept = savedLocationId.current;
+          if (kept) {
+            const match = list.find((item) => item.locationId === kept);
+            if (match) return match;
+          }
           return list.find((item) => item.description.toUpperCase() === "SALTA") || list[0] || null;
         });
       })
@@ -319,7 +409,37 @@ export function HomeAutoQuote({
   }, [postal]);
 
   useEffect(() => {
+    if (!wizard || !hydrated) return;
+    const draft: QuoteDraft = {
+      plate,
+      yearId,
+      brandId,
+      modelId,
+      versionId,
+      brandLabel: brand?.label || labels.brand,
+      modelLabel: model?.label || labels.model,
+      versionLabel: version?.fullCarDescripcion || version?.description || labels.version,
+      postal,
+      locationId: location?.locationId ?? savedLocationId.current,
+      hasGnc,
+      age,
+      nombre,
+      dni,
+      celular,
+    };
+    try {
+      localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* el navegador puede bloquear el almacenamiento */
+    }
+  }, [wizard, hydrated, plate, yearId, brandId, modelId, versionId, brand, model, version, labels, postal, location, hasGnc, age, nombre, dni, celular]);
+
+  useEffect(() => {
     if (plateKind !== "auto") return;
+    if (skipPlateFill.current) {
+      skipPlateFill.current = false;
+      return;
+    }
     let cancelled = false;
     setLooking(true);
     const timer = window.setTimeout(() => {
@@ -728,6 +848,7 @@ export function HomeAutoQuote({
               <AutoSelect
                 label="Marca"
                 value={brandId}
+                fallback={labels.brand}
                 open={openField === "brand"}
                 onOpen={() => setOpenField("brand")}
                 onChange={(value) => {
@@ -754,6 +875,7 @@ export function HomeAutoQuote({
                   setOpenField("version");
                 }}
                 placeholder="Elegí el modelo"
+                fallback={labels.model}
                 options={models}
                 empty={brandId ? "Buscando modelos…" : "Primero elegí la marca"}
               />
@@ -773,6 +895,7 @@ export function HomeAutoQuote({
                   window.setTimeout(() => ageRef.current?.focus(), 40);
                 }}
                 placeholder="Elegí la versión"
+                fallback={labels.version}
                 options={versions.map((item) => ({ id: String(item.id), label: item.fullCarDescripcion || item.description }))}
                 empty={modelId ? "Buscando versiones…" : "Primero elegí el modelo"}
               />
@@ -1229,6 +1352,7 @@ function AutoSelect({
   onOpen,
   onChange,
   placeholder,
+  fallback = "",
   options,
   empty,
 }: {
@@ -1238,6 +1362,7 @@ function AutoSelect({
   onOpen: () => void;
   onChange: (value: string) => void;
   placeholder: string;
+  fallback?: string;
   options: Option[];
   empty: string;
 }) {
@@ -1258,7 +1383,7 @@ function AutoSelect({
     <div className={`wizard-field${open ? " is-open" : ""}`}>
       <span>{label}</span>
       <button type="button" className="field wizard-trigger" aria-expanded={open} onClick={onOpen}>
-        {selected?.label || placeholder}
+        {selected?.label || (value ? fallback : "") || placeholder}
       </button>
       {open ? (
         <div className="wizard-list">
