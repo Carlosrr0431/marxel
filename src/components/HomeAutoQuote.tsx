@@ -25,6 +25,12 @@ type Location = {
   zipCode: number;
   synonymous: string;
 };
+
+function placeName(item: Location) {
+  const city = niceName(item.description);
+  const province = item.state ? niceName(item.state) : "";
+  return province ? `${city}, ${province}` : city;
+}
 type Offer = { id: string; title: string; monthly: number; description?: string; covers?: Record<string, string> | null };
 type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number };
 type QuotePayload = { carDescription: string; statedAmount: number; sancristobal: CompanyQuote; smg: CompanyQuote };
@@ -129,7 +135,9 @@ export function HomeAutoQuote({
   const [models, setModels] = useState<Option[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
   const [postal, setPostal] = useState("4400");
+  const [locations, setLocations] = useState<Location[]>([]);
   const [location, setLocation] = useState<Location | null>(null);
+  const [locating, setLocating] = useState(false);
   const [hasGnc, setHasGnc] = useState("no");
   const [nombre, setNombre] = useState(preset?.nombre || "");
   const [celular, setCelular] = useState(preset?.celular || "");
@@ -162,7 +170,29 @@ export function HomeAutoQuote({
   const ageRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
+  const tailRef = useRef<HTMLDivElement>(null);
+  const tailShown = useRef(false);
   const wizard = variant !== "crm";
+  const ageReady = age.replace(/\D/g, "").length >= 2;
+
+  useEffect(() => {
+    if (!wizard || !ageReady) {
+      tailShown.current = false;
+      return;
+    }
+    if (tailShown.current) return;
+    const timer = window.setTimeout(() => {
+      tailShown.current = true;
+      const node = tailRef.current;
+      if (node) {
+        const bottom = node.getBoundingClientRect().bottom;
+        const limit = window.innerHeight - 96;
+        if (bottom > limit) window.scrollBy({ top: bottom - limit + 16, behavior: "smooth" });
+      }
+      nameRef.current?.focus({ preventScroll: true });
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [wizard, ageReady]);
 
   const normalized = normalizeArPlate(plate);
   const plateKind = classifyArPlate(normalized);
@@ -258,18 +288,30 @@ export function HomeAutoQuote({
 
   useEffect(() => {
     if (postal.length !== 4) {
+      setLocations([]);
       setLocation(null);
+      setLocating(false);
       return;
     }
     let cancelled = false;
+    setLocating(true);
     fetchJson(`/api/sc-auto?${new URLSearchParams({ kind: "location", postalCode: postal })}`)
       .then((data) => {
         if (cancelled) return;
         const list = (data.locations || []) as Location[];
-        setLocation(list.find((item) => item.description.toUpperCase() === "SALTA") || list[0] || null);
+        setLocations(list);
+        setLocation((current) => {
+          if (current && list.some((item) => item.locationId === current.locationId)) return current;
+          return list.find((item) => item.description.toUpperCase() === "SALTA") || list[0] || null;
+        });
       })
       .catch(() => {
-        if (!cancelled) setLocation(null);
+        if (cancelled) return;
+        setLocations([]);
+        setLocation(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLocating(false);
       });
     return () => {
       cancelled = true;
@@ -532,11 +574,39 @@ export function HomeAutoQuote({
       plate ? `Patente: ${plate}.` : "",
       quote?.carDescription || hint || "",
       `Plan: ${plan.company} · ${plan.title} · $${plan.monthly} por mes.`,
-      `CP ${postal}. Edad ${age || "—"}. GNC: ${hasGnc === "si" ? "sí" : "no"}.`,
+      `CP ${postal}${location ? ` · ${placeName(location)}` : ""}. Edad ${age || "—"}. GNC: ${hasGnc === "si" ? "sí" : "no"}.`,
     ]
       .filter(Boolean)
       .join("\n");
     window.open(`https://wa.me/${site.whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
+  function renderPlace() {
+    if (postal.length !== 4) return null;
+    if (locating) return <p className="quote-lookup">Buscando ciudad y provincia…</p>;
+    if (locations.length > 1) {
+      return (
+        <label className="home-quote__place">
+          <span>Ciudad y provincia</span>
+          <select
+            className="field field-select"
+            value={location ? String(location.locationId) : ""}
+            onChange={(event) => {
+              const next = locations.find((item) => String(item.locationId) === event.target.value);
+              if (next) setLocation(next);
+            }}
+          >
+            {locations.map((item) => (
+              <option key={item.locationId} value={String(item.locationId)}>
+                {placeName(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+    if (location) return <p className="quote-found">{placeName(location)}</p>;
+    return <p className="quote-alert">No encontramos esa localidad.</p>;
   }
 
   function pickPlan(plan: ComparePlan) {
@@ -705,45 +775,50 @@ export function HomeAutoQuote({
                   onChange={(event) => {
                     const next = event.target.value.replace(/\D/g, "").slice(0, 2);
                     setAge(next);
-                    if (next.length === 2) nameRef.current?.focus();
                   }}
                 />
               </label>
             </div>
             ) : null}
-            {age.replace(/\D/g, "").length >= 2 ? (
-            <div className="home-quote__grid wizard-pair">
-              <label>
-                <span>Nombre</span>
-                <input
-                  ref={nameRef}
-                  className="field"
-                  value={nombre}
-                  placeholder="Tu nombre"
-                  onChange={(event) => setNombre(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      phoneRef.current?.focus();
-                    }
-                  }}
-                />
-              </label>
-              <label>
-                <span>DNI</span>
-                <input
-                  className="field"
-                  inputMode="numeric"
-                  maxLength={8}
-                  placeholder="DNI"
-                  value={dni}
-                  onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))}
-                />
-              </label>
-              <label className="home-quote__wide">
-                <span>WhatsApp</span>
-                <input ref={phoneRef} className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
-              </label>
+            {versionId ? renderPlace() : null}
+            {ageReady ? (
+            <div ref={tailRef} className="home-quote__tail wizard-pair">
+              <div className="home-quote__grid">
+                <label>
+                  <span>Nombre</span>
+                  <input
+                    ref={nameRef}
+                    className="field"
+                    value={nombre}
+                    placeholder="Tu nombre"
+                    onChange={(event) => setNombre(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        phoneRef.current?.focus();
+                      }
+                    }}
+                  />
+                </label>
+                <label>
+                  <span>DNI</span>
+                  <input
+                    className="field"
+                    inputMode="numeric"
+                    maxLength={8}
+                    placeholder="DNI"
+                    value={dni}
+                    onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))}
+                  />
+                </label>
+                <label className="home-quote__wide">
+                  <span>WhatsApp</span>
+                  <input ref={phoneRef} className="field" inputMode="tel" placeholder="387…" value={celular} onChange={(event) => setCelular(event.target.value)} />
+                </label>
+              </div>
+              <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
+                {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
+              </button>
             </div>
             ) : null}
           </>
@@ -809,6 +884,7 @@ export function HomeAutoQuote({
             <input className="field" inputMode="numeric" maxLength={2} placeholder="34" value={age} onChange={(event) => setAge(event.target.value.replace(/\D/g, "").slice(0, 2))} />
           </label>
         </div>
+        {renderPlace()}
         <div className="home-quote__row home-quote__contact">
           <label>
             <span>Nombre</span>
@@ -825,7 +901,7 @@ export function HomeAutoQuote({
         </div>
           </>
         )}
-        {!wizard || age.replace(/\D/g, "").length >= 2 ? (
+        {!wizard ? (
           <button type="submit" className="btn btn-primary home-quote__submit" disabled={quoting}>
             {quoting ? "Cotizando…" : "Cotizar en San Cristóbal y SMG"}
           </button>
