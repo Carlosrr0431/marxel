@@ -25,6 +25,44 @@ import {
   type SeguimientoTipo,
 } from "@/lib/crm/types";
 
+const COLOR_NAMES_KEY = "mx_cal_colores";
+
+function useColorNames() {
+  const [names, setNames] = useState<Partial<Record<EventColorId, string>>>({});
+
+  useEffect(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem(COLOR_NAMES_KEY) || "{}") as Record<string, string>;
+      const next: Partial<Record<EventColorId, string>> = {};
+      for (const item of EVENT_COLORS) {
+        const label = String(data[item.id] || "").trim().slice(0, 24);
+        if (label) next[item.id] = label;
+      }
+      setNames(next);
+    } catch {
+      setNames({});
+    }
+  }, []);
+
+  function rename(id: EventColorId, label: string) {
+    const clean = label.trim().slice(0, 24);
+    setNames((prev) => {
+      const next = { ...prev };
+      if (!clean || clean === eventColor(id)?.label) delete next[id];
+      else next[id] = clean;
+      localStorage.setItem(COLOR_NAMES_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function labelOf(id: EventColorId | null | undefined) {
+    if (!id) return "";
+    return names[id] || eventColor(id)?.label || "";
+  }
+
+  return { labelOf, rename };
+}
+
 const TIPO_STYLE: Record<SeguimientoTipo, { label: string; chip: string; bar: string }> = {
   whatsapp: { label: "WhatsApp", chip: "bg-emerald-100 text-emerald-700", bar: "#059669" },
   llamada: { label: "Llamada", chip: "bg-sky-100 text-sky-700", bar: "#0284c7" },
@@ -157,6 +195,7 @@ export function CrmCalendar({
     return start >= weekStart.getTime() && start < weekEnd.getTime();
   });
   const todayCount = weekVisible.filter((event) => sameDay(new Date(event.start), today)).length;
+  const { labelOf, rename } = useColorNames();
   const overdueCount = events.filter(
     (event) => event.estado === "pendiente" && event.source !== "google" && new Date(event.start).getTime() < Date.now(),
   ).length;
@@ -339,7 +378,15 @@ export function CrmCalendar({
                               {event.title}
                             </p>
                             <p className="mt-0.5 truncate text-[11px] text-muted">{event.person}</p>
-                            <span className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold ${style.chip}`}>{style.label}</span>
+                            <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                              <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold ${style.chip}`}>{style.label}</span>
+                              {event.color && labelOf(event.color) ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-mist px-2 py-0.5 text-[9px] font-semibold text-navy">
+                                  <i className="h-1.5 w-1.5 rounded-full" style={{ background: bar }} />
+                                  {labelOf(event.color)}
+                                </span>
+                              ) : null}
+                            </span>
                           </button>
                           <div className="px-3 pb-2.5">
                             {done ? (
@@ -420,6 +467,8 @@ export function CrmCalendar({
           people={people}
           pending={pending}
           error={error}
+          colorLabel={labelOf}
+          onRenameColor={rename}
           onClose={() => setSheet(null)}
           onCreate={(formData) => run(() => createSeguimiento(formData))}
           onUpdate={(formData) => run(() => updateSeguimiento(formData))}
@@ -536,6 +585,8 @@ function EventModal({
   people,
   pending,
   error,
+  colorLabel,
+  onRenameColor,
   onClose,
   onCreate,
   onUpdate,
@@ -552,6 +603,8 @@ function EventModal({
   people: CalendarPerson[];
   pending: boolean;
   error: string;
+  colorLabel: (id: EventColorId) => string;
+  onRenameColor: (id: EventColorId, label: string) => void;
   onClose: () => void;
   onCreate: (formData: FormData) => void;
   onUpdate: (formData: FormData) => void;
@@ -571,6 +624,7 @@ function EventModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [when, setWhen] = useState(at);
   const [color, setColor] = useState<EventColorId>(event?.color || "azul");
+  const [naming, setNaming] = useState(false);
   const [repeat, setRepeat] = useState<"" | "semanal" | "quincenal" | "mensual">("");
   const [repeatCount, setRepeatCount] = useState("");
   const [date, time] = when.split("T");
@@ -621,20 +675,45 @@ function EventModal({
             </label>
           </div>
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Color</p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Color</p>
+              <button type="button" className="text-[11px] font-semibold text-teal" onClick={() => setNaming((value) => !value)}>
+                {naming ? "Listo" : "Renombrar"}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {EVENT_COLORS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={color === item.id}
-                  onClick={() => setColor(item.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${color === item.id ? "bg-navy text-white shadow-sm" : "bg-mist text-navy"}`}
-                >
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.hex }} />
-                  {item.label}
-                </button>
-              ))}
+              {EVENT_COLORS.map((item) =>
+                naming ? (
+                  <label key={item.id} className="inline-flex items-center gap-1.5 rounded-full bg-mist px-2.5 py-1">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.hex }} />
+                    <input
+                      key={colorLabel(item.id)}
+                      aria-label={`Nombre de ${item.label}`}
+                      defaultValue={colorLabel(item.id)}
+                      maxLength={24}
+                      className="w-24 bg-transparent text-xs font-semibold text-navy outline-none"
+                      onBlur={(input) => onRenameColor(item.id, input.target.value)}
+                      onKeyDown={(input) => {
+                        if (input.key === "Enter") {
+                          input.preventDefault();
+                          input.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={color === item.id}
+                    onClick={() => setColor(item.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${color === item.id ? "bg-navy text-white shadow-sm" : "bg-mist text-navy"}`}
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.hex }} />
+                    {colorLabel(item.id)}
+                  </button>
+                ),
+              )}
             </div>
           </div>
           {mode === "create" ? (
