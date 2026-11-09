@@ -31,7 +31,7 @@ function placeName(item: Location) {
   const province = item.state ? niceName(item.state) : "";
   return province ? `${city}, ${province}` : city;
 }
-type Offer = { id: string; title: string; monthly: number; description?: string; covers?: Record<string, string> | null };
+type Offer = { id: string; title: string; monthly: number; description?: string; covers?: Record<string, string> | null; quoteId?: number };
 type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number; discount?: number };
 type QuotePayload = {
   carDescription: string;
@@ -40,7 +40,15 @@ type QuotePayload = {
   smg: CompanyQuote;
   sitio?: CompanyQuote;
 };
-type Choice = { company: "sancristobal" | "smg"; id: string; title: string; monthly: number };
+type Choice = {
+  company: "sancristobal" | "smg";
+  id: string;
+  title: string;
+  monthly: number;
+  channel?: "api" | "sitio";
+  quoteId?: number;
+  opportunityId?: number;
+};
 
 const QUOTE_DRAFT_KEY = "mx_cotizacion_auto";
 
@@ -202,6 +210,7 @@ export function HomeAutoQuote({
   const [quoting, setQuoting] = useState(false);
   const [error, setError] = useState("");
   const [quote, setQuote] = useState<QuotePayload | null>(null);
+  const [scChannel, setScChannel] = useState<"api" | "sitio">("api");
   const [choice, setChoice] = useState<Choice | null>(null);
   const [dni, setDni] = useState("");
   const [insured, setInsured] = useState<{ dni: string; firstName: string; lastName: string } | null>(null);
@@ -583,7 +592,9 @@ export function HomeAutoQuote({
         }),
       });
       setError("");
-      setQuote(data as QuotePayload);
+      const next = data as QuotePayload;
+      setScChannel(next.sitio?.plans.length ? "sitio" : "api");
+      setQuote(next);
     } catch (err) {
       quotedTicket.current = "";
       setError(err instanceof Error ? err.message : "No pudimos cotizar.");
@@ -603,6 +614,7 @@ export function HomeAutoQuote({
       return;
     }
     if (
+      choice.channel !== "sitio" &&
       (choice.company === "sancristobal" || choice.company === "smg") &&
       INSPECTION_SHOTS.some((shot) => shot.required && !photos[shot.id])
     ) {
@@ -626,6 +638,9 @@ export function HomeAutoQuote({
         body: JSON.stringify({
           action: "emit",
           company: choice.company,
+          channel: choice.channel || "api",
+          quoteId: choice.quoteId || 0,
+          opportunityId: choice.opportunityId || 0,
           planId: choice.id,
           planTitle: choice.title,
           year: Number(year),
@@ -680,7 +695,7 @@ export function HomeAutoQuote({
     if (!wizard || view !== "plans") return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [wizard, view]);
-  const plans = quote ? comparePlans(quote) : [];
+  const plans = quote ? comparePlans(quote, variant === "crm" ? scChannel : "api") : [];
   const planTicket = plans.map((plan) => plan.key).join("|");
   const pdfKeys = pdfPick?.ticket === planTicket ? pdfPick.keys : plans.map((plan) => plan.key);
   function togglePdfPlan(key: string) {
@@ -740,12 +755,18 @@ export function HomeAutoQuote({
       return;
     }
     setError("");
+    const sitioPick = plan.key.startsWith("sitio:");
     const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
+    const id = sitioPick ? plan.key.slice("sitio:".length) : plan.key.slice(company.length + 1);
+    const sitioPlan = sitioPick ? quote?.sitio?.plans.find((item) => item.id === id) : null;
     setChoice({
       company,
-      id: plan.key.slice(company.length + 1),
+      id,
       title: plan.title,
       monthly: plan.monthly,
+      channel: sitioPick ? "sitio" : "api",
+      quoteId: sitioPlan?.quoteId,
+      opportunityId: sitioPick ? quote?.sitio?.opportunityId : undefined,
     });
   }
 
@@ -1108,7 +1129,9 @@ export function HomeAutoQuote({
                 </button>
               ) : null}
             </div>
-            {quote.sitio ? <ScChannels api={quote.sancristobal} sitio={quote.sitio} /> : null}
+            {quote.sitio ? (
+              <ScChannels api={quote.sancristobal} sitio={quote.sitio} channel={scChannel} onChannel={setScChannel} />
+            ) : null}
             {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
             {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
             {plans.length > 0 ? (
@@ -1134,7 +1157,12 @@ export function HomeAutoQuote({
             </button>
             <h2>Emitir {choice.title}</h2>
             <p className="home-quote__lede">
-              {choice.company === "smg" ? "SMG" : "San Cristóbal"} · {money(choice.monthly)} / mes
+              {choice.company === "smg"
+                ? "SMG"
+                : choice.channel === "sitio"
+                  ? "San Cristóbal · Sitio Seguro"
+                  : "San Cristóbal · API"}{" "}
+              · {money(choice.monthly)} / mes
             </p>
             {personHint ? <p className="quote-found">{personHint}</p> : null}
           <div className="home-quote__grid">
@@ -1179,7 +1207,10 @@ export function HomeAutoQuote({
               <input className="field" maxLength={20} value={engine} onChange={(event) => setEngine(event.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase())} />
             </label>
           </div>
-          {choice.company === "sancristobal" || choice.company === "smg" ? (
+          {choice.channel === "sitio" ? (
+            <p className="quote-info">Este alta se carga en Sitio Seguro, sin las fotos de la inspección.</p>
+          ) : null}
+          {choice.channel !== "sitio" && (choice.company === "sancristobal" || choice.company === "smg") ? (
             <div className="home-quote__grid">
               <p className="sm:col-span-2">
                 {choice.company === "smg"
@@ -1216,7 +1247,7 @@ export function HomeAutoQuote({
             </div>
           ) : null}
           <button type="submit" className="btn btn-primary home-quote__submit" disabled={emitting}>
-            {emitting ? "Emitiendo…" : "Emitir póliza"}
+            {emitting ? "Emitiendo…" : choice.channel === "sitio" ? "Cargar en Sitio Seguro" : "Emitir póliza"}
           </button>
           </>
         ) : null}
@@ -1361,7 +1392,17 @@ function coverKey(id: string) {
   return "";
 }
 
-function ScChannels({ api, sitio }: { api: CompanyQuote; sitio: CompanyQuote }) {
+function ScChannels({
+  api,
+  sitio,
+  channel,
+  onChannel,
+}: {
+  api: CompanyQuote;
+  sitio: CompanyQuote;
+  channel: "api" | "sitio";
+  onChannel: (value: "api" | "sitio") => void;
+}) {
   const apiBy = new Map(api.plans.map((plan) => [coverKey(plan.id), plan]));
   const sitioBy = new Map(sitio.plans.map((plan) => [coverKey(plan.id), plan]));
   const keys = COVER_ORDER.filter((key) => apiBy.has(key) || sitioBy.has(key));
@@ -1373,6 +1414,14 @@ function ScChannels({ api, sitio }: { api: CompanyQuote; sitio: CompanyQuote }) 
         <h3>Dos precios del mismo auto</h3>
         {sitio.discount ? <span>Descuento digital {sitio.discount}%</span> : null}
       </header>
+      <div className="sc-gap__switch">
+        <button type="button" className={channel === "api" ? "is-on" : undefined} onClick={() => onChannel("api")} disabled={!api.plans.length}>
+          Emitir por API
+        </button>
+        <button type="button" className={channel === "sitio" ? "is-on" : undefined} onClick={() => onChannel("sitio")} disabled={!sitio.plans.length}>
+          Emitir por Sitio Seguro
+        </button>
+      </div>
       {sitio.error ? <p className="quote-alert">{sitio.error}</p> : null}
       {keys.length ? (
         <div className="sc-gap__rows">
@@ -1409,14 +1458,21 @@ function ScChannels({ api, sitio }: { api: CompanyQuote; sitio: CompanyQuote }) 
   );
 }
 
-function comparePlans(quote: QuotePayload): ComparePlan[] {
+function comparePlans(quote: QuotePayload, channel: "api" | "sitio"): ComparePlan[] {
+  const useSitio = channel === "sitio" && Boolean(quote.sitio?.plans.length);
+  const sc = useSitio ? quote.sitio! : quote.sancristobal;
   const columns = [
-    { company: "sancristobal" as const, name: "San Cristóbal", logo: "/companias/sancristobal.svg", data: quote.sancristobal },
-    { company: "smg" as const, name: "Swiss Medical", logo: "/companias/smg.svg", data: quote.smg },
+    {
+      key: useSitio ? "sitio" : "sancristobal",
+      name: quote.sitio ? (useSitio ? "San Cristóbal Sitio" : "San Cristóbal API") : "San Cristóbal",
+      logo: "/companias/sancristobal.svg",
+      data: sc,
+    },
+    { key: "smg", name: "Swiss Medical", logo: "/companias/smg.svg", data: quote.smg },
   ];
   return columns.flatMap((column) =>
     column.data.plans.slice(0, 3).map((plan) => ({
-      key: `${column.company}:${plan.id}`,
+      key: `${column.key}:${plan.id}`,
       company: column.name,
       logo: column.logo,
       title: plan.title,

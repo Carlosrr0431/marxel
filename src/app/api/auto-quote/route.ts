@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
-import { AutoQuoteError, formatScPlanDetail, quoteAutoVehicle, type AutoLocation, type AutoQuoteResult, type AutoVersion } from "@/lib/sc-auto";
+import { AutoQuoteError, formatScPlanDetail, quoteAutoVehicle, registerAutoQuoteWithProducer, type AutoLocation, type AutoQuoteResult, type AutoVersion } from "@/lib/sc-auto";
 import { scCovers } from "@/lib/plan-covers";
 import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, quoteCa7, ScB2bError } from "@/lib/sc-b2b";
 import { emitSmgPublic, quoteSmgPublic } from "@/lib/smg/public-auto";
@@ -210,12 +210,14 @@ function sitioQuote(result: PromiseSettledResult<AutoQuoteResult | null>) {
   if (result.status === "fulfilled" && result.value) {
     return {
       discount: result.value.appliedDiscount,
+      opportunityId: result.value.opportunityId || 0,
       plans: result.value.plans.map((plan) => ({
         id: plan.productCode || plan.key,
         title: plan.title,
         monthly: plan.monthly,
         description: plan.description,
         covers: plan.covers,
+        quoteId: plan.quoteId,
       })),
     };
   }
@@ -291,6 +293,32 @@ async function emit(body: Record<string, unknown>) {
     note = issued.isPolicy
       ? `Póliza Swiss Medical ${policyNumber}. Las fotos de la inspección quedaron cargadas.`
       : `Certificado Swiss Medical ${policyNumber}. Las fotos quedaron cargadas. La póliza sale cuando Swiss Medical autoriza la solicitud.`;
+  } else if (String(body.channel) === "sitio") {
+    const registered = await registerAutoQuoteWithProducer({
+      opportunityId: Number(body.opportunityId) || 0,
+      quoteId: Number(body.quoteId) || 0,
+      dni,
+      nombre: `${first} ${last}`.trim(),
+      email,
+      celular: phone,
+      age: Number(body.age) || 0,
+      gender: String(body.gender || "M"),
+      location: {
+        locationId: Number(location.locationId) || 0,
+        description: String(location.description || ""),
+        stateKey: String(location.stateKey || ""),
+        zipCode: Number(location.zipCode) || 0,
+        synonymous: String(location.synonymous || ""),
+      },
+      is0km: Boolean(body.is0km),
+      licensePlate: plate,
+      vin,
+      engineNumber: engine,
+    });
+    policyNumber = registered.registeredWithSc ? String(registered.opportunityId || "") : "";
+    note = registered.registeredWithSc
+      ? `Sitio Seguro cargó la cotización en San Cristóbal. Oportunidad ${registered.opportunityId}.`
+      : "Sitio Seguro cotizó, pero no devolvió el id para cargar el alta. El pedido quedó para el productor.";
   } else {
     const photos = inspectionPhotos(body.photos);
     if (!hasCarPhotos(photos)) {

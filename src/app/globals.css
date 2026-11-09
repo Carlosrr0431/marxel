@@ -1773,6 +1773,19 @@ a {
   font-size: 0.72rem;
   font-weight: 750;
 }
+.sc-gap__switch { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.sc-gap__switch button {
+  border: 0;
+  border-radius: 999px;
+  background: #f4f7fb;
+  padding: 0.42rem 0.8rem;
+  color: var(--navy);
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.sc-gap__switch button.is-on { background: var(--navy); color: white; }
+.sc-gap__switch button:disabled { opacity: 0.45; cursor: default; }
 .sc-gap__rows { display: grid; gap: 0.45rem; }
 .sc-gap__row {
   display: grid;

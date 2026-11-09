@@ -1071,11 +1071,11 @@ export async function registerAutoQuoteWithProducer(input: RegisterAutoQuoteInpu
   if (!input.is0km && plateKind !== "auto") {
     throw new AutoQuoteError("Ingresá la patente del auto", 400);
   }
-  if (String(input.vin || "").replace(/\D/g, "").length !== 10) {
-    throw new AutoQuoteError("El número de chasis tiene que tener 10 dígitos", 400);
+  if (String(input.vin || "").replace(/[^a-zA-Z0-9]/g, "").length < 10) {
+    throw new AutoQuoteError("El número de chasis tiene que tener al menos 10 caracteres", 400);
   }
-  if (String(input.engineNumber || "").replace(/\D/g, "").length < 6) {
-    throw new AutoQuoteError("El número de motor tiene que tener al menos 6 dígitos", 400);
+  if (String(input.engineNumber || "").replace(/[^a-zA-Z0-9]/g, "").length < 6) {
+    throw new AutoQuoteError("El número de motor tiene que tener al menos 6 caracteres", 400);
   }
 
   const nombreCompleto = `${names.firstName} ${names.lastName}`.trim();
