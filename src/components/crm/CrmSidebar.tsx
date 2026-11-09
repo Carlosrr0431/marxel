@@ -16,6 +16,7 @@ const links = [
   { href: "/crm/formulario", label: "Formulario", icon: "form" as const },
   { href: "/crm/visitas", label: "Visitas", icon: "spark" as const },
   { href: "/crm/cotizar", label: "Cotizar", icon: "car" as const },
+  { href: "/crm/cotizaciones", label: "Cotizaciones", icon: "stack" as const },
   { href: "/crm/calendario", label: "Calendario", icon: "calendar" as const, group: "Agenda" },
   { href: "/crm/mailing", label: "Mailing", icon: "mail" as const, group: "Herramientas" },
 ];
@@ -115,6 +116,15 @@ function NavIcon({ name }: { name: (typeof links)[number]["icon"] }) {
       <svg {...props}>
         <path d="M12 3.5v3M12 17.5v3M4.8 6.2l2.1 2.1M17.1 15.7l2.1 2.1M3.5 12h3M17.5 12h3M4.8 17.8l2.1-2.1M17.1 8.3l2.1-2.1" />
         <circle cx="12" cy="12" r="3.2" />
+      </svg>
+    );
+  }
+  if (name === "stack") {
+    return (
+      <svg {...props}>
+        <path d="M7 4.5h8.5A1.5 1.5 0 0 1 17 6v11" />
+        <path d="M5.5 7.5h8.5A1.5 1.5 0 0 1 15.5 9v9.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 18.5v-9.5A1.5 1.5 0 0 1 5.5 7.5z" />
+        <path d="M7.2 11.5h5.2M7.2 14.5h3.6" />
       </svg>
     );
   }

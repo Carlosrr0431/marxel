@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
+import { saveCotizacion } from "@/lib/crm/saved-quotes";
 import { AutoQuoteError, formatScPlanDetail, quoteAutoVehicle, registerAutoQuoteWithProducer, type AutoLocation, type AutoQuoteResult, type AutoVersion } from "@/lib/sc-auto";
 import { scCovers } from "@/lib/plan-covers";
 import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, quoteCa7, ScB2bError } from "@/lib/sc-b2b";
@@ -190,7 +191,7 @@ async function quote(body: Record<string, unknown>) {
     });
   }
 
-  return NextResponse.json({
+  const payload = {
     carDescription: scResult?.carDescription || lines[1],
     statedAmount: scResult?.statedAmount || 0,
     sancristobal: scResult
@@ -203,7 +204,44 @@ async function quote(body: Record<string, unknown>) {
       ? { plans: smgResult.plans.slice(0, 4) }
       : { plans: [], error: reasonOf(smg) },
     ...(fromCrm(body) ? { sitio: sitioQuote(sitio) } : {}),
-  });
+  };
+  let savedId = "";
+  if (fromCrm(body)) {
+    savedId = await saveCotizacion({
+      nombre,
+      celular,
+      dni,
+      age: Number(body.age) || null,
+      plate,
+      year,
+      is0km: Boolean(body.is0km),
+      brand: String(brand.description || ""),
+      model: String(model.description || ""),
+      version: String(version.fullCarDescripcion || version.description || ""),
+      localidad: String(location.description || ""),
+      postal: String(body.postalCode || location.zipCode || ""),
+      gnc: Boolean(body.hasGnc),
+      vehiculo: String(payload.carDescription || ""),
+      pedido: {
+        year,
+        is0km: Boolean(body.is0km),
+        brand: { id: Number(brand.id) || 0, description: String(brand.description || "") },
+        model: { id: Number(model.id) || 0, description: String(model.description || "") },
+        version,
+        location,
+        postalCode: Number(body.postalCode) || Number(location.zipCode) || 0,
+        nombre,
+        celular,
+        dni,
+        gender: String(body.gender || "M"),
+        age: Number(body.age) || 0,
+        hasGnc: Boolean(body.hasGnc),
+        licensePlate: plate,
+      },
+      resultado: payload,
+    }).catch(() => "");
+  }
+  return NextResponse.json(savedId ? { ...payload, savedId } : payload);
 }
 
 function sitioQuote(result: PromiseSettledResult<AutoQuoteResult | null>) {

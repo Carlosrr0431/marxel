@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { classifyArPlate, normalizeArPlate } from "@/lib/ar-plate";
 import { VISITOR_COOKIE, noteTrail, postCookieVisit, readCookie, touchTrail, writeCookie } from "@/lib/cookies/visitor";
 import { QuoteCompare, type ComparePlan } from "@/components/QuoteCompare";
+import { markCotizacion } from "@/lib/crm/saved-quote-actions";
 import { site } from "@/lib/content";
 
 type Option = { id: string; label: string };
@@ -111,6 +112,13 @@ function niceName(value: string) {
     .replace(/(^|\s)(\p{L})/gu, (_match, space: string, letter: string) => `${space}${letter.toLocaleUpperCase("es-AR")}`);
 }
 
+function asOption(value: unknown): Option | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { id?: number; description?: string };
+  if (!row.id || !row.description) return null;
+  return { id: String(row.id), label: String(row.description) };
+}
+
 function years() {
   const current = new Date().getFullYear();
   const list = [{ id: `${current}-0km`, label: `${current} 0km` }];
@@ -184,9 +192,11 @@ function compressPhoto(file: File) {
 export function HomeAutoQuote({
   variant = "hero",
   preset,
+  saved = null,
 }: {
   variant?: "hero" | "crm";
   preset?: { nombre?: string; celular?: string };
+  saved?: { id: string; pedido: Record<string, unknown>; resultado: QuotePayload } | null;
 }) {
   const yearList = useMemo(years, []);
   const [plate, setPlate] = useState("");
@@ -210,6 +220,8 @@ export function HomeAutoQuote({
   const [quoting, setQuoting] = useState(false);
   const [error, setError] = useState("");
   const [quote, setQuote] = useState<QuotePayload | null>(null);
+  const [savedId, setSavedId] = useState(saved?.id || "");
+  const [fromArchive, setFromArchive] = useState(Boolean(saved));
   const [scChannel, setScChannel] = useState<"api" | "sitio">("api");
   const [choice, setChoice] = useState<Choice | null>(null);
   const [dni, setDni] = useState("");
@@ -239,8 +251,49 @@ export function HomeAutoQuote({
   const skipPlateFill = useRef(false);
   const restoredAge = useRef(false);
   const savedLocationId = useRef<number | null>(null);
+  const heldVehicle = useRef<{ brand: Option; model: Option; version: Version } | null>(null);
+  const openedSaved = useRef(false);
   const [labels, setLabels] = useState({ brand: "", model: "", version: "" });
   const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    if (variant !== "crm" || !saved || openedSaved.current) return;
+    openedSaved.current = true;
+    const pedido = saved.pedido;
+    const savedBrand = asOption(pedido.brand);
+    const savedModel = asOption(pedido.model);
+    const savedVersion = pedido.version && typeof pedido.version === "object" ? (pedido.version as Version) : null;
+    const savedLocation = pedido.location && typeof pedido.location === "object" ? (pedido.location as Location) : null;
+    skipPlateFill.current = true;
+    if (savedLocation?.locationId) savedLocationId.current = savedLocation.locationId;
+    if (savedBrand && savedModel && savedVersion?.id) {
+      heldVehicle.current = { brand: savedBrand, model: savedModel, version: savedVersion };
+    }
+    const savedYear = String(pedido.year || "");
+    setPlate(String(pedido.licensePlate || ""));
+    setYearId(pedido.is0km ? `${savedYear}-0km` : savedYear);
+    setBrandId(savedBrand?.id || "");
+    setModelId(savedModel?.id || "");
+    setVersionId(savedVersion?.id ? String(savedVersion.id) : "");
+    setLabels({
+      brand: savedBrand?.label || "",
+      model: savedModel?.label || "",
+      version: savedVersion?.fullCarDescripcion || savedVersion?.description || "",
+    });
+    setPostal(String(pedido.postalCode || "4400").replace(/\D/g, "").slice(0, 4) || "4400");
+    setHasGnc(pedido.hasGnc ? "si" : "no");
+    setNombre(String(pedido.nombre || ""));
+    setCelular(String(pedido.celular || ""));
+    setAge(String(pedido.age || "").replace(/\D/g, "").slice(0, 2));
+    setDni(String(pedido.dni || "").replace(/\D/g, "").slice(0, 8));
+    setGender(String(pedido.gender || "").toUpperCase().startsWith("F") ? "F" : "M");
+    if (savedLocation?.locationId) setLocation(savedLocation);
+    if (savedVersion?.id) setVersions([savedVersion]);
+    setScChannel(saved.resultado?.sitio?.plans.length ? "sitio" : "api");
+    setQuote(saved.resultado);
+    setSavedId(saved.id);
+    setFromArchive(true);
+  }, [saved, variant]);
+
   const wizard = variant !== "crm";
   const ageReady = age.replace(/\D/g, "").length >= 2;
 
@@ -298,9 +351,15 @@ export function HomeAutoQuote({
   const plateKind = classifyArPlate(normalized);
   const is0km = yearId.endsWith("-0km");
   const year = yearId.replace(/-0km$/, "");
-  const brand = brands.find((item) => item.id === brandId) || null;
-  const model = models.find((item) => item.id === modelId) || null;
-  const version = versions.find((item) => String(item.id) === versionId) || null;
+  const brand =
+    brands.find((item) => item.id === brandId) ||
+    (heldVehicle.current?.brand.id === brandId ? heldVehicle.current.brand : null);
+  const model =
+    models.find((item) => item.id === modelId) ||
+    (heldVehicle.current?.model.id === modelId ? heldVehicle.current.model : null);
+  const version =
+    versions.find((item) => String(item.id) === versionId) ||
+    (heldVehicle.current && String(heldVehicle.current.version.id) === versionId ? heldVehicle.current.version : null);
 
   useEffect(() => {
     if (dni.length < 7) {
@@ -592,8 +651,10 @@ export function HomeAutoQuote({
         }),
       });
       setError("");
-      const next = data as QuotePayload;
+      const next = data as QuotePayload & { savedId?: string };
       setScChannel(next.sitio?.plans.length ? "sitio" : "api");
+      setSavedId(next.savedId ? String(next.savedId) : "");
+      setFromArchive(false);
       setQuote(next);
     } catch (err) {
       quotedTicket.current = "";
@@ -676,8 +737,9 @@ export function HomeAutoQuote({
         : note;
       setCertificatePdf(typeof data.certificatePdf === "string" ? data.certificatePdf : "");
       setCouponPdf(typeof data.couponPdf === "string" ? data.couponPdf : "");
+      if (variant === "crm" && savedId) void markCotizacion(savedId, "emitida");
       setIssued(
-        readable.startsWith("Certificado") || readable.startsWith("Póliza")
+        readable.startsWith("Certificado") || readable.startsWith("Póliza") || readable.startsWith("Sitio Seguro")
           ? readable
           : data.policyNumber
             ? `Póliza ${data.policyNumber}`
@@ -759,6 +821,7 @@ export function HomeAutoQuote({
     const company = plan.key.startsWith("smg:") ? "smg" : "sancristobal";
     const id = sitioPick ? plan.key.slice("sitio:".length) : plan.key.slice(company.length + 1);
     const sitioPlan = sitioPick ? quote?.sitio?.plans.find((item) => item.id === id) : null;
+    if (savedId) void markCotizacion(savedId, "elegida");
     setChoice({
       company,
       id,
@@ -1100,6 +1163,14 @@ export function HomeAutoQuote({
               </button>
               <h2>{quote.carDescription || hint || plate}</h2>
               <p>Marcá las cotizaciones del PDF y elegí un plan para emitir.</p>
+              {savedId ? (
+                <p className="quote-found">
+                  {fromArchive
+                    ? "Abriste una cotización guardada. Los precios son los de ese momento."
+                    : "Quedó guardada. La podés buscar después por nombre, patente o DNI."}{" "}
+                  <a href="/crm/cotizaciones">Ver guardadas</a>
+                </p>
+              ) : null}
               {plans.length > 0 ? (
                 <button
                   type="button"
@@ -1121,6 +1192,9 @@ export function HomeAutoQuote({
                           plans: chosen,
                         })
                       )
+                      .then(() => {
+                        if (savedId) void markCotizacion(savedId, "enviada");
+                      })
                       .catch(() => setError("No se pudo armar el PDF."))
                       .finally(() => setPdfBusy(false));
                   }}

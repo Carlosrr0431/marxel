@@ -235,6 +235,7 @@ a {
   font-size: 0.95rem;
   font-weight: 650;
 }
+.quote-found a { color: var(--teal); font-weight: 750; text-decoration: underline; }
 
 .quote-info,
 .quote-lookup {
