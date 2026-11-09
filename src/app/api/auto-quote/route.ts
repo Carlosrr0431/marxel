@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveQuoteLeadSafe } from "@/lib/crm/quote-lead";
-import { AutoQuoteError, formatScPlanDetail, type AutoLocation, type AutoVersion } from "@/lib/sc-auto";
+import { AutoQuoteError, formatScPlanDetail, quoteAutoVehicle, type AutoLocation, type AutoQuoteResult, type AutoVersion } from "@/lib/sc-auto";
 import { scCovers } from "@/lib/plan-covers";
 import { coverageCertificatePdf, policyCouponsPdf, quoteAndIssueCa7, quoteCa7, ScB2bError } from "@/lib/sc-b2b";
 import { emitSmgPublic, quoteSmgPublic } from "@/lib/smg/public-auto";
@@ -101,7 +101,7 @@ async function quote(body: Record<string, unknown>) {
   const infoauto = String(version.infoAutoCode || "").replace(/\D/g, "");
   const stateKey = /^AR_\d+$/.test(String(location.stateKey || "")) ? String(location.stateKey) : "AR_01";
 
-  const [sc, smg] = await Promise.allSettled([
+  const [sc, smg, sitio] = await Promise.allSettled([
     (async () => {
       if (dni.length < 7) throw new AutoQuoteError("Falta el DNI para cotizar en San Cristóbal", 400);
       if (!infoauto) throw new AutoQuoteError("Esa versión no tiene código InfoAuto", 400);
@@ -138,9 +138,27 @@ async function quote(body: Record<string, unknown>) {
       postalCode: Number(body.postalCode) || Number(location.zipCode),
       plate,
     }),
+    fromCrm(body)
+      ? quoteAutoVehicle({
+          year,
+          is0km: Boolean(body.is0km),
+          brand: { id: Number(brand.id) || 0, description: String(brand.description || "") },
+          model: { id: Number(model.id) || 0, description: String(model.description || "") },
+          version,
+          location,
+          nombre,
+          celular,
+          age: Number(body.age) || undefined,
+          hasGnc: Boolean(body.hasGnc),
+          hasTracker: Boolean(body.hasTracker),
+          licensePlate: plate,
+          source: "web",
+        })
+      : Promise.resolve(null),
   ]);
 
-  if (sc.status === "rejected" && smg.status === "rejected") {
+  const sitioOk = sitio.status === "fulfilled" && Boolean(sitio.value);
+  if (sc.status === "rejected" && smg.status === "rejected" && !sitioOk) {
     throw new Error(reasonOf(sc));
   }
 
@@ -184,7 +202,24 @@ async function quote(body: Record<string, unknown>) {
     smg: smgResult
       ? { plans: smgResult.plans.slice(0, 4) }
       : { plans: [], error: reasonOf(smg) },
+    ...(fromCrm(body) ? { sitio: sitioQuote(sitio) } : {}),
   });
+}
+
+function sitioQuote(result: PromiseSettledResult<AutoQuoteResult | null>) {
+  if (result.status === "fulfilled" && result.value) {
+    return {
+      discount: result.value.appliedDiscount,
+      plans: result.value.plans.map((plan) => ({
+        id: plan.productCode || plan.key,
+        title: plan.title,
+        monthly: plan.monthly,
+        description: plan.description,
+        covers: plan.covers,
+      })),
+    };
+  }
+  return { plans: [], error: reasonOf(result) };
 }
 
 async function emit(body: Record<string, unknown>) {

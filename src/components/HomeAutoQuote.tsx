@@ -32,8 +32,14 @@ function placeName(item: Location) {
   return province ? `${city}, ${province}` : city;
 }
 type Offer = { id: string; title: string; monthly: number; description?: string; covers?: Record<string, string> | null };
-type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number };
-type QuotePayload = { carDescription: string; statedAmount: number; sancristobal: CompanyQuote; smg: CompanyQuote };
+type CompanyQuote = { plans: Offer[]; error?: string; opportunityId?: number; discount?: number };
+type QuotePayload = {
+  carDescription: string;
+  statedAmount: number;
+  sancristobal: CompanyQuote;
+  smg: CompanyQuote;
+  sitio?: CompanyQuote;
+};
 type Choice = { company: "sancristobal" | "smg"; id: string; title: string; monthly: number };
 
 const QUOTE_DRAFT_KEY = "mx_cotizacion_auto";
@@ -788,7 +794,9 @@ export function HomeAutoQuote({
         {wizard ? null : <p className="home-quote__kicker">San Cristóbal y SMG</p>}
         {wizard ? <h1>Cotizá tu auto en un minuto</h1> : <h2>Cotizá tu auto en un minuto</h2>}
         <p className="home-quote__lede" {...(wizard ? { "data-seo-lede": true } : {})}>
-          La patente completa el auto y cotiza en las dos.
+          {wizard
+            ? "La patente completa el auto y cotiza en las dos."
+            : "La patente completa el auto. San Cristóbal se cotiza por la API y por Sitio Seguro."}
         </p>
 
         {wizard ? null : (
@@ -1100,6 +1108,7 @@ export function HomeAutoQuote({
                 </button>
               ) : null}
             </div>
+            {quote.sitio ? <ScChannels api={quote.sancristobal} sitio={quote.sitio} /> : null}
             {quote.sancristobal.error ? <p className="quote-alert">{quote.sancristobal.error}</p> : null}
             {quote.smg.error ? <p className="quote-alert">{quote.smg.error}</p> : null}
             {plans.length > 0 ? (
@@ -1334,6 +1343,69 @@ function QuoteProgress({
         {quoting ? "Buscando los planes…" : phase === "planes" ? "Elegí un plan para seguir" : pending ? `Ahora: ${pending.label}` : "Listo para cotizar"}
       </p>
     </div>
+  );
+}
+
+const COVER_ORDER = ["A", "CM", "D"] as const;
+const COVER_LABEL: Record<(typeof COVER_ORDER)[number], string> = {
+  A: "Terceros básico",
+  CM: "Terceros completo",
+  D: "Todo riesgo",
+};
+
+function coverKey(id: string) {
+  const code = id.toUpperCase().replace(/^CA7_/, "");
+  if (code.startsWith("CM")) return "CM";
+  if (code.startsWith("D")) return "D";
+  if (code.startsWith("A")) return "A";
+  return "";
+}
+
+function ScChannels({ api, sitio }: { api: CompanyQuote; sitio: CompanyQuote }) {
+  const apiBy = new Map(api.plans.map((plan) => [coverKey(plan.id), plan]));
+  const sitioBy = new Map(sitio.plans.map((plan) => [coverKey(plan.id), plan]));
+  const keys = COVER_ORDER.filter((key) => apiBy.has(key) || sitioBy.has(key));
+
+  return (
+    <section className="sc-gap" aria-label="Precios de San Cristóbal por API y Sitio Seguro">
+      <header className="sc-gap__head">
+        <p>San Cristóbal</p>
+        <h3>Dos precios del mismo auto</h3>
+        {sitio.discount ? <span>Descuento digital {sitio.discount}%</span> : null}
+      </header>
+      {sitio.error ? <p className="quote-alert">{sitio.error}</p> : null}
+      {keys.length ? (
+        <div className="sc-gap__rows">
+          {keys.map((key) => {
+            const left = apiBy.get(key)?.monthly || 0;
+            const right = sitioBy.get(key)?.monthly || 0;
+            const diff = left && right ? left - right : 0;
+            return (
+              <article key={key} className="sc-gap__row">
+                <strong>{COVER_LABEL[key]}</strong>
+                <p className={diff < 0 ? "is-low" : undefined}>
+                  <span>API</span>
+                  {left ? money(left) : "Sin precio"}
+                </p>
+                <p className={diff > 0 ? "is-low" : undefined}>
+                  <span>Sitio Seguro</span>
+                  {right ? money(right) : "Sin precio"}
+                </p>
+                <em>
+                  {!left || !right
+                    ? "Falta un precio"
+                    : diff === 0
+                      ? "Mismo precio"
+                      : diff > 0
+                        ? `Sitio ${money(diff)} menos`
+                        : `API ${money(-diff)} menos`}
+                </em>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
